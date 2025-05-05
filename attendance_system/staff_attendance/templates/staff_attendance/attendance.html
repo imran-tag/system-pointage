@@ -1,0 +1,825 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gestion des Présences du Personnel</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.25/jspdf.plugin.autotable.min.js"></script>
+    <style>
+
+:root {
+    /* Light theme variables */
+    --bg-color: #f5f7fa;
+    --card-bg: white;
+    --text-color: #2c3e50;
+    --header-color: #2c3e50;
+    --border-color: #eee;
+    --city-group-bg: #f8f9fa;
+    --city-border: #e9ecef;
+    --button-primary: #3498db;
+    --button-primary-hover: #2980b9;
+    --button-admin: #e74c3c;
+    --button-admin-hover: #c0392b;
+    --button-pdf: #28a745;
+    --button-pdf-hover: #218838;
+    --button-disabled: #bdc3c7;
+    --message-success-bg: #d4edda;
+    --message-success-color: #155724;
+    --message-error-bg: #f8d7da;
+    --message-error-color: #721c24;
+    --message-info-bg: #d1ecf1;
+    --message-info-color: #0c5460;
+    --timestamp-color: #7f8c8d;
+    --status-present: #2ecc71;
+    --status-absent: #e74c3c;
+    --select-bg: white;
+    --select-border: #ddd;
+    --modal-overlay: rgba(0, 0, 0, 0.5);
+    --modal-bg: white;
+    --close-color: #aaa;
+    --close-hover: black;
+}
+
+/* Dark theme variables */
+body.dark-mode {
+    --bg-color: #1d1c1c;
+    --card-bg: #262626;
+    --text-color: #e0e0e0;
+    --header-color: #e0e0e0;
+    --border-color: #333;
+    --city-group-bg: #2d2d2d;
+    --city-border: #444;
+    --button-primary: #2980b9;
+    --button-primary-hover: #3498db;
+    --button-admin: #c0392b;
+    --button-admin-hover: #e74c3c;
+    --button-pdf: #218838;
+    --button-pdf-hover: #28a745;
+    --button-disabled: #555;
+    --message-success-bg: #0f401a;
+    --message-success-color: #a3d9b3;
+    --message-error-bg: #401a1a;
+    --message-error-color: #d9a3a3;
+    --message-info-bg: #164046;
+    --message-info-color: #a3d9d9;
+    --timestamp-color: #a0a0a0;
+    --status-present: #27ae60;
+    --status-absent: #c0392b;
+    --select-bg: #2d2d2d;
+    --select-border: #444;
+    --modal-overlay: rgba(0, 0, 0, 0.7);
+    --modal-bg: #2d2d2d;
+    --close-color: #ccc;
+    --close-hover: white;
+}
+/* Dark mode toggle switch */
+.theme-toggle {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-bottom: 20px;
+}
+
+.switch {
+    position: relative;
+    display: inline-block;
+    width: 60px;
+    height: 34px;
+    margin-left: 10px;
+}
+
+.switch input {
+    opacity: 0;
+    width: 0;
+    height: 0;
+}
+
+.slider {
+    position: absolute;
+    cursor: pointer;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: #ccc;
+    transition: .4s;
+    border-radius: 34px;
+}
+
+.slider:before {
+    position: absolute;
+    content: "";
+    height: 26px;
+    width: 26px;
+    left: 4px;
+    bottom: 4px;
+    background-color: white;
+    transition: .4s;
+    border-radius: 50%;
+}
+
+input:checked + .slider {
+    background-color: #2196F3;
+}
+
+input:checked + .slider:before {
+    transform: translateX(26px);
+}
+
+.theme-icon {
+    margin-right: 8px;
+    font-size: 20px;
+}
+
+
+body {
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    max-width: 900px;
+    margin: 0 auto;
+    padding: 20px;
+    background-color: var(--bg-color);
+    color: var(--text-color);
+    }
+.header {
+    text-align: center;
+    margin-bottom: 30px;
+    }
+    .header h1 {
+        color: var(--header-color);
+    }
+.card {
+    background: var(--card-bg);
+    border-radius: 8px;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+    padding: 20px;
+    margin-bottom: 20px;
+    }
+.button {
+    display: inline-block;
+    background-color: var(--button-primary);
+    color: white;
+    border: none;
+    padding: 12px 24px;
+    text-align: center;
+    text-decoration: none;
+    font-size: 16px;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: background-color 0.3s;
+    }
+.button:hover {
+    background-color: var(--button-primary-hover);
+    }
+.button:disabled {
+    background-color: var(--button-disabled);
+    cursor: not-allowed;
+    }
+.button.admin {
+    background-color: var(--button-admin);
+    }
+.button.admin:hover {
+    background-color: var(--button-admin-hover);
+    }
+.controls {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    align-items: center;
+    margin-bottom: 20px;
+    }
+.select {
+    padding: 10px;
+    border-radius: 4px;
+    border: 1px solid var(--select-border);
+    background-color: var(--select-bg);
+    min-width: 150px;
+    color: var(--text-color);
+    }
+.city-group {
+    margin-top: 20px;
+    background-color: var(--city-group-bg);
+    border-radius: 6px;
+    padding: 15px;
+    margin-bottom: 20px;
+    }
+.city-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 10px;
+    padding-bottom: 5px;
+    border-bottom: 2px solid var(--city-border);
+    }
+.city-title {
+    font-size: 18px;
+    font-weight: 600;
+    color: var(--text-color);
+    margin: 0;
+    padding: 0;
+    line-height: 1.2;
+    }
+.city-button {
+    min-width: 120px;
+    }
+.staff-list {
+    margin-top: 10px;
+    }
+.staff-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 10px 0;
+    border-bottom: 1px solid var(--border-color);
+    }
+.staff-item:last-child {
+    border-bottom: none;
+    }
+.staff-info {
+    display: flex;
+    align-items: center;
+    min-width: 200px;
+    }
+.status {
+    display: inline-block;
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    margin-right: 8px;
+    }
+.status.present {
+    background-color: var(--status-present);
+    }
+.status.absent {
+    background-color: var(--status-absent);
+    }
+.modal {
+    display: none;
+    position: fixed;
+    z-index: 1;
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: 100%;
+    background-color: var(--modal-overlay);
+    }
+.modal-content {
+    background-color: var(--modal-bg);
+    margin: 15% auto;
+    padding: 20px;
+    border-radius: 8px;
+    width: 300px;
+    }
+.close {
+    color: var(--close-color);
+    float: right;
+    font-size: 28px;
+    font-weight: bold;
+    cursor: pointer;
+    }
+.close:hover {
+    color: var(--close-hover);
+    }
+.form-group {
+    margin-bottom: 15px;
+    }
+.form-group label {
+    display: block;
+    margin-bottom: 5px;
+    }
+.form-group input {
+    width: 100%;
+    padding: 8px;
+    border: 1px solid var(--border-color);
+    border-radius: 4px;
+    }
+.timestamp {
+    font-size: 12px;
+    color: var(--timestamp-color);
+    }
+.message {
+    padding: 10px;
+    margin: 10px 0;
+    border-radius: 4px;
+    text-align: center;
+    }
+.success {
+    background-color: var(--message-success-bg);
+    color: var(--message-success-color);
+    }
+.error {
+    background-color: var(--message-error-bg);
+    color: var(--message-error-color);
+    }
+.info {
+    background-color: var(--message-info-bg);
+    color: var(--message-info-color);
+    }
+.export-controls {
+    display: flex;
+    justify-content: center;
+    margin-top: 20px;
+    }
+.pdf-button {
+    background-color: var(--button-pdf);
+    }
+.pdf-button:hover {
+    background-color: var(--button-pdf-hover);
+    }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>Gestion des Présences du Personnel</h1>
+        <p id="current-date"></p>
+    </div>
+
+    <div class="theme-toggle">
+    <span class="theme-icon">☀️</span>
+    <label class="switch">
+        <input type="checkbox" id="dark-mode-toggle">
+        <span class="slider"></span>
+    </label>
+    <span class="theme-icon">🌙</span>
+</div>
+
+
+
+    <div class="card">
+        <h2>Présences du Jour</h2>
+        <div id="message" class="message" style="display: none;"></div>
+        <div class="controls">
+            <button id="mark-all-present" class="button">Marquer Tous Présents</button>
+            <select id="city-filter" class="select">
+                <option value="all">Toutes les Villes</option>
+                <!-- City options will be populated here -->
+            </select>
+            <button id="mark-city-present" class="button">Marquer Ville Sélectionnée</button>
+            <button id="admin-modify" class="button admin">Modification Admin</button>
+        </div>
+
+        <div id="attendance-container">
+            <!-- City groups will be populated here -->
+        </div>
+    </div>
+
+    <div class="card">
+        <div class="export-controls">
+            <button id="generate-pdf" class="button pdf-button">Générer PDF</button>
+        </div>
+    </div>
+
+    <!-- Admin Password Modal -->
+    <div id="admin-modal" class="modal">
+        <div class="modal-content">
+            <span class="close">&times;</span>
+            <h3>Authentification Administrateur</h3>
+            <div class="form-group">
+                <label for="admin-password">Mot de passe :</label>
+                <input type="password" id="admin-password">
+            </div>
+            <button id="submit-password" class="button">Valider</button>
+        </div>
+    </div>
+
+    {% csrf_token %}
+    <script>
+        // Get CSRF token
+        const csrftoken = document.querySelector('[name=csrfmiddlewaretoken]').value;
+
+        // Variables
+        let staffMembers = [];
+        let cities = [];
+        let attendanceRegistered = false;
+        let adminMode = false;
+
+        // DOM elements
+        const attendanceContainer = document.getElementById('attendance-container');
+        const markAllPresentButton = document.getElementById('mark-all-present');
+        const markCityPresentButton = document.getElementById('mark-city-present');
+        const cityFilterSelect = document.getElementById('city-filter');
+        const adminModifyButton = document.getElementById('admin-modify');
+        const adminModal = document.getElementById('admin-modal');
+        const closeModalButton = document.querySelector('.close');
+        const submitPasswordButton = document.getElementById('submit-password');
+        const adminPasswordInput = document.getElementById('admin-password');
+        const messageElement = document.getElementById('message');
+        const currentDateElement = document.getElementById('current-date');
+        const generatePdfButton = document.getElementById('generate-pdf');
+
+        // Display current date in French
+        const today = new Date();
+        const options = {
+            weekday: 'long',
+            year: 'numeric',
+            month: 'long',
+            day: 'numeric'
+        };
+        currentDateElement.textContent = today.toLocaleDateString('fr-FR', options);
+
+        // Add this to your JavaScript in attendance.html
+// You can place it after the variable declarations but before fetchStaffData()
+
+// Dark mode toggle functionality
+const darkModeToggle = document.getElementById('dark-mode-toggle');
+
+// Check for saved theme preference or use preference from OS
+const prefersDarkScheme = window.matchMedia('(prefers-color-scheme: dark)');
+const currentTheme = localStorage.getItem('theme');
+
+// Set initial theme based on saved preference or OS preference
+if (currentTheme === 'dark' || (!currentTheme && prefersDarkScheme.matches)) {
+    document.body.classList.add('dark-mode');
+    darkModeToggle.checked = true;
+} else {
+    document.body.classList.remove('dark-mode');
+    darkModeToggle.checked = false;
+}
+
+// Toggle theme when switch is clicked
+darkModeToggle.addEventListener('change', function() {
+    if (this.checked) {
+        document.body.classList.add('dark-mode');
+        localStorage.setItem('theme', 'dark');
+    } else {
+        document.body.classList.remove('dark-mode');
+        localStorage.setItem('theme', 'light');
+    }
+});
+
+    // il n'est pas laaa
+
+
+
+        // Fetch staff data from server
+        async function fetchStaffData() {
+            try {
+                const response = await fetch('/api/staff/');
+                const data = await response.json();
+                staffMembers = data.staffMembers;
+                cities = [...new Set(staffMembers.map(staff => staff.city))];
+                populateCityFilter();
+                renderStaffList();
+            } catch (error) {
+                showMessage('Erreur lors du chargement des données', 'error');
+                console.error('Error fetching staff data:', error);
+            }
+        }
+
+        // Populate city filter dropdown
+        function populateCityFilter() {
+            cityFilterSelect.innerHTML = '<option value="all">Toutes les Villes</option>';
+
+            cities.forEach(city => {
+                const option = document.createElement('option');
+                option.value = city;
+                option.textContent = city;
+                cityFilterSelect.appendChild(option);
+            });
+        }
+
+        // Render staff list grouped by city
+        function renderStaffList() {
+            attendanceContainer.innerHTML = '';
+
+            const selectedCity = cityFilterSelect.value;
+
+            // Filter cities based on selection
+            const citiesToRender = selectedCity === 'all' ? cities : [selectedCity];
+
+            citiesToRender.forEach(city => {
+                const cityStaff = staffMembers.filter(staff => staff.city === city);
+
+                // Create city group element
+                const cityGroup = document.createElement('div');
+                cityGroup.className = 'city-group';
+
+                // Create city header
+                const cityHeader = document.createElement('div');
+                cityHeader.className = 'city-header';
+
+                const cityTitle = document.createElement('h3');
+                cityTitle.className = 'city-title';
+                cityTitle.textContent = city;
+
+                const cityButton = document.createElement('button');
+                cityButton.className = 'button city-button';
+                cityButton.textContent = 'Marquer Présents';
+                cityButton.disabled = attendanceRegistered && !adminMode;
+                cityButton.addEventListener('click', () => {
+                    markCityPresent(city);
+                });
+
+                cityHeader.appendChild(cityTitle);
+                cityHeader.appendChild(cityButton);
+                cityGroup.appendChild(cityHeader);
+
+                // Create staff list for this city
+                const staffList = document.createElement('div');
+                staffList.className = 'staff-list';
+
+                cityStaff.forEach(staff => {
+                    const staffItem = document.createElement('div');
+                    staffItem.className = 'staff-item';
+
+                    const statusIndicator = document.createElement('span');
+                    statusIndicator.className = `status ${staff.present ? 'present' : 'absent'}`;
+
+                    const nameElement = document.createElement('span');
+                    nameElement.className = 'staff-info';
+                    nameElement.innerHTML = `
+                        ${statusIndicator.outerHTML}
+                        ${staff.name}
+                        ${staff.timestamp ? `<span class="timestamp">(${new Date(staff.timestamp).toLocaleTimeString()})</span>` : ''}
+                    `;
+
+                    const actionButton = document.createElement('button');
+                    actionButton.className = 'button';
+                    actionButton.style.minWidth = '120px';
+                    actionButton.textContent = staff.present ? 'Marquer Absent' : 'Marquer Présent';
+                    // Disable the button if attendance is registered and not in admin mode
+                    // OR if already marked present and not in admin mode
+                    actionButton.disabled = (attendanceRegistered && !adminMode) || (staff.present && !adminMode);
+
+                    actionButton.addEventListener('click', () => {
+                        // Prevent changing from present to absent unless in admin mode
+                        if (staff.present && !adminMode) {
+                            showMessage('Une présence enregistrée ne peut être modifiée que par un administrateur', 'error');
+                            return;
+                        }
+
+                        if (staff.present) {
+                            markStaffAbsent(staff.id);
+                        } else {
+                            markStaffPresent(staff.id);
+                        }
+                    });
+
+                    staffItem.appendChild(nameElement);
+                    staffItem.appendChild(actionButton);
+                    staffList.appendChild(staffItem);
+                });
+
+                cityGroup.appendChild(staffList);
+                attendanceContainer.appendChild(cityGroup);
+            });
+        }
+
+        // Mark staff member as present via API
+        async function markStaffPresent(staffId) {
+            try {
+                const response = await fetch('/api/mark-present/', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': csrftoken
+                    },
+                    body: JSON.stringify({ staff_id: staffId })
+                });
+
+                const data = await response.json();
+
+                if (data.success) {
+                    // Update local data
+                    const staffMember = staffMembers.find(s => s.id === staffId);
+                    if (staffMember) {
+                        staffMember.present = true;
+                        staffMember.timestamp = new Date().toISOString();
+                    }
+
+                    renderStaffList();
+                    showMessage(data.message, 'success');
+                } else {
+                    showMessage(data.message, 'error');
+                }
+            } catch (error) {
+                showMessage('Erreur lors de la mise à jour', 'error');
+                console.error('Error marking present:', error);
+            }
+        }
+
+        // Mark staff member as absent via API
+        async function markStaffAbsent(staffId) {
+            try {
+                const response = await fetch('/api/mark-absent/', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': csrftoken
+                    },
+                    body: JSON.stringify({ staff_id: staffId })
+                });
+
+                const data = await response.json();
+
+                if (data.success) {
+                    // Update local data
+                    const staffMember = staffMembers.find(s => s.id === staffId);
+                    if (staffMember) {
+                        staffMember.present = false;
+                        staffMember.timestamp = new Date().toISOString();
+                    }
+
+                    renderStaffList();
+                    showMessage(data.message, 'success');
+                } else {
+                    showMessage(data.message, 'error');
+                }
+            } catch (error) {
+                showMessage('Erreur lors de la mise à jour', 'error');
+                console.error('Error marking absent:', error);
+            }
+        }
+
+        // Mark all staff in a specific city as present
+        async function markCityPresent(city) {
+            if (!attendanceRegistered || adminMode) {
+                try {
+                    const response = await fetch('/api/mark-city-present/', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'X-CSRFToken': csrftoken
+                        },
+                        body: JSON.stringify({ city: city })
+                    });
+
+                    const data = await response.json();
+
+                    if (data.success) {
+                        // Update local data
+                        const timestamp = new Date().toISOString();
+                        staffMembers.forEach(staff => {
+                            if (staff.city === city && (!staff.present || adminMode)) {
+                                staff.present = true;
+                                staff.timestamp = timestamp;
+                            }
+                        });
+
+                        attendanceRegistered = true;
+                        renderStaffList();
+                        showMessage(data.message, 'success');
+                    } else {
+                        showMessage(data.message, 'error');
+                    }
+                } catch (error) {
+                    showMessage('Erreur lors de la mise à jour', 'error');
+                    console.error('Error marking city present:', error);
+                }
+            }
+        }
+
+        // Mark all staff as present
+        markAllPresentButton.addEventListener('click', async () => {
+            if (!attendanceRegistered || adminMode) {
+                try {
+                    const response = await fetch('/api/mark-all-present/', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'X-CSRFToken': csrftoken
+                        }
+                    });
+
+                    const data = await response.json();
+
+                    if (data.success) {
+                        // Update local data
+                        const timestamp = new Date().toISOString();
+                        staffMembers.forEach(staff => {
+                            staff.present = true;
+                            staff.timestamp = timestamp;
+                        });
+
+                        attendanceRegistered = true;
+                        renderStaffList();
+                        showMessage(data.message, 'success');
+
+                        if (!adminMode) {
+                            markAllPresentButton.disabled = true;
+                            markCityPresentButton.disabled = true;
+                        }
+                    } else {
+                        showMessage(data.message, 'error');
+                    }
+                } catch (error) {
+                    showMessage('Erreur lors de la mise à jour', 'error');
+                    console.error('Error marking all present:', error);
+                }
+            }
+        });
+
+        // Mark selected city staff as present
+        markCityPresentButton.addEventListener('click', () => {
+            const selectedCity = cityFilterSelect.value;
+            if (selectedCity === 'all') {
+                showMessage('Veuillez sélectionner une ville spécifique', 'error');
+                return;
+            }
+
+            markCityPresent(selectedCity);
+        });
+
+        // Admin modify button click
+        adminModifyButton.addEventListener('click', () => {
+            adminModal.style.display = 'block';
+            adminPasswordInput.value = '';
+        });
+
+        // Close modal
+        closeModalButton.addEventListener('click', () => {
+            adminModal.style.display = 'none';
+        });
+
+        // Click outside modal to close
+        window.addEventListener('click', (e) => {
+            if (e.target === adminModal) {
+                adminModal.style.display = 'none';
+            }
+        });
+
+        // Submit password
+        submitPasswordButton.addEventListener('click', async () => {
+            try {
+                const response = await fetch('/api/verify-admin/', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': csrftoken
+                    },
+                    body: JSON.stringify({ password: adminPasswordInput.value })
+                });
+
+                const data = await response.json();
+
+                if (data.success) {
+                    adminMode = true;
+                    adminModal.style.display = 'none';
+                    showMessage('Mode administrateur activé. Vous pouvez maintenant modifier les présences.', 'success');
+                    markAllPresentButton.disabled = false;
+                    markCityPresentButton.disabled = false;
+                    renderStaffList();
+                } else {
+                    showMessage('Mot de passe incorrect !', 'error');
+                }
+            } catch (error) {
+                showMessage('Erreur lors de la vérification', 'error');
+                console.error('Error verifying admin:', error);
+            }
+        });
+
+        // Show message
+        function showMessage(text, type) {
+            messageElement.textContent = text;
+            messageElement.className = `message ${type}`;
+            messageElement.style.display = 'block';
+
+            setTimeout(() => {
+                messageElement.style.display = 'none';
+            }, 3000);
+        }
+
+        // Generate PDF function
+        generatePdfButton.addEventListener('click', async () => {
+            try {
+                const response = await fetch('/api/generate-pdf/', {
+                    method: 'POST',
+                    headers: {
+                        'X-CSRFToken': csrftoken
+                    }
+                });
+
+                if (response.ok) {
+                    // Create a blob from the PDF stream
+                    const blob = await response.blob();
+                    // Create a link to download it
+                    const downloadUrl = window.URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = downloadUrl;
+                    a.download = 'rapport-presences.pdf';
+                    document.body.appendChild(a);
+                    a.click();
+                    // Clean up
+                    window.URL.revokeObjectURL(downloadUrl);
+                    document.body.removeChild(a);
+
+                    showMessage('PDF généré avec succès !', 'success');
+                } else {
+                    const errorData = await response.json();
+                    showMessage(errorData.message || 'Erreur lors de la génération du PDF', 'error');
+                }
+            } catch (error) {
+                showMessage('Erreur lors de la génération du PDF', 'error');
+                console.error('Error generating PDF:', error);
+            }
+        });
+
+        // City filter change handler
+        cityFilterSelect.addEventListener('change', renderStaffList);
+
+        // Initialize by fetching data
+        fetchStaffData();
+    </script>
+</body>
+</html>

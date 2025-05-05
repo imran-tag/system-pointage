@@ -1,0 +1,80 @@
+[
+  {
+    "model": "staff_attendance.city",
+    "pk": 1,
+    "fields": {
+      "name": "Folschviller"
+    }
+  },
+  {
+    "model": "staff_attendance.city",
+    "pk": 2,
+    "fields": {
+      "name": "Mulhouse"
+    }
+  },
+  {
+    "model": "staff_attendance.city",
+    "pk": 3,
+    "fields": {
+      "name": "Pfastatt"
+    }
+  },
+  {
+    "model": "staff_attendance.staffmember",
+    "pk": 1,
+    "fields": {
+      "name": "Elkabous Abdellah",
+      "city": 1
+    }
+  },
+  {
+    "model": "staff_attendance.staffmember",
+    "pk": 2,
+    "fields": {
+      "name": "Elkabous Hassan",
+      "city": 1
+    }
+  },
+  {
+    "model": "staff_attendance.staffmember",
+    "pk": 3,
+    "fields": {
+      "name": "Amraou Mohamed",
+      "city": 2
+    }
+  },
+  {
+    "model": "staff_attendance.staffmember",
+    "pk": 4,
+    "fields": {
+      "name": "Lhoucine Bensaid",
+      "city": 2
+    }
+  },
+  {
+    "model": "staff_attendance.staffmember",
+    "pk": 5,
+    "fields": {
+      "name": "Lahcen Bensaid",
+      "city": 2
+    }
+  },
+  {
+    "model": "staff_attendance.staffmember",
+    "pk": 6,
+    "fields": {
+      "name": "Amraou Abdellah",
+      "city": 3
+    }
+  },
+  {
+    "model": "staff_attendance.staffmember",
+    "pk": 7,
+    "fields": {
+      "name": "Yassine Boulakdour",
+      "city": 3
+    }
+  }
+]
+
