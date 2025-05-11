@@ -1,0 +1,759 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Historique des Présences du Personnel</title>
+    <style>
+:root {
+    /* Light theme variables */
+    --bg-color: #f5f7fa;
+    --card-bg: white;
+    --text-color: #2c3e50;
+    --header-color: #2c3e50;
+    --border-color: #eee;
+    --city-group-bg: #f8f9fa;
+    --city-border: #e9ecef;
+    --button-primary: #3498db;
+    --button-primary-hover: #2980b9;
+    --button-admin: #e74c3c;
+    --button-admin-hover: #c0392b;
+    --button-pdf: #28a745;
+    --button-pdf-hover: #218838;
+    --button-disabled: #bdc3c7;
+    --message-success-bg: #d4edda;
+    --message-success-color: #155724;
+    --message-error-bg: #f8d7da;
+    --message-error-color: #721c24;
+    --message-info-bg: #d1ecf1;
+    --message-info-color: #0c5460;
+    --timestamp-color: #7f8c8d;
+    --status-present: #2ecc71;
+    --status-absent: #e74c3c;
+    --status-undefined: #f39c12;
+    --select-bg: white;
+    --select-border: #ddd;
+    --modal-overlay: rgba(0, 0, 0, 0.5);
+    --modal-bg: white;
+    --close-color: #aaa;
+    --close-hover: black;
+    --table-border: #ddd;
+    --table-header-bg: #f2f2f2;
+    --table-hover: #f5f5f5;
+    --weekend-bg: #f0f0f0;
+}
+
+/* Dark theme variables */
+body.dark-mode {
+    --bg-color: #1d1c1c;
+    --card-bg: #262626;
+    --text-color: #e0e0e0;
+    --header-color: #e0e0e0;
+    --border-color: #333;
+    --city-group-bg: #2d2d2d;
+    --city-border: #444;
+    --button-primary: #2980b9;
+    --button-primary-hover: #3498db;
+    --button-admin: #c0392b;
+    --button-admin-hover: #e74c3c;
+    --button-pdf: #218838;
+    --button-pdf-hover: #28a745;
+    --button-disabled: #555;
+    --message-success-bg: #0f401a;
+    --message-success-color: #a3d9b3;
+    --message-error-bg: #401a1a;
+    --message-error-color: #d9a3a3;
+    --message-info-bg: #164046;
+    --message-info-color: #a3d9d9;
+    --timestamp-color: #a0a0a0;
+    --status-present: #27ae60;
+    --status-absent: #c0392b;
+    --status-undefined: #d35400;
+    --select-bg: #2d2d2d;
+    --select-border: #444;
+    --modal-overlay: rgba(0, 0, 0, 0.7);
+    --modal-bg: #2d2d2d;
+    --close-color: #ccc;
+    --close-hover: white;
+    --table-border: #444;
+    --table-header-bg: #333;
+    --table-hover: #383838;
+    --weekend-bg: #2a2a2a;
+}
+
+/* Dark mode toggle switch */
+.theme-toggle {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-bottom: 20px;
+}
+
+.switch {
+    position: relative;
+    display: inline-block;
+    width: 60px;
+    height: 34px;
+    margin-left: 10px;
+}
+
+.switch input {
+    opacity: 0;
+    width: 0;
+    height: 0;
+}
+
+.slider {
+    position: absolute;
+    cursor: pointer;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: #ccc;
+    transition: .4s;
+    border-radius: 34px;
+}
+
+.slider:before {
+    position: absolute;
+    content: "";
+    height: 26px;
+    width: 26px;
+    left: 4px;
+    bottom: 4px;
+    background-color: white;
+    transition: .4s;
+    border-radius: 50%;
+}
+
+input:checked + .slider {
+    background-color: #2196F3;
+}
+
+input:checked + .slider:before {
+    transform: translateX(26px);
+}
+
+.theme-icon {
+    margin-right: 8px;
+    font-size: 20px;
+}
+
+body {
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    max-width: 100%;
+    margin: 0 auto;
+    padding: 20px;
+    background-color: var(--bg-color);
+    color: var(--text-color);
+}
+
+.header {
+    text-align: center;
+    margin-bottom: 30px;
+}
+
+.header h1 {
+    color: var(--header-color);
+}
+
+.card {
+    background: var(--card-bg);
+    border-radius: 8px;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+    padding: 20px;
+    margin-bottom: 20px;
+    overflow-x: auto;
+}
+
+.button {
+    display: inline-block;
+    background-color: var(--button-primary);
+    color: white;
+    border: none;
+    padding: 12px 24px;
+    text-align: center;
+    text-decoration: none;
+    font-size: 16px;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: background-color 0.3s;
+}
+
+.button:hover {
+    background-color: var(--button-primary-hover);
+}
+
+.button:disabled {
+    background-color: var(--button-disabled);
+    cursor: not-allowed;
+}
+
+.controls {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    align-items: center;
+    margin-bottom: 20px;
+}
+
+.select {
+    padding: 10px;
+    border-radius: 4px;
+    border: 1px solid var(--select-border);
+    background-color: var(--select-bg);
+    min-width: 150px;
+    color: var(--text-color);
+}
+
+.message {
+    padding: 10px;
+    margin: 10px 0;
+    border-radius: 4px;
+    text-align: center;
+}
+
+.success {
+    background-color: var(--message-success-bg);
+    color: var(--message-success-color);
+}
+
+.error {
+    background-color: var(--message-error-bg);
+    color: var(--message-error-color);
+}
+
+.info {
+    background-color: var(--message-info-bg);
+    color: var(--message-info-color);
+}
+
+.export-controls {
+    display: flex;
+    justify-content: center;
+    margin-top: 20px;
+}
+
+.pdf-button {
+    background-color: var(--button-pdf);
+}
+
+.pdf-button:hover {
+    background-color: var(--button-pdf-hover);
+}
+
+.nav-buttons {
+    display: flex;
+    justify-content: center;
+    margin-bottom: 20px;
+}
+
+.nav-button {
+    margin: 0 10px;
+}
+
+.history-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 20px;
+}
+
+.history-table th,
+.history-table td {
+    padding: 10px;
+    text-align: center;
+    border: 1px solid var(--table-border);
+}
+
+.history-table th {
+    background-color: var(--table-header-bg);
+    position: sticky;
+    top: 0;
+    z-index: 10;
+}
+
+.history-table tr:hover {
+    background-color: var(--table-hover);
+}
+
+.weekend {
+    background-color: var(--weekend-bg);
+}
+
+.status-cell {
+    display: inline-block;
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    position: relative;
+}
+
+.status-present {
+    background-color: var(--status-present);
+}
+
+.status-absent {
+    background-color: var(--status-absent);
+}
+
+.status-undefined {
+    background-color: var(--status-undefined);
+}
+
+.status-none {
+    border: 1px solid var(--border-color);
+}
+
+.status-tooltip {
+    visibility: hidden;
+    width: 150px;
+    background-color: var(--modal-bg);
+    color: var(--text-color);
+    text-align: center;
+    border-radius: 6px;
+    padding: 5px;
+    position: absolute;
+    z-index: 100;
+    bottom: 125%;
+    left: 50%;
+    margin-left: -75px;
+    opacity: 0;
+    transition: opacity 0.3s;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+    font-size: 12px;
+}
+
+.status-cell:hover .status-tooltip {
+    visibility: visible;
+    opacity: 1;
+}
+
+.legend {
+    display: flex;
+    justify-content: center;
+    margin-top: 20px;
+    flex-wrap: wrap;
+}
+
+.legend-item {
+    display: flex;
+    align-items: center;
+    margin: 0 10px;
+}
+
+.legend-color {
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    margin-right: 5px;
+}
+
+.city-title {
+    margin-top: 30px;
+    margin-bottom: 10px;
+    padding-bottom: 5px;
+    border-bottom: 1px solid var(--border-color);
+    font-size: 20px;
+    font-weight: bold;
+}
+
+.filter-controls {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    margin-bottom: 20px;
+}
+
+.fixed-name-column {
+    position: sticky;
+    left: 0;
+    background-color: var(--card-bg);
+    z-index: 5;
+}
+
+.date-header {
+    white-space: nowrap;
+}
+
+/* Loading indicator */
+.loader {
+    border: 5px solid #f3f3f3;
+    border-top: 5px solid var(--button-primary);
+    border-radius: 50%;
+    width: 50px;
+    height: 50px;
+    animation: spin 2s linear infinite;
+    margin: 20px auto;
+}
+
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+
+.loading-container {
+    text-align: center;
+    padding: 30px;
+}
+
+.absence-reason {
+    font-style: italic;
+    font-weight: normal;
+    font-size: 12px;
+}
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>Historique des Présences du Personnel</h1>
+        <p>Les 30 derniers jours</p>
+    </div>
+
+    <div class="theme-toggle">
+        <span class="theme-icon">☀️</span>
+        <label class="switch">
+            <input type="checkbox" id="dark-mode-toggle">
+            <span class="slider"></span>
+        </label>
+        <span class="theme-icon">🌙</span>
+    </div>
+
+    <div class="nav-buttons">
+        <a href="{% url 'staff_attendance:attendance_page' %}" class="button nav-button">Retour à la page de présence</a>
+        <button id="generate-pdf" class="button pdf-button">Générer PDF</button>
+    </div>
+
+    <div class="card">
+        <div id="message" class="message" style="display: none;"></div>
+
+        <div class="filter-controls">
+            <select id="city-filter" class="select">
+                <option value="all">Toutes les Villes</option>
+                <!-- City options will be populated here -->
+            </select>
+        </div>
+
+        <div id="history-container">
+            <div class="loading-container">
+                <div class="loader"></div>
+                <p>Chargement de l'historique...</p>
+            </div>
+        </div>
+
+        <div class="legend">
+            <div class="legend-item">
+                <div class="legend-color status-present"></div>
+                <span>Présent</span>
+            </div>
+            <div class="legend-item">
+                <div class="legend-color status-absent"></div>
+                <span>Absent</span>
+            </div>
+            <div class="legend-item">
+                <div class="legend-color status-undefined"></div>
+                <span>Non défini</span>
+            </div>
+            <div class="legend-item">
+                <div class="legend-color status-none"></div>
+                <span>Pas de données</span>
+            </div>
+        </div>
+    </div>
+
+    {% csrf_token %}
+    <script>
+        // Get CSRF token
+        const csrftoken = document.querySelector('[name=csrfmiddlewaretoken]').value;
+
+        // DOM elements
+        const historyContainer = document.getElementById('history-container');
+        const cityFilterSelect = document.getElementById('city-filter');
+        const generatePdfButton = document.getElementById('generate-pdf');
+        const messageElement = document.getElementById('message');
+
+        // Variables
+        let historyData = [];
+        let staffData = [];
+        let cities = [];
+
+        // Dark mode toggle functionality
+        const darkModeToggle = document.getElementById('dark-mode-toggle');
+
+        // Check for saved theme preference or use preference from OS
+        const prefersDarkScheme = window.matchMedia('(prefers-color-scheme: dark)');
+        const currentTheme = localStorage.getItem('theme');
+
+        // Set initial theme based on saved preference or OS preference
+        if (currentTheme === 'dark' || (!currentTheme && prefersDarkScheme.matches)) {
+            document.body.classList.add('dark-mode');
+            darkModeToggle.checked = true;
+        } else {
+            document.body.classList.remove('dark-mode');
+            darkModeToggle.checked = false;
+        }
+
+        // Toggle theme when switch is clicked
+        darkModeToggle.addEventListener('change', function() {
+            if (this.checked) {
+                document.body.classList.add('dark-mode');
+                localStorage.setItem('theme', 'dark');
+            } else {
+                document.body.classList.remove('dark-mode');
+                localStorage.setItem('theme', 'light');
+            }
+        });
+
+        // Fetch attendance history data
+        async function fetchAttendanceHistory() {
+            try {
+                const response = await fetch('/api/attendance-history/');
+                const data = await response.json();
+
+                historyData = data.history;
+                staffData = data.staff;
+
+                // Extract unique cities
+                cities = [...new Set(staffData.map(staff => staff.city))];
+
+                // Populate city filter
+                populateCityFilter();
+
+                // Render history table
+                renderHistoryTable();
+            } catch (error) {
+                showMessage('Erreur lors du chargement des données d\'historique', 'error');
+                console.error('Error fetching attendance history:', error);
+            }
+        }
+
+        // Populate city filter dropdown
+        function populateCityFilter() {
+            cityFilterSelect.innerHTML = '<option value="all">Toutes les Villes</option>';
+
+            cities.forEach(city => {
+                const option = document.createElement('option');
+                option.value = city;
+                option.textContent = city;
+                cityFilterSelect.appendChild(option);
+            });
+        }
+
+        // Render history table
+        function renderHistoryTable() {
+            const selectedCity = cityFilterSelect.value;
+
+            // Filter staff based on selected city
+            const filteredStaff = selectedCity === 'all'
+                ? staffData
+                : staffData.filter(staff => staff.city === selectedCity);
+
+            // Group staff by city
+            const staffByCity = {};
+            filteredStaff.forEach(staff => {
+                if (!staffByCity[staff.city]) {
+                    staffByCity[staff.city] = [];
+                }
+                staffByCity[staff.city].push(staff);
+            });
+
+            // Clear container
+            historyContainer.innerHTML = '';
+
+            // Create a table for each city
+            Object.keys(staffByCity).sort().forEach(city => {
+                const cityStaff = staffByCity[city];
+
+                // Create city title
+                const cityTitle = document.createElement('div');
+                cityTitle.className = 'city-title';
+                cityTitle.textContent = city;
+                historyContainer.appendChild(cityTitle);
+
+                // Create table
+                const table = document.createElement('table');
+                table.className = 'history-table';
+
+                // Create table header
+                const thead = document.createElement('thead');
+                const headerRow = document.createElement('tr');
+
+                // Add staff name header
+                const nameHeader = document.createElement('th');
+                nameHeader.textContent = 'Nom';
+                nameHeader.className = 'fixed-name-column';
+                headerRow.appendChild(nameHeader);
+
+                // Add date headers
+                historyData.forEach(day => {
+                    const dateHeader = document.createElement('th');
+                    dateHeader.className = 'date-header';
+
+                    const dateSpan = document.createElement('span');
+                    dateSpan.textContent = day.display_date;
+
+                    const weekdaySpan = document.createElement('span');
+                    weekdaySpan.textContent = ` (${day.weekday.slice(0, 3)})`;
+                    weekdaySpan.style.fontSize = '0.8em';
+                    weekdaySpan.style.color = 'var(--timestamp-color)';
+
+                    dateHeader.appendChild(dateSpan);
+                    dateHeader.appendChild(weekdaySpan);
+
+                    // Add weekend class if Saturday or Sunday
+                    if (day.weekday === 'Saturday' || day.weekday === 'Sunday') {
+                        dateHeader.classList.add('weekend');
+                    }
+
+                    headerRow.appendChild(dateHeader);
+                });
+
+                thead.appendChild(headerRow);
+                table.appendChild(thead);
+
+                // Create table body
+                const tbody = document.createElement('tbody');
+
+                // Add staff rows
+                cityStaff.forEach(staff => {
+                    const row = document.createElement('tr');
+
+                    // Add staff name cell
+                    const nameCell = document.createElement('td');
+                    nameCell.textContent = staff.name;
+                    nameCell.className = 'fixed-name-column';
+                    row.appendChild(nameCell);
+
+                    // Add attendance cells
+                    historyData.forEach(day => {
+                        const cell = document.createElement('td');
+
+                        // Check if weekend
+                        if (day.weekday === 'Saturday' || day.weekday === 'Sunday') {
+                            cell.classList.add('weekend');
+                        }
+
+                        const staffAttendance = day.staff[staff.id];
+                        const statusCell = document.createElement('div');
+                        statusCell.className = 'status-cell';
+
+                        if (staffAttendance) {
+                            statusCell.classList.add(`status-${staffAttendance.status}`);
+
+                            // Create tooltip for more details
+                            const tooltip = document.createElement('div');
+                            tooltip.className = 'status-tooltip';
+
+                            // Add status text
+                            let statusText = '';
+                            if (staffAttendance.status === 'present') {
+                                statusText = 'Présent';
+                            } else if (staffAttendance.status === 'absent') {
+                                statusText = 'Absent';
+                            } else {
+                                statusText = 'Non défini';
+                            }
+
+                            tooltip.textContent = `${statusText}`;
+
+                            // Add timestamp if available
+                            if (staffAttendance.timestamp) {
+                                const timestamp = new Date(staffAttendance.timestamp);
+                                tooltip.textContent += ` à ${timestamp.toLocaleTimeString()}`;
+                            }
+
+                            // Add absence reason if available
+                            if (staffAttendance.absence_reason) {
+                                const reasonDiv = document.createElement('div');
+                                reasonDiv.className = 'absence-reason';
+                                reasonDiv.textContent = `Motif: ${staffAttendance.absence_reason}`;
+                                tooltip.appendChild(reasonDiv);
+                            }
+
+                            statusCell.appendChild(tooltip);
+                        } else {
+                            statusCell.classList.add('status-none');
+
+                            // Create tooltip for no data
+                            const tooltip = document.createElement('div');
+                            tooltip.className = 'status-tooltip';
+                            tooltip.textContent = 'Pas de données';
+                            statusCell.appendChild(tooltip);
+                        }
+
+                        cell.appendChild(statusCell);
+                        row.appendChild(cell);
+                    });
+
+                    tbody.appendChild(row);
+                });
+
+                table.appendChild(tbody);
+                historyContainer.appendChild(table);
+            });
+
+            // Show message if no data
+            if (Object.keys(staffByCity).length === 0) {
+                const noDataMessage = document.createElement('div');
+                noDataMessage.className = 'message info';
+                noDataMessage.textContent = 'Aucune donnée disponible pour la sélection actuelle.';
+                historyContainer.appendChild(noDataMessage);
+            }
+        }
+
+        // Generate PDF function
+        generatePdfButton.addEventListener('click', async () => {
+            try {
+                showMessage('Génération du PDF en cours...', 'info');
+                const response = await fetch('/api/generate-history-pdf/', {
+                    method: 'POST',
+                    headers: {
+                        'X-CSRFToken': csrftoken
+                    }
+                });
+
+                if (response.ok) {
+                    // Create a blob from the PDF stream
+                    const blob = await response.blob();
+                    // Create a link to download it
+                    const downloadUrl = window.URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = downloadUrl;
+                    a.download = 'historique-presences.pdf';
+                    document.body.appendChild(a);
+                    a.click();
+                    // Clean up
+                    window.URL.revokeObjectURL(downloadUrl);
+                    document.body.removeChild(a);
+
+                    showMessage('PDF généré avec succès !', 'success');
+                } else {
+                    const errorData = await response.json();
+                    showMessage(errorData.message || 'Erreur lors de la génération du PDF', 'error');
+                }
+            } catch (error) {
+                showMessage('Erreur lors de la génération du PDF', 'error');
+                console.error('Error generating PDF:', error);
+            }
+        });
+
+        // Show message
+        function showMessage(text, type) {
+            messageElement.textContent = text;
+            messageElement.className = `message ${type}`;
+            messageElement.style.display = 'block';
+
+            setTimeout(() => {
+                messageElement.style.display = 'none';
+            }, 3000);
+        }
+
+        // City filter change handler
+        cityFilterSelect.addEventListener('change', renderHistoryTable);
+
+        // Initialize
+        fetchAttendanceHistory();
+    </script>
+</body>
+</html>

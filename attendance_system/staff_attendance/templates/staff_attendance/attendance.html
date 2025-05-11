@@ -8,7 +8,6 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.25/jspdf.plugin.autotable.min.js"></script>
     <style>
-
 :root {
     /* Light theme variables */
     --bg-color: #f5f7fa;
@@ -34,6 +33,7 @@
     --timestamp-color: #7f8c8d;
     --status-present: #2ecc71;
     --status-absent: #e74c3c;
+    --status-undefined: #f39c12;
     --select-bg: white;
     --select-border: #ddd;
     --modal-overlay: rgba(0, 0, 0, 0.5);
@@ -67,6 +67,7 @@ body.dark-mode {
     --timestamp-color: #a0a0a0;
     --status-present: #27ae60;
     --status-absent: #c0392b;
+    --status-undefined: #d35400;
     --select-bg: #2d2d2d;
     --select-border: #444;
     --modal-overlay: rgba(0, 0, 0, 0.7);
@@ -254,6 +255,9 @@ body {
 .status.absent {
     background-color: var(--status-absent);
     }
+.status.undefined {
+    background-color: var(--status-undefined);
+}
 .modal {
     display: none;
     position: fixed;
@@ -293,7 +297,21 @@ body {
     padding: 8px;
     border: 1px solid var(--border-color);
     border-radius: 4px;
+    box-sizing: border-box;
+    color: var(--text-color);
+    background-color: var(--select-bg);
     }
+.form-group textarea {
+    width: 100%;
+    padding: 8px;
+    border: 1px solid var(--border-color);
+    border-radius: 4px;
+    box-sizing: border-box;
+    color: var(--text-color);
+    background-color: var(--select-bg);
+    min-height: 100px;
+    resize: vertical;
+}
 .timestamp {
     font-size: 12px;
     color: var(--timestamp-color);
@@ -327,6 +345,44 @@ body {
 .pdf-button:hover {
     background-color: var(--button-pdf-hover);
     }
+.absence-reason {
+    font-style: italic;
+    font-size: 12px;
+    color: var(--timestamp-color);
+    margin-top: 5px;
+    display: block;
+}
+.action-buttons {
+    display: flex;
+    gap: 5px;
+}
+.admin-indicator {
+    display: flex;
+    align-items: center;
+    margin-left: 15px;
+    padding: 6px 12px;
+    background-color: #f39c12;
+    color: white;
+    border-radius: 4px;
+    font-weight: bold;
+}
+.admin-indicator span {
+    margin-right: 10px;
+}
+.button.exit-admin {
+    background-color: #e74c3c;
+    padding: 6px 12px;
+    font-size: 14px;
+}
+.button.exit-admin:hover {
+    background-color: #c0392b;
+}
+.locked-icon {
+    display: inline-block;
+    margin-left: 5px;
+    font-size: 16px;
+    cursor: help;
+}
     </style>
 </head>
 <body>
@@ -357,6 +413,10 @@ body {
             </select>
             <button id="mark-city-present" class="button">Marquer Ville Sélectionnée</button>
             <button id="admin-modify" class="button admin">Modification Admin</button>
+            <div id="admin-mode-indicator" class="admin-indicator" style="display: none;">
+                <span>Mode Admin Actif</span>
+                <button id="exit-admin-mode" class="button exit-admin">Quitter</button>
+            </div>
         </div>
 
         <div id="attendance-container">
@@ -367,6 +427,7 @@ body {
     <div class="card">
         <div class="export-controls">
             <button id="generate-pdf" class="button pdf-button">Générer PDF</button>
+            <a href="{% url 'staff_attendance:attendance_history' %}" class="button" style="margin-left: 10px;">Voir l'historique</a>
         </div>
     </div>
 
@@ -383,6 +444,19 @@ body {
         </div>
     </div>
 
+    <!-- Absence Reason Modal -->
+    <div id="absence-modal" class="modal">
+        <div class="modal-content">
+            <span class="close">&times;</span>
+            <h3>Motif d'absence</h3>
+            <div class="form-group">
+                <label for="absence-reason">Veuillez indiquer le motif d'absence :</label>
+                <textarea id="absence-reason" placeholder="Motif d'absence..."></textarea>
+            </div>
+            <button id="submit-absence" class="button">Valider</button>
+        </div>
+    </div>
+
     {% csrf_token %}
     <script>
         // Get CSRF token
@@ -391,8 +465,8 @@ body {
         // Variables
         let staffMembers = [];
         let cities = [];
-        let attendanceRegistered = false;
         let adminMode = false;
+        let currentAbsentStaffId = null;
 
         // DOM elements
         const attendanceContainer = document.getElementById('attendance-container');
@@ -400,10 +474,15 @@ body {
         const markCityPresentButton = document.getElementById('mark-city-present');
         const cityFilterSelect = document.getElementById('city-filter');
         const adminModifyButton = document.getElementById('admin-modify');
+        const adminModeIndicator = document.getElementById('admin-mode-indicator');
+        const exitAdminModeButton = document.getElementById('exit-admin-mode');
         const adminModal = document.getElementById('admin-modal');
-        const closeModalButton = document.querySelector('.close');
+        const absenceModal = document.getElementById('absence-modal');
+        const closeModalButtons = document.querySelectorAll('.close');
         const submitPasswordButton = document.getElementById('submit-password');
+        const submitAbsenceButton = document.getElementById('submit-absence');
         const adminPasswordInput = document.getElementById('admin-password');
+        const absenceReasonInput = document.getElementById('absence-reason');
         const messageElement = document.getElementById('message');
         const currentDateElement = document.getElementById('current-date');
         const generatePdfButton = document.getElementById('generate-pdf');
@@ -418,39 +497,32 @@ body {
         };
         currentDateElement.textContent = today.toLocaleDateString('fr-FR', options);
 
-        // Add this to your JavaScript in attendance.html
-// You can place it after the variable declarations but before fetchStaffData()
+        // Dark mode toggle functionality
+        const darkModeToggle = document.getElementById('dark-mode-toggle');
 
-// Dark mode toggle functionality
-const darkModeToggle = document.getElementById('dark-mode-toggle');
+        // Check for saved theme preference or use preference from OS
+        const prefersDarkScheme = window.matchMedia('(prefers-color-scheme: dark)');
+        const currentTheme = localStorage.getItem('theme');
 
-// Check for saved theme preference or use preference from OS
-const prefersDarkScheme = window.matchMedia('(prefers-color-scheme: dark)');
-const currentTheme = localStorage.getItem('theme');
+        // Set initial theme based on saved preference or OS preference
+        if (currentTheme === 'dark' || (!currentTheme && prefersDarkScheme.matches)) {
+            document.body.classList.add('dark-mode');
+            darkModeToggle.checked = true;
+        } else {
+            document.body.classList.remove('dark-mode');
+            darkModeToggle.checked = false;
+        }
 
-// Set initial theme based on saved preference or OS preference
-if (currentTheme === 'dark' || (!currentTheme && prefersDarkScheme.matches)) {
-    document.body.classList.add('dark-mode');
-    darkModeToggle.checked = true;
-} else {
-    document.body.classList.remove('dark-mode');
-    darkModeToggle.checked = false;
-}
-
-// Toggle theme when switch is clicked
-darkModeToggle.addEventListener('change', function() {
-    if (this.checked) {
-        document.body.classList.add('dark-mode');
-        localStorage.setItem('theme', 'dark');
-    } else {
-        document.body.classList.remove('dark-mode');
-        localStorage.setItem('theme', 'light');
-    }
-});
-
-    // il n'est pas laaa
-
-
+        // Toggle theme when switch is clicked
+        darkModeToggle.addEventListener('change', function() {
+            if (this.checked) {
+                document.body.classList.add('dark-mode');
+                localStorage.setItem('theme', 'dark');
+            } else {
+                document.body.classList.remove('dark-mode');
+                localStorage.setItem('theme', 'light');
+            }
+        });
 
         // Fetch staff data from server
         async function fetchStaffData() {
@@ -477,6 +549,20 @@ darkModeToggle.addEventListener('change', function() {
                 option.textContent = city;
                 cityFilterSelect.appendChild(option);
             });
+        }
+
+        // Get status class based on status
+        function getStatusClass(status) {
+            if (status === 'present') return 'present';
+            if (status === 'absent') return 'absent';
+            return 'undefined'; // New status for undefined
+        }
+
+        // Get status text based on status
+        function getStatusText(status) {
+            if (status === 'present') return 'Présent';
+            if (status === 'absent') return 'Absent';
+            return 'Non défini';
         }
 
         // Render staff list grouped by city
@@ -506,9 +592,16 @@ darkModeToggle.addEventListener('change', function() {
                 const cityButton = document.createElement('button');
                 cityButton.className = 'button city-button';
                 cityButton.textContent = 'Marquer Présents';
-                cityButton.disabled = attendanceRegistered && !adminMode;
+                // Check if any staff member in this city has a defined status and disable the button accordingly
+                const cityHasDefinedStatus = cityStaff.some(staff => staff.status !== 'undefined');
+                cityButton.disabled = cityHasDefinedStatus && !adminMode;
+
                 cityButton.addEventListener('click', () => {
-                    markCityPresent(city);
+                    if (!cityHasDefinedStatus || adminMode) {
+                        markCityPresent(city);
+                    } else {
+                        showMessage('Le statut a déjà été défini. Utilisez le mode admin pour modifier.', 'error');
+                    }
                 });
 
                 cityHeader.appendChild(cityTitle);
@@ -524,7 +617,10 @@ darkModeToggle.addEventListener('change', function() {
                     staffItem.className = 'staff-item';
 
                     const statusIndicator = document.createElement('span');
-                    statusIndicator.className = `status ${staff.present ? 'present' : 'absent'}`;
+                    statusIndicator.className = `status ${getStatusClass(staff.status)}`;
+
+                    const staffInfoContainer = document.createElement('div');
+                    staffInfoContainer.style.flexGrow = '1';
 
                     const nameElement = document.createElement('span');
                     nameElement.className = 'staff-info';
@@ -534,36 +630,65 @@ darkModeToggle.addEventListener('change', function() {
                         ${staff.timestamp ? `<span class="timestamp">(${new Date(staff.timestamp).toLocaleTimeString()})</span>` : ''}
                     `;
 
-                    const actionButton = document.createElement('button');
-                    actionButton.className = 'button';
-                    actionButton.style.minWidth = '120px';
-                    actionButton.textContent = staff.present ? 'Marquer Absent' : 'Marquer Présent';
-                    // Disable the button if attendance is registered and not in admin mode
-                    // OR if already marked present and not in admin mode
-                    actionButton.disabled = (attendanceRegistered && !adminMode) || (staff.present && !adminMode);
+                    staffInfoContainer.appendChild(nameElement);
 
-                    actionButton.addEventListener('click', () => {
-                        // Prevent changing from present to absent unless in admin mode
-                        if (staff.present && !adminMode) {
-                            showMessage('Une présence enregistrée ne peut être modifiée que par un administrateur', 'error');
-                            return;
-                        }
+                    // Add absence reason if present
+                    if (staff.absence_reason) {
+                        const reasonElement = document.createElement('span');
+                        reasonElement.className = 'absence-reason';
+                        reasonElement.textContent = `Motif: ${staff.absence_reason}`;
+                        staffInfoContainer.appendChild(reasonElement);
+                    }
 
-                        if (staff.present) {
-                            markStaffAbsent(staff.id);
-                        } else {
-                            markStaffPresent(staff.id);
-                        }
+                    const actionButtons = document.createElement('div');
+                    actionButtons.className = 'action-buttons';
+
+                    const presentButton = document.createElement('button');
+                    presentButton.className = 'button';
+                    presentButton.textContent = 'Présent';
+                    // Disable buttons if state is already set and not in admin mode
+                    presentButton.disabled = (staff.status !== 'undefined' && !adminMode);
+                    presentButton.addEventListener('click', () => {
+                        markStaffPresent(staff.id);
                     });
 
-                    staffItem.appendChild(nameElement);
-                    staffItem.appendChild(actionButton);
+                    const absentButton = document.createElement('button');
+                    absentButton.className = 'button';
+                    absentButton.textContent = 'Absent';
+                    // Disable buttons if state is already set and not in admin mode
+                    absentButton.disabled = (staff.status !== 'undefined' && !adminMode);
+                    absentButton.addEventListener('click', () => {
+                        // Show absence reason modal
+                        showAbsenceModal(staff.id);
+                    });
+
+                    actionButtons.appendChild(presentButton);
+                    actionButtons.appendChild(absentButton);
+
+                    // Add a visual indicator if status has been set and locked
+                    if (staff.status !== 'undefined' && !adminMode) {
+                        const lockedIcon = document.createElement('span');
+                        lockedIcon.className = 'locked-icon';
+                        lockedIcon.innerHTML = '🔒';
+                        lockedIcon.title = 'Statut verrouillé - nécessite le mode admin pour modifier';
+                        actionButtons.appendChild(lockedIcon);
+                    }
+
+                    staffItem.appendChild(staffInfoContainer);
+                    staffItem.appendChild(actionButtons);
                     staffList.appendChild(staffItem);
                 });
 
                 cityGroup.appendChild(staffList);
                 attendanceContainer.appendChild(cityGroup);
             });
+        }
+
+        // Show absence reason modal
+        function showAbsenceModal(staffId) {
+            currentAbsentStaffId = staffId;
+            absenceReasonInput.value = '';
+            absenceModal.style.display = 'block';
         }
 
         // Mark staff member as present via API
@@ -584,7 +709,8 @@ darkModeToggle.addEventListener('change', function() {
                     // Update local data
                     const staffMember = staffMembers.find(s => s.id === staffId);
                     if (staffMember) {
-                        staffMember.present = true;
+                        staffMember.status = 'present';
+                        staffMember.absence_reason = null;
                         staffMember.timestamp = new Date().toISOString();
                     }
 
@@ -600,7 +726,7 @@ darkModeToggle.addEventListener('change', function() {
         }
 
         // Mark staff member as absent via API
-        async function markStaffAbsent(staffId) {
+        async function markStaffAbsent(staffId, reason) {
             try {
                 const response = await fetch('/api/mark-absent/', {
                     method: 'POST',
@@ -608,7 +734,10 @@ darkModeToggle.addEventListener('change', function() {
                         'Content-Type': 'application/json',
                         'X-CSRFToken': csrftoken
                     },
-                    body: JSON.stringify({ staff_id: staffId })
+                    body: JSON.stringify({
+                        staff_id: staffId,
+                        reason: reason
+                    })
                 });
 
                 const data = await response.json();
@@ -617,7 +746,8 @@ darkModeToggle.addEventListener('change', function() {
                     // Update local data
                     const staffMember = staffMembers.find(s => s.id === staffId);
                     if (staffMember) {
-                        staffMember.present = false;
+                        staffMember.status = 'absent';
+                        staffMember.absence_reason = reason;
                         staffMember.timestamp = new Date().toISOString();
                     }
 
@@ -634,79 +764,77 @@ darkModeToggle.addEventListener('change', function() {
 
         // Mark all staff in a specific city as present
         async function markCityPresent(city) {
-            if (!attendanceRegistered || adminMode) {
-                try {
-                    const response = await fetch('/api/mark-city-present/', {
-                        method: 'POST',
-                        headers: {
-                            'Content-Type': 'application/json',
-                            'X-CSRFToken': csrftoken
-                        },
-                        body: JSON.stringify({ city: city })
+            try {
+                const response = await fetch('/api/mark-city-present/', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': csrftoken
+                    },
+                    body: JSON.stringify({ city: city })
+                });
+
+                const data = await response.json();
+
+                if (data.success) {
+                    // Update local data
+                    const timestamp = new Date().toISOString();
+                    staffMembers.forEach(staff => {
+                        if (staff.city === city) {
+                            staff.status = 'present';
+                            staff.absence_reason = null;
+                            staff.timestamp = timestamp;
+                        }
                     });
 
-                    const data = await response.json();
-
-                    if (data.success) {
-                        // Update local data
-                        const timestamp = new Date().toISOString();
-                        staffMembers.forEach(staff => {
-                            if (staff.city === city && (!staff.present || adminMode)) {
-                                staff.present = true;
-                                staff.timestamp = timestamp;
-                            }
-                        });
-
-                        attendanceRegistered = true;
-                        renderStaffList();
-                        showMessage(data.message, 'success');
-                    } else {
-                        showMessage(data.message, 'error');
-                    }
-                } catch (error) {
-                    showMessage('Erreur lors de la mise à jour', 'error');
-                    console.error('Error marking city present:', error);
+                    renderStaffList();
+                    showMessage(data.message, 'success');
+                } else {
+                    showMessage(data.message, 'error');
                 }
+            } catch (error) {
+                showMessage('Erreur lors de la mise à jour', 'error');
+                console.error('Error marking city present:', error);
             }
         }
 
         // Mark all staff as present
         markAllPresentButton.addEventListener('click', async () => {
-            if (!attendanceRegistered || adminMode) {
-                try {
-                    const response = await fetch('/api/mark-all-present/', {
-                        method: 'POST',
-                        headers: {
-                            'Content-Type': 'application/json',
-                            'X-CSRFToken': csrftoken
-                        }
+            // Check if any staff has defined status and we're not in admin mode
+            const hasDefinedStatus = staffMembers.some(staff => staff.status !== 'undefined');
+
+            if (hasDefinedStatus && !adminMode) {
+                showMessage('Le statut a déjà été défini pour certains membres. Utilisez le mode admin pour modifier.', 'error');
+                return;
+            }
+            try {
+                const response = await fetch('/api/mark-all-present/', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': csrftoken
+                    }
+                });
+
+                const data = await response.json();
+
+                if (data.success) {
+                    // Update local data
+                    const timestamp = new Date().toISOString();
+                    staffMembers.forEach(staff => {
+                        staff.status = 'present';
+                        staff.absence_reason = null;
+                        staff.timestamp = timestamp;
                     });
 
-                    const data = await response.json();
-
-                    if (data.success) {
-                        // Update local data
-                        const timestamp = new Date().toISOString();
-                        staffMembers.forEach(staff => {
-                            staff.present = true;
-                            staff.timestamp = timestamp;
-                        });
-
-                        attendanceRegistered = true;
-                        renderStaffList();
-                        showMessage(data.message, 'success');
-
-                        if (!adminMode) {
-                            markAllPresentButton.disabled = true;
-                            markCityPresentButton.disabled = true;
-                        }
-                    } else {
-                        showMessage(data.message, 'error');
-                    }
-                } catch (error) {
-                    showMessage('Erreur lors de la mise à jour', 'error');
-                    console.error('Error marking all present:', error);
+                    renderStaffList();
+                    showMessage(data.message, 'success');
+                } else {
+                    showMessage(data.message, 'error');
                 }
+            } catch (error) {
+                showMessage('Erreur lors de la mise à jour', 'error');
+                console.error('Error marking all present:', error);
             }
         });
 
@@ -715,6 +843,15 @@ darkModeToggle.addEventListener('change', function() {
             const selectedCity = cityFilterSelect.value;
             if (selectedCity === 'all') {
                 showMessage('Veuillez sélectionner une ville spécifique', 'error');
+                return;
+            }
+
+            // Check if any staff member in the selected city has defined status
+            const cityStaff = staffMembers.filter(staff => staff.city === selectedCity);
+            const cityHasDefinedStatus = cityStaff.some(staff => staff.status !== 'undefined');
+
+            if (cityHasDefinedStatus && !adminMode) {
+                showMessage('Le statut a déjà été défini pour certains membres. Utilisez le mode admin pour modifier.', 'error');
                 return;
             }
 
@@ -727,15 +864,21 @@ darkModeToggle.addEventListener('change', function() {
             adminPasswordInput.value = '';
         });
 
-        // Close modal
-        closeModalButton.addEventListener('click', () => {
-            adminModal.style.display = 'none';
+        // Close all modals
+        closeModalButtons.forEach(button => {
+            button.addEventListener('click', () => {
+                adminModal.style.display = 'none';
+                absenceModal.style.display = 'none';
+            });
         });
 
         // Click outside modal to close
         window.addEventListener('click', (e) => {
             if (e.target === adminModal) {
                 adminModal.style.display = 'none';
+            }
+            if (e.target === absenceModal) {
+                absenceModal.style.display = 'none';
             }
         });
 
@@ -756,9 +899,9 @@ darkModeToggle.addEventListener('change', function() {
                 if (data.success) {
                     adminMode = true;
                     adminModal.style.display = 'none';
+                    adminModeIndicator.style.display = 'flex';
+                    adminModifyButton.style.display = 'none';
                     showMessage('Mode administrateur activé. Vous pouvez maintenant modifier les présences.', 'success');
-                    markAllPresentButton.disabled = false;
-                    markCityPresentButton.disabled = false;
                     renderStaffList();
                 } else {
                     showMessage('Mot de passe incorrect !', 'error');
@@ -766,6 +909,16 @@ darkModeToggle.addEventListener('change', function() {
             } catch (error) {
                 showMessage('Erreur lors de la vérification', 'error');
                 console.error('Error verifying admin:', error);
+            }
+        });
+
+        // Submit absence reason
+        submitAbsenceButton.addEventListener('click', () => {
+            if (currentAbsentStaffId) {
+                const reason = absenceReasonInput.value.trim();
+                markStaffAbsent(currentAbsentStaffId, reason);
+                absenceModal.style.display = 'none';
+                currentAbsentStaffId = null;
             }
         });
 
@@ -815,11 +968,20 @@ darkModeToggle.addEventListener('change', function() {
             }
         });
 
+        // Exit admin mode handler
+        exitAdminModeButton.addEventListener('click', () => {
+            adminMode = false;
+            adminModeIndicator.style.display = 'none';
+            adminModifyButton.style.display = 'inline-block';
+            showMessage('Mode administrateur désactivé.', 'info');
+            renderStaffList();
+        });
+
         // City filter change handler
         cityFilterSelect.addEventListener('change', renderStaffList);
 
         // Initialize by fetching data
         fetchStaffData();
-    </script>
+        </script>
 </body>
 </html>
