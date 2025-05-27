@@ -23,7 +23,7 @@ class StaffMember(models.Model):
 class Attendance(models.Model):
     staff_member = models.ForeignKey(StaffMember, on_delete=models.CASCADE, related_name='attendances')
     date = models.DateField(default=timezone.now)
-    present = models.BooleanField(null=True, blank=True)  # Changed from default=False to null=True
+    present = models.BooleanField(null=True, blank=True)  # Now allows NULL for congé
     timestamp = models.DateTimeField(null=True, blank=True)
     absence_reason = models.TextField(verbose_name="Motif d'absence", null=True, blank=True)
 
@@ -31,8 +31,24 @@ class Attendance(models.Model):
         unique_together = ['staff_member', 'date']
 
     def __str__(self):
-        if self.present is None:
-            status = "Non défini"
+        if self.absence_reason == 'CONGE_STATUS':
+            status = "En congé"
+        elif self.present is True:
+            status = "Present"
+        elif self.present is False:
+            status = "Absent"
         else:
-            status = "Present" if self.present else "Absent"
+            status = "Non défini"
         return f"{self.staff_member.name} - {self.date} - {status}"
+
+    @property
+    def status(self):
+        """Return the actual status of attendance"""
+        if self.absence_reason == 'CONGE_STATUS':
+            return 'conge'
+        elif self.present is True:
+            return 'present'
+        elif self.present is False:
+            return 'absent'
+        else:
+            return 'undefined'
