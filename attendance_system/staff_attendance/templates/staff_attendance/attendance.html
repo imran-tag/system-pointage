@@ -1,12 +1,163 @@
-{% load static %}
-<!DOCTYPE html>
+<script>
+    if (data.success) {
+        showMessage(data.message, 'success');
+        // Refresh staff data
+        await loadAllStaff();
+        await loadCities();
+        renderCities();
+        renderCongeList();
+        if (currentCityId) {
+            selectCity(currentCityId, currentCityName);
+        } else {
+            showMessage(data.message, 'error');
+        }
+
+    }
+
+
+        // Mark all staff in current city as present
+        async function markCityPresent(cityName) {
+            try {
+                const response = await fetch('/api/mark-city-present/', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': csrftoken
+                    },
+                    body: JSON.stringify({ city: cityName })
+                });
+
+                const data = await response.json();
+
+                if (data.success) {
+                    showMessage(data.message, 'success');
+                    // Refresh staff data
+                    await loadAllStaff();
+                    await loadCities();
+                    renderCities();
+                    renderCongeList();
+                    if (currentCityId) {
+                        selectCity(currentCityId, currentCityName);
+                    }
+                } else {
+                    showMessage(data.message, 'error');
+                }
+            } catch (error) {
+                showMessage('Erreur lors de la mise à jour', 'error');
+                console.error('Error marking city present:', error);
+            }
+        }
+
+        // Staff drag handlers
+        function handleStaffDragStart(e) {
+            draggedStaffId = e.target.dataset.staffId;
+            e.target.classList.add('dragging');
+
+            // Set drag effect
+            e.dataTransfer.effectAllowed = 'move';
+            e.dataTransfer.setData('text/html', e.target.outerHTML);
+        }
+
+        function handleStaffDragEnd(e) {
+            e.target.classList.remove('dragging');
+            draggedStaffId = null;
+        }
+
+        // City drag handlers
+        function handleCityDragOver(e) {
+            e.preventDefault();
+            e.dataTransfer.dropEffect = 'move';
+
+            if (draggedStaffId && e.currentTarget.dataset.cityName != currentCityId) {
+                e.currentTarget.classList.add('drag-over');
+            }
+        }
+
+        function handleCityDragLeave(e) {
+            e.currentTarget.classList.remove('drag-over');
+        }
+
+        async function handleCityDrop(e) {
+            e.preventDefault();
+            e.currentTarget.classList.remove('drag-over');
+
+            if (!draggedStaffId) return;
+
+            const targetCityName = e.currentTarget.dataset.cityName;
+
+            if (targetCityName == currentCityId) return; // Same city
+
+            // Update staff city
+            await updateStaffCityByName(draggedStaffId, targetCityName);
+        }
+
+        // Update staff city via API (modified to work with city names)
+        async function updateStaffCityByName(staffId, newCityName) {
+            try {
+                const updateResponse = await fetch('/api/update-staff-city/', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': csrftoken
+                    },
+                    body: JSON.stringify({
+                        staff_id: staffId,
+                        city_name: newCityName
+                    })
+                });
+
+                const updateData = await updateResponse.json();
+
+                if (updateData.success) {
+                    showMessage(updateData.message, 'success');
+
+                    // Refresh data
+                    await loadAllStaff();
+                    await loadCities();
+                    renderCities();
+                    renderCongeList();
+
+                    // Refresh current staff view if a city is selected
+                    if (currentCityId) {
+                        const cityStaff = allStaff.filter(function(staff) {
+                            return staff.city === currentCityId;
+                        });
+                        renderStaff(cityStaff);
+                    }
+                } else {
+                    showMessage(updateData.message, 'error');
+                }
+            } catch (error) {
+                showMessage('Erreur lors de la mise à jour', 'error');
+                console.error('Error updating staff city:', error);
+            }
+        }
+
+        // Show message
+        function showMessage(text, type) {
+            messageElement.textContent = text;
+            messageElement.className = 'message ' + type;
+            messageElement.style.display = 'block';
+            messageElement.classList.add('show');
+
+            setTimeout(function() {
+                messageElement.classList.remove('show');
+                setTimeout(function() {
+                    messageElement.style.display = 'none';
+                }, 300);
+            }, 3000);
+        }
+
+        // Initialize the application
+        init();
+    </script>
+</body>
+</html>{% load static %}
 <html lang="fr">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Gestion des Présences du Personnel</title>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.25/jspdf.plugin.autotable.min.js"></script>
+    <title>Gestion du Personnel et des Présences</title>
     <style>
 :root {
     /* Light theme variables */
@@ -19,27 +170,21 @@
     --city-border: #e9ecef;
     --button-primary: #3498db;
     --button-primary-hover: #2980b9;
-    --button-admin: #e74c3c;
-    --button-admin-hover: #c0392b;
-    --button-pdf: #28a745;
-    --button-pdf-hover: #218838;
-    --button-disabled: #bdc3c7;
+    --button-success: #28a745;
+    --button-success-hover: #218838;
     --message-success-bg: #d4edda;
     --message-success-color: #155724;
     --message-error-bg: #f8d7da;
     --message-error-color: #721c24;
     --message-info-bg: #d1ecf1;
     --message-info-color: #0c5460;
-    --timestamp-color: #7f8c8d;
-    --status-present: #2ecc71;
-    --status-absent: #e74c3c;
-    --status-undefined: #f39c12;
     --select-bg: white;
     --select-border: #ddd;
-    --modal-overlay: rgba(0, 0, 0, 0.5);
-    --modal-bg: white;
-    --close-color: #aaa;
-    --close-hover: black;
+    --drag-hover: #e3f2fd;
+    --drag-over: #bbdefb;
+    --staff-item-bg: white;
+    --staff-item-hover: #f8f9fa;
+    --staff-item-dragging: #e1f5fe;
 }
 
 /* Dark theme variables */
@@ -53,28 +198,23 @@ body.dark-mode {
     --city-border: #444;
     --button-primary: #2980b9;
     --button-primary-hover: #3498db;
-    --button-admin: #c0392b;
-    --button-admin-hover: #e74c3c;
-    --button-pdf: #218838;
-    --button-pdf-hover: #28a745;
-    --button-disabled: #555;
+    --button-success: #218838;
+    --button-success-hover: #28a745;
     --message-success-bg: #0f401a;
     --message-success-color: #a3d9b3;
     --message-error-bg: #401a1a;
     --message-error-color: #d9a3a3;
     --message-info-bg: #164046;
     --message-info-color: #a3d9d9;
-    --timestamp-color: #a0a0a0;
-    --status-present: #27ae60;
-    --status-absent: #c0392b;
-    --status-undefined: #d35400;
     --select-bg: #2d2d2d;
     --select-border: #444;
-    --modal-overlay: rgba(0, 0, 0, 0.7);
-    --modal-bg: #2d2d2d;
-    --close-color: #ccc;
-    --close-hover: white;
+    --drag-hover: #1a237e;
+    --drag-over: #283593;
+    --staff-item-bg: #2d2d2d;
+    --staff-item-hover: #383838;
+    --staff-item-dragging: #0d47a1;
 }
+
 /* Dark mode toggle switch */
 .theme-toggle {
     display: flex;
@@ -134,29 +274,32 @@ input:checked + .slider:before {
     font-size: 20px;
 }
 
-
 body {
     font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-    max-width: 900px;
-    margin: 0 auto;
+    margin: 0;
     padding: 20px;
     background-color: var(--bg-color);
     color: var(--text-color);
-    }
+    min-height: 100vh;
+}
+
 .header {
     text-align: center;
     margin-bottom: 30px;
-    }
-    .header h1 {
-        color: var(--header-color);
-    }
-.card {
-    background: var(--card-bg);
-    border-radius: 8px;
-    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
-    padding: 20px;
+}
+
+.header h1 {
+    color: var(--header-color);
+    margin-bottom: 10px;
+}
+
+.nav-buttons {
+    display: flex;
+    justify-content: center;
     margin-bottom: 20px;
-    }
+    gap: 10px;
+}
+
 .button {
     display: inline-block;
     background-color: var(--button-primary);
@@ -169,265 +312,656 @@ body {
     border-radius: 4px;
     cursor: pointer;
     transition: background-color 0.3s;
-    }
+}
+
 .button:hover {
     background-color: var(--button-primary-hover);
-    }
-.button:disabled {
-    background-color: var(--button-disabled);
-    cursor: not-allowed;
-    }
-.button.admin {
-    background-color: var(--button-admin);
-    }
-.button.admin:hover {
-    background-color: var(--button-admin-hover);
-    }
-.controls {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 10px;
-    align-items: center;
-    margin-bottom: 20px;
-    }
-.select {
-    padding: 10px;
-    border-radius: 4px;
-    border: 1px solid var(--select-border);
-    background-color: var(--select-bg);
-    min-width: 150px;
-    color: var(--text-color);
-    }
-.city-group {
-    margin-top: 20px;
-    background-color: var(--city-group-bg);
-    border-radius: 6px;
-    padding: 15px;
-    margin-bottom: 20px;
-    }
-.city-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: 10px;
-    padding-bottom: 5px;
-    border-bottom: 2px solid var(--city-border);
-    }
-.city-title {
+}
+
+.button.success {
+    background-color: var(--button-success);
+}
+
+.button.success:hover {
+    background-color: var(--button-success-hover);
+}
+
+.container {
+    display: grid;
+    grid-template-columns: 1fr 2fr 200px;
+    gap: 20px;
+    max-width: 1400px;
+    margin: 0 auto;
+}
+
+.cities-panel, .staff-panel, .conge-panel {
+    background: var(--card-bg);
+    border-radius: 8px;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+    padding: 20px;
+    height: fit-content;
+    max-height: 80vh;
+    overflow-y: auto;
+}
+
+.panel-title {
     font-size: 18px;
     font-weight: 600;
-    color: var(--text-color);
-    margin: 0;
+    margin-bottom: 15px;
+    padding-bottom: 10px;
+    border-bottom: 2px solid var(--border-color);
+}
+
+.city-list {
+    list-style: none;
     padding: 0;
-    line-height: 1.2;
-    }
-.city-button {
-    min-width: 120px;
-    }
+    margin: 0;
+}
+
+.city-item {
+    padding: 12px 16px;
+    margin-bottom: 8px;
+    background: var(--city-group-bg);
+    border: 2px solid var(--city-border);
+    border-radius: 6px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    position: relative;
+}
+
+.city-item:hover {
+    background: var(--drag-hover);
+}
+
+.city-item.active {
+    background: var(--button-primary);
+    color: white;
+    border-color: var(--button-primary);
+}
+
+.city-item.drag-over {
+    background: var(--drag-over);
+    border-style: dashed;
+    border-width: 3px;
+}
+
+.city-name {
+    font-weight: 500;
+    font-size: 16px;
+}
+
+.staff-count {
+    font-size: 12px;
+    opacity: 0.8;
+    margin-top: 4px;
+}
+
 .staff-list {
-    margin-top: 10px;
-    }
+    min-height: 200px;
+    padding: 10px;
+    border: 2px dashed var(--border-color);
+    border-radius: 6px;
+    background: var(--city-group-bg);
+}
+
 .staff-item {
+    background: var(--staff-item-bg);
+    border: 1px solid var(--border-color);
+    border-radius: 6px;
+    padding: 12px 16px;
+    margin-bottom: 8px;
+    cursor: grab;
+    transition: all 0.3s ease;
     display: flex;
     justify-content: space-between;
     align-items: center;
-    padding: 10px 0;
-    border-bottom: 1px solid var(--border-color);
-    }
-.staff-item:last-child {
-    border-bottom: none;
-    }
+    flex-wrap: wrap;
+    gap: 10px;
+    position: relative;
+}
+
+.staff-item:hover {
+    background: var(--staff-item-hover);
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+}
+
+.staff-item:active {
+    cursor: grabbing;
+}
+
+.staff-item.dragging {
+    opacity: 0.5;
+    background: var(--staff-item-dragging);
+    transform: rotate(5deg);
+}
+
 .staff-info {
     display: flex;
-    align-items: center;
+    flex-direction: column;
+    gap: 6px;
+    flex: 1;
     min-width: 200px;
-    }
-.status {
+}
+
+.staff-name {
+    font-weight: 500;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 16px;
+}
+
+.drag-handle {
+    color: #999;
+    cursor: grab;
+    font-size: 18px;
+    padding: 2px 4px;
+    border-radius: 3px;
+    transition: all 0.2s ease;
+    user-select: none;
+}
+
+.drag-handle:hover {
+    background: var(--border-color);
+    color: var(--text-color);
+}
+
+.staff-item.dragging .drag-handle {
+    cursor: grabbing;
+}
+
+.staff-city {
+    font-size: 12px;
+    background: var(--button-primary);
+    color: white;
+    padding: 4px 8px;
+    border-radius: 12px;
+    width: fit-content;
+    font-weight: 500;
+}
+
+.status-indicator {
     display: inline-block;
     width: 12px;
     height: 12px;
     border-radius: 50%;
-    margin-right: 8px;
-    }
-.status.present {
-    background-color: var(--status-present);
-    }
-.status.absent {
-    background-color: var(--status-absent);
-    }
-.status.undefined {
-    background-color: var(--status-undefined);
+    margin-right: 4px;
+    flex-shrink: 0;
 }
-.modal {
-    display: none;
-    position: fixed;
-    z-index: 1;
-    left: 0;
-    top: 0;
-    width: 100%;
-    height: 100%;
-    background-color: var(--modal-overlay);
-    }
-.modal-content {
-    background-color: var(--modal-bg);
-    margin: 15% auto;
-    padding: 20px;
-    border-radius: 8px;
-    width: 300px;
-    }
-.close {
-    color: var(--close-color);
-    float: right;
-    font-size: 28px;
-    font-weight: bold;
-    cursor: pointer;
-    }
-.close:hover {
-    color: var(--close-hover);
-    }
-.form-group {
-    margin-bottom: 15px;
-    }
-.form-group label {
-    display: block;
-    margin-bottom: 5px;
-    }
-.form-group input {
-    width: 100%;
-    padding: 8px;
-    border: 1px solid var(--border-color);
-    border-radius: 4px;
-    box-sizing: border-box;
-    color: var(--text-color);
-    background-color: var(--select-bg);
-    }
-.form-group textarea {
-    width: 100%;
-    padding: 8px;
-    border: 1px solid var(--border-color);
-    border-radius: 4px;
-    box-sizing: border-box;
-    color: var(--text-color);
-    background-color: var(--select-bg);
-    min-height: 100px;
-    resize: vertical;
+
+.status-indicator.present {
+    background-color: #2ecc71;
+    box-shadow: 0 0 0 2px rgba(46, 204, 113, 0.3);
 }
-.timestamp {
+
+.status-indicator.absent {
+    background-color: #e74c3c;
+    box-shadow: 0 0 0 2px rgba(231, 76, 60, 0.3);
+}
+
+.status-indicator.undefined {
+    background-color: #f39c12;
+    box-shadow: 0 0 0 2px rgba(243, 156, 18, 0.3);
+}
+
+.status-indicator.conge {
+    background-color: #9b59b6;
+    box-shadow: 0 0 0 2px rgba(155, 89, 182, 0.3);
+}
+
+.attendance-info {
     font-size: 12px;
-    color: var(--timestamp-color);
-    }
-.message {
-    padding: 10px;
-    margin: 10px 0;
-    border-radius: 4px;
-    text-align: center;
-    }
-.success {
-    background-color: var(--message-success-bg);
-    color: var(--message-success-color);
-    }
-.error {
-    background-color: var(--message-error-bg);
-    color: var(--message-error-color);
-    }
-.info {
-    background-color: var(--message-info-bg);
-    color: var(--message-info-color);
-    }
-.export-controls {
+    color: #666;
     display: flex;
-    justify-content: center;
-    margin-top: 20px;
-    }
-.pdf-button {
-    background-color: var(--button-pdf);
-    }
-.pdf-button:hover {
-    background-color: var(--button-pdf-hover);
-    }
+    flex-direction: column;
+    gap: 3px;
+}
+
+.status-text {
+    font-weight: 500;
+    color: var(--text-color);
+}
+
+.timestamp {
+    font-size: 11px;
+    color: #999;
+    font-style: italic;
+}
+
 .absence-reason {
     font-style: italic;
-    font-size: 12px;
-    color: var(--timestamp-color);
-    margin-top: 5px;
-    display: block;
+    font-size: 11px;
+    color: #e74c3c;
+    background: rgba(231, 76, 60, 0.1);
+    padding: 2px 6px;
+    border-radius: 3px;
+    width: fit-content;
 }
-.action-buttons {
+
+.attendance-actions {
     display: flex;
-    gap: 5px;
+    gap: 6px;
+    flex-wrap: wrap;
+    align-items: center;
 }
+
+.attendance-actions .button {
+    padding: 6px 12px;
+    font-size: 12px;
+    min-width: 65px;
+    border-radius: 4px;
+    font-weight: 500;
+}
+
+.button.small {
+    padding: 6px 12px;
+    font-size: 12px;
+}
+
+.button.present-btn {
+    background-color: #27ae60;
+    border: 1px solid #27ae60;
+}
+
+.button.present-btn:hover:not(:disabled) {
+    background-color: #2ecc71;
+    transform: translateY(-1px);
+    box-shadow: 0 2px 4px rgba(46, 204, 113, 0.3);
+}
+
+.button.absent-btn {
+    background-color: #c0392b;
+    border: 1px solid #c0392b;
+}
+
+.button.absent-btn:hover:not(:disabled) {
+    background-color: #e74c3c;
+    transform: translateY(-1px);
+    box-shadow: 0 2px 4px rgba(231, 76, 60, 0.3);
+}
+
+.button.conge-btn {
+    background-color: #8e44ad;
+    border: 1px solid #8e44ad;
+}
+
+.button.conge-btn:hover:not(:disabled) {
+    background-color: #9b59b6;
+    transform: translateY(-1px);
+    box-shadow: 0 2px 4px rgba(155, 89, 182, 0.3);
+}
+
+.button:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+    transform: none !important;
+    box-shadow: none !important;
+}
+
+.button.admin {
+    background-color: #e74c3c;
+}
+
+.button.admin:hover {
+    background-color: #c0392b;
+}
+
+.staff-panel-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 15px;
+    flex-wrap: wrap;
+    gap: 10px;
+}
+
+.attendance-controls {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+    flex-wrap: wrap;
+}
+
 .admin-indicator {
     display: flex;
     align-items: center;
-    margin-left: 15px;
     padding: 6px 12px;
     background-color: #f39c12;
     color: white;
     border-radius: 4px;
     font-weight: bold;
+    font-size: 12px;
 }
+
 .admin-indicator span {
     margin-right: 10px;
 }
+
 .button.exit-admin {
     background-color: #e74c3c;
-    padding: 6px 12px;
-    font-size: 14px;
+    padding: 4px 8px;
+    font-size: 11px;
 }
+
 .button.exit-admin:hover {
     background-color: #c0392b;
 }
+
+.current-date {
+    text-align: center;
+    padding: 10px;
+    background: var(--message-info-bg);
+    color: var(--message-info-color);
+    border-radius: 4px;
+    margin-bottom: 15px;
+    font-weight: 500;
+}
+
 .locked-icon {
     display: inline-block;
     margin-left: 5px;
-    font-size: 16px;
+    font-size: 12px;
     cursor: help;
+}
+
+.message {
+    padding: 10px;
+    margin: 10px 0;
+    border-radius: 4px;
+    text-align: center;
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    z-index: 1000;
+    min-width: 300px;
+    opacity: 0;
+    transform: translateX(100%);
+    transition: all 0.3s ease;
+}
+
+.message.show {
+    opacity: 1;
+    transform: translateX(0);
+}
+
+.success {
+    background-color: var(--message-success-bg);
+    color: var(--message-success-color);
+}
+
+.error {
+    background-color: var(--message-error-bg);
+    color: var(--message-error-color);
+}
+
+.info {
+    background-color: var(--message-info-bg);
+    color: var(--message-info-color);
+}
+
+.conge-panel {
+    background: linear-gradient(135deg, #9b59b6, #8e44ad);
+    color: white;
+    text-align: center;
+    position: relative;
+    min-height: 300px;
+    display: flex;
+    flex-direction: column;
+}
+
+.conge-panel.drag-over {
+    background: linear-gradient(135deg, #c39bd3, #bb8fce);
+    border: 3px dashed white;
+    transform: scale(1.02);
+}
+
+.conge-title {
+    font-size: 18px;
+    font-weight: 600;
+    margin-bottom: 15px;
+    padding-bottom: 10px;
+    border-bottom: 2px solid rgba(255, 255, 255, 0.3);
+}
+
+.conge-icon {
+    font-size: 48px;
+    margin: 20px 0;
+    opacity: 0.7;
+}
+
+.conge-list {
+    flex: 1;
+    min-height: 100px;
+}
+
+.conge-item {
+    background: rgba(255, 255, 255, 0.2);
+    border: 1px solid rgba(255, 255, 255, 0.3);
+    border-radius: 6px;
+    padding: 8px 12px;
+    margin-bottom: 8px;
+    font-size: 14px;
+    font-weight: 500;
+    transition: all 0.3s ease;
+}
+
+.conge-item:hover {
+    background: rgba(255, 255, 255, 0.3);
+    transform: translateY(-1px);
+}
+
+.conge-empty {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    height: 200px;
+    opacity: 0.7;
+    font-style: italic;
+}
+
+.conge-instructions {
+    font-size: 12px;
+    opacity: 0.8;
+    margin-top: auto;
+    padding-top: 15px;
+    border-top: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.empty-state {
+    text-align: center;
+    padding: 40px 20px;
+    color: #999;
+    font-style: italic;
+}
+
+.instructions {
+    background: var(--message-info-bg);
+    color: var(--message-info-color);
+    padding: 15px;
+    border-radius: 6px;
+    margin-bottom: 20px;
+    font-size: 14px;
+}
+
+.modal {
+    display: none;
+    position: fixed;
+    z-index: 1000;
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.5);
+}
+
+.modal-content {
+    background-color: var(--card-bg);
+    margin: 15% auto;
+    padding: 20px;
+    border-radius: 8px;
+    width: 300px;
+    color: var(--text-color);
+}
+
+.close {
+    color: #aaa;
+    float: right;
+    font-size: 28px;
+    font-weight: bold;
+    cursor: pointer;
+}
+
+.close:hover {
+    color: var(--text-color);
+}
+
+.form-group {
+    margin-bottom: 15px;
+}
+
+.form-group label {
+    display: block;
+    margin-bottom: 5px;
+}
+
+.form-group input, .form-group textarea {
+    width: 100%;
+    padding: 8px;
+    border: 1px solid var(--border-color);
+    border-radius: 4px;
+    box-sizing: border-box;
+    color: var(--text-color);
+    background-color: var(--select-bg);
+}
+
+.form-group textarea {
+    min-height: 100px;
+    resize: vertical;
+}
+
+@media (max-width: 768px) {
+    .container {
+        grid-template-columns: 1fr;
+        gap: 15px;
+    }
+
+    .cities-panel, .staff-panel, .conge-panel {
+        max-height: 60vh;
+    }
+
+    .staff-item {
+        flex-direction: column;
+        align-items: stretch;
+        gap: 12px;
+        padding: 16px;
+    }
+
+    .staff-info {
+        min-width: auto;
+        text-align: center;
+    }
+
+    .staff-name {
+        justify-content: center;
+        font-size: 18px;
+    }
+
+    .attendance-actions {
+        justify-content: center;
+        gap: 10px;
+    }
+
+    .attendance-actions .button {
+        flex: 1;
+        min-width: 60px;
+    }
+
+    .staff-panel-header {
+        flex-direction: column;
+        align-items: stretch;
+        gap: 15px;
+    }
+
+    .attendance-controls {
+        justify-content: center;
+        flex-wrap: wrap;
+    }
 }
     </style>
 </head>
 <body>
     <div class="header">
-        <h1>Gestion des Présences du Personnel</h1>
-        <p id="current-date"></p>
+        <h1>Gestion du Personnel et des Présences</h1>
+        <p>Glissez-déposez le personnel entre les villes et gérez les présences</p>
     </div>
 
     <div class="theme-toggle">
-    <span class="theme-icon">☀️</span>
-    <label class="switch">
-        <input type="checkbox" id="dark-mode-toggle">
-        <span class="slider"></span>
-    </label>
-    <span class="theme-icon">🌙</span>
-</div>
+        <span class="theme-icon">☀️</span>
+        <label class="switch">
+            <input type="checkbox" id="dark-mode-toggle">
+            <span class="slider"></span>
+        </label>
+        <span class="theme-icon">🌙</span>
+    </div>
 
+    <div class="nav-buttons">
+        <a href="{% url 'staff_attendance:attendance_page' %}" class="button nav-button">Retour aux Présences</a>
+        <a href="{% url 'staff_attendance:attendance_history' %}" class="button nav-button">Historique</a>
+    </div>
 
+    <div class="instructions">
+        <strong>Instructions:</strong>
+        1. Cliquez sur une ville pour voir son personnel et gérer les présences du jour
+        2. Utilisez les boutons "Présent/Absent/Congé" pour marquer la présence de chaque membre
+        3. Glissez-déposez un membre du personnel (utilisez l'icône ⋮⋮) vers une autre ville pour le déplacer
+        4. Glissez vers la zone "Congé" pour mettre un membre en congé
+        5. Les changements sont sauvegardés automatiquement
+        6. Utilisez le mode admin pour modifier les présences verrouillées
+    </div>
 
-    <div class="card">
-        <h2>Présences du Jour</h2>
-        <div id="message" class="message" style="display: none;"></div>
-        <div class="controls">
-            <button id="mark-all-present" class="button">Marquer Tous Présents</button>
-            <select id="city-filter" class="select">
-                <option value="all">Toutes les Villes</option>
-                <!-- City options will be populated here -->
-            </select>
-            <button id="mark-city-present" class="button">Marquer Ville Sélectionnée</button>
-            <button id="admin-modify" class="button admin">Modification Admin</button>
-            <div id="admin-mode-indicator" class="admin-indicator" style="display: none;">
-                <span>Mode Admin Actif</span>
-                <button id="exit-admin-mode" class="button exit-admin">Quitter</button>
+    <div id="message" class="message" style="display: none;"></div>
+
+    <div class="container">
+        <div class="cities-panel">
+            <h2 class="panel-title">Villes</h2>
+            <ul class="city-list" id="city-list">
+                <!-- Cities will be populated here -->
+            </ul>
+        </div>
+
+        <div class="staff-panel">
+            <div class="staff-panel-header">
+                <h2 class="panel-title" id="staff-panel-title">Personnel</h2>
+                <div class="attendance-controls" id="attendance-controls" style="display: none;">
+                    <button id="mark-city-present" class="button success">Marquer Tous Présents</button>
+                    <button id="admin-modify" class="button admin">Mode Admin</button>
+                    <div id="admin-mode-indicator" class="admin-indicator" style="display: none;">
+                        <span>Mode Admin Actif</span>
+                        <button id="exit-admin-mode" class="button exit-admin">Quitter</button>
+                    </div>
+                </div>
+            </div>
+            <div class="current-date" id="current-date" style="display: none;"></div>
+            <div class="staff-list" id="staff-list">
+                <div class="empty-state">
+                    Sélectionnez une ville pour voir son personnel
+                </div>
             </div>
         </div>
 
-        <div id="attendance-container">
-            <!-- City groups will be populated here -->
-        </div>
-    </div>
-
-    <div class="card">
-        <div class="export-controls">
-            <button id="generate-pdf" class="button pdf-button">Générer PDF</button>
-            <a href="{% url 'staff_attendance:attendance_history' %}" class="button" style="margin-left: 10px;">Voir l'historique</a>
+        <div class="conge-panel" id="conge-panel">
+            <h2 class="conge-title">Congé</h2>
+            <div class="conge-icon">🏖️</div>
+            <div class="conge-list" id="conge-list">
+                <div class="conge-empty">
+                    <div>Aucun personnel en congé</div>
+                </div>
+            </div>
+            <div class="conge-instructions">
+                Glissez le personnel ici pour le mettre en congé
+            </div>
         </div>
     </div>
 
@@ -463,16 +997,22 @@ body {
         const csrftoken = document.querySelector('[name=csrfmiddlewaretoken]').value;
 
         // Variables
-        let staffMembers = [];
         let cities = [];
+        let allStaff = [];
+        let currentCityId = null;
+        let currentCityName = null;
+        let draggedStaffId = null;
         let adminMode = false;
         let currentAbsentStaffId = null;
 
         // DOM elements
-        const attendanceContainer = document.getElementById('attendance-container');
-        const markAllPresentButton = document.getElementById('mark-all-present');
+        const cityList = document.getElementById('city-list');
+        const staffList = document.getElementById('staff-list');
+        const staffPanelTitle = document.getElementById('staff-panel-title');
+        const messageElement = document.getElementById('message');
+        const attendanceControls = document.getElementById('attendance-controls');
+        const currentDateElement = document.getElementById('current-date');
         const markCityPresentButton = document.getElementById('mark-city-present');
-        const cityFilterSelect = document.getElementById('city-filter');
         const adminModifyButton = document.getElementById('admin-modify');
         const adminModeIndicator = document.getElementById('admin-mode-indicator');
         const exitAdminModeButton = document.getElementById('exit-admin-mode');
@@ -483,28 +1023,14 @@ body {
         const submitAbsenceButton = document.getElementById('submit-absence');
         const adminPasswordInput = document.getElementById('admin-password');
         const absenceReasonInput = document.getElementById('absence-reason');
-        const messageElement = document.getElementById('message');
-        const currentDateElement = document.getElementById('current-date');
-        const generatePdfButton = document.getElementById('generate-pdf');
-
-        // Display current date in French
-        const today = new Date();
-        const options = {
-            weekday: 'long',
-            year: 'numeric',
-            month: 'long',
-            day: 'numeric'
-        };
-        currentDateElement.textContent = today.toLocaleDateString('fr-FR', options);
+        const congePanel = document.getElementById('conge-panel');
+        const congeList = document.getElementById('conge-list');
 
         // Dark mode toggle functionality
         const darkModeToggle = document.getElementById('dark-mode-toggle');
-
-        // Check for saved theme preference or use preference from OS
         const prefersDarkScheme = window.matchMedia('(prefers-color-scheme: dark)');
         const currentTheme = localStorage.getItem('theme');
 
-        // Set initial theme based on saved preference or OS preference
         if (currentTheme === 'dark' || (!currentTheme && prefersDarkScheme.matches)) {
             document.body.classList.add('dark-mode');
             darkModeToggle.checked = true;
@@ -513,7 +1039,6 @@ body {
             darkModeToggle.checked = false;
         }
 
-        // Toggle theme when switch is clicked
         darkModeToggle.addEventListener('change', function() {
             if (this.checked) {
                 document.body.classList.add('dark-mode');
@@ -524,30 +1049,310 @@ body {
             }
         });
 
-        // Fetch staff data from server
-        async function fetchStaffData() {
-            try {
-                const response = await fetch('/api/staff/');
-                const data = await response.json();
-                staffMembers = data.staffMembers;
-                cities = [...new Set(staffMembers.map(staff => staff.city))];
-                populateCityFilter();
-                renderStaffList();
-            } catch (error) {
-                showMessage('Erreur lors du chargement des données', 'error');
-                console.error('Error fetching staff data:', error);
+        // Initialize
+        async function init() {
+            await loadCities();
+            await loadAllStaff();
+            renderCities();
+            renderCongeList();
+            setupCurrentDate();
+            setupEventListeners();
+        }
+
+        // Setup current date display
+        function setupCurrentDate() {
+            const today = new Date();
+            const options = {
+                weekday: 'long',
+                year: 'numeric',
+                month: 'long',
+                day: 'numeric'
+            };
+            currentDateElement.textContent = 'Présences du ' + today.toLocaleDateString('fr-FR', options);
+        }
+
+        // Setup event listeners
+        function setupEventListeners() {
+            // Mark city present button
+            if (markCityPresentButton) {
+                markCityPresentButton.addEventListener('click', function() {
+                    if (currentCityId) {
+                        markCityPresent(currentCityName);
+                    }
+                });
+            }
+
+            // Setup congé panel drag events
+            if (congePanel) {
+                congePanel.addEventListener('dragover', handleCongeDragOver);
+                congePanel.addEventListener('drop', handleCongeDrop);
+                congePanel.addEventListener('dragleave', handleCongeDragLeave);
+            }
+
+            // Admin modify button
+            if (adminModifyButton) {
+                adminModifyButton.addEventListener('click', function() {
+                    adminModal.style.display = 'block';
+                    adminPasswordInput.value = '';
+                });
+            }
+
+            // Exit admin mode
+            if (exitAdminModeButton) {
+                exitAdminModeButton.addEventListener('click', function() {
+                    adminMode = false;
+                    adminModeIndicator.style.display = 'none';
+                    adminModifyButton.style.display = 'inline-block';
+                    showMessage('Mode administrateur désactivé.', 'info');
+                    if (currentCityId) {
+                        selectCity(currentCityId, currentCityName);
+                    }
+                });
+            }
+
+            // Close modals
+            closeModalButtons.forEach(function(button) {
+                button.addEventListener('click', function() {
+                    adminModal.style.display = 'none';
+                    absenceModal.style.display = 'none';
+                });
+            });
+
+            // Click outside modal to close
+            window.addEventListener('click', function(e) {
+                if (e.target === adminModal) {
+                    adminModal.style.display = 'none';
+                }
+                if (e.target === absenceModal) {
+                    absenceModal.style.display = 'none';
+                }
+            });
+
+            // Submit password
+            if (submitPasswordButton) {
+                submitPasswordButton.addEventListener('click', async function() {
+                    try {
+                        const response = await fetch('/api/verify-admin/', {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json',
+                                'X-CSRFToken': csrftoken
+                            },
+                            body: JSON.stringify({ password: adminPasswordInput.value })
+                        });
+
+                        const data = await response.json();
+
+                        if (data.success) {
+                            adminMode = true;
+                            adminModal.style.display = 'none';
+                            adminModeIndicator.style.display = 'flex';
+                            adminModifyButton.style.display = 'none';
+                            showMessage('Mode administrateur activé.', 'success');
+                            if (currentCityId) {
+                                selectCity(currentCityId, currentCityName);
+                            }
+                        } else {
+                            showMessage('Mot de passe incorrect !', 'error');
+                        }
+                    } catch (error) {
+                        showMessage('Erreur lors de la vérification', 'error');
+                        console.error('Error verifying admin:', error);
+                    }
+                });
+            }
+
+            // Submit absence reason
+            if (submitAbsenceButton) {
+                submitAbsenceButton.addEventListener('click', function() {
+                    if (currentAbsentStaffId) {
+                        const reason = absenceReasonInput.value.trim();
+                        markStaffAbsent(currentAbsentStaffId, reason);
+                        absenceModal.style.display = 'none';
+                        currentAbsentStaffId = null;
+                    }
+                });
             }
         }
 
-        // Populate city filter dropdown
-        function populateCityFilter() {
-            cityFilterSelect.innerHTML = '<option value="all">Toutes les Villes</option>';
+        // Load cities
+        async function loadCities() {
+            try {
+                const response = await fetch('/api/staff/');
+                const data = await response.json();
 
-            cities.forEach(city => {
-                const option = document.createElement('option');
-                option.value = city;
-                option.textContent = city;
-                cityFilterSelect.appendChild(option);
+                if (data.staffMembers) {
+                    allStaff = data.staffMembers;
+                    // Extract unique cities
+                    const cityMap = new Map();
+                    allStaff.forEach(function(staff) {
+                        const cityKey = staff.city;
+                        if (!cityMap.has(cityKey)) {
+                            cityMap.set(cityKey, {
+                                name: cityKey,
+                                staff_count: 0
+                            });
+                        }
+                        cityMap.get(cityKey).staff_count++;
+                    });
+                    cities = Array.from(cityMap.values());
+                }
+            } catch (error) {
+                showMessage('Erreur lors du chargement des villes', 'error');
+                console.error('Error loading cities:', error);
+            }
+        }
+
+        // Load all staff with attendance data
+        async function loadAllStaff() {
+            try {
+                const response = await fetch('/api/staff/');
+                const data = await response.json();
+
+                if (data.staffMembers) {
+                    allStaff = data.staffMembers;
+                }
+            } catch (error) {
+                showMessage('Erreur lors du chargement du personnel', 'error');
+                console.error('Error loading staff:', error);
+            }
+        }
+
+        // Render cities
+        function renderCities() {
+            cityList.innerHTML = '';
+
+            cities.forEach(function(city) {
+                const cityItem = document.createElement('li');
+                cityItem.className = 'city-item';
+                cityItem.dataset.cityName = city.name;
+
+                cityItem.innerHTML =
+                    '<div class="city-name">' + city.name + '</div>' +
+                    '<div class="staff-count">' + city.staff_count + ' membre(s)</div>';
+
+                // Add click event
+                cityItem.addEventListener('click', function() {
+                    selectCity(city.name, city.name);
+                });
+
+                // Add drag and drop events for cities
+                cityItem.addEventListener('dragover', handleCityDragOver);
+                cityItem.addEventListener('drop', handleCityDrop);
+                cityItem.addEventListener('dragleave', handleCityDragLeave);
+
+                cityList.appendChild(cityItem);
+            });
+        }
+
+        // Select city and show its staff
+        function selectCity(cityName, displayName) {
+            currentCityId = cityName;
+            currentCityName = displayName;
+
+            // Update active city
+            document.querySelectorAll('.city-item').forEach(function(item) {
+                item.classList.remove('active');
+            });
+            const activeCity = document.querySelector('[data-city-name="' + cityName + '"]');
+            if (activeCity) {
+                activeCity.classList.add('active');
+            }
+
+            // Update staff panel title
+            staffPanelTitle.textContent = 'Personnel - ' + displayName;
+
+            // Show attendance controls and current date
+            attendanceControls.style.display = 'flex';
+            currentDateElement.style.display = 'block';
+
+            // Filter and render staff for this city
+            const cityStaff = allStaff.filter(function(staff) {
+                return staff.city === cityName;
+            });
+            renderStaff(cityStaff);
+        }
+
+        // Render staff with attendance information
+        function renderStaff(staff) {
+            staffList.innerHTML = '';
+
+            if (staff.length === 0) {
+                staffList.innerHTML = '<div class="empty-state">Aucun personnel dans cette ville</div>';
+                return;
+            }
+
+            staff.forEach(function(member) {
+                const staffItem = document.createElement('div');
+                staffItem.className = 'staff-item';
+                staffItem.draggable = true;
+                staffItem.dataset.staffId = member.id;
+
+                // Determine status
+                const statusClass = getStatusClass(member.status);
+                const statusText = getStatusText(member.status);
+
+                // Create timestamp display
+                let timestampHtml = '';
+                if (member.timestamp) {
+                    const time = new Date(member.timestamp).toLocaleTimeString();
+                    timestampHtml = '<div class="timestamp">' + time + '</div>';
+                }
+
+                // Create absence reason display
+                let absenceReasonHtml = '';
+                if (member.absence_reason) {
+                    absenceReasonHtml = '<div class="absence-reason">Motif: ' + member.absence_reason + '</div>';
+                }
+
+                // Create attendance actions
+                const isLocked = member.status !== 'undefined' && !adminMode;
+                const lockedIcon = isLocked ? '<span class="locked-icon" title="Statut verrouillé">🔒</span>' : '';
+
+                staffItem.innerHTML =
+                    '<div class="staff-info">' +
+                        '<div class="staff-name">' +
+                            '<span class="status-indicator ' + statusClass + '"></span>' +
+                            member.name +
+                            '<span class="drag-handle" title="Glisser pour déplacer">⋮⋮</span>' +
+                        '</div>' +
+                        '<div class="staff-city">' + member.city + '</div>' +
+                        '<div class="attendance-info">' +
+                            '<div class="status-text">' + statusText + '</div>' +
+                            timestampHtml +
+                            absenceReasonHtml +
+                        '</div>' +
+                    '</div>' +
+                    '<div class="attendance-actions">' +
+                        '<button class="button small present-btn" onclick="markStaffPresent(' + member.id + ')" ' + (isLocked ? 'disabled' : '') + '>' +
+                            'Présent' +
+                        '</button>' +
+                        '<button class="button small absent-btn" onclick="showAbsenceModal(' + member.id + ')" ' + (isLocked ? 'disabled' : '') + '>' +
+                            'Absent' +
+                        '</button>' +
+                        '<button class="button small conge-btn" onclick="markStaffConge(' + member.id + ')" ' + (isLocked ? 'disabled' : '') + '>' +
+                            'Congé' +
+                        '</button>' +
+                        lockedIcon +
+                    '</div>';
+
+                // Add drag events
+                staffItem.addEventListener('dragstart', handleStaffDragStart);
+                staffItem.addEventListener('dragend', handleStaffDragEnd);
+
+                // Prevent dragging when clicking on buttons
+                const buttons = staffItem.querySelectorAll('button');
+                buttons.forEach(function(button) {
+                    button.addEventListener('mousedown', function(e) {
+                        e.stopPropagation();
+                        staffItem.draggable = false;
+                    });
+                    button.addEventListener('mouseup', function() {
+                        staffItem.draggable = true;
+                    });
+                });
+
+                staffList.appendChild(staffItem);
             });
         }
 
@@ -555,133 +1360,16 @@ body {
         function getStatusClass(status) {
             if (status === 'present') return 'present';
             if (status === 'absent') return 'absent';
-            return 'undefined'; // New status for undefined
+            if (status === 'conge') return 'conge';
+            return 'undefined';
         }
 
         // Get status text based on status
         function getStatusText(status) {
             if (status === 'present') return 'Présent';
             if (status === 'absent') return 'Absent';
+            if (status === 'conge') return 'En congé';
             return 'Non défini';
-        }
-
-        // Render staff list grouped by city
-        function renderStaffList() {
-            attendanceContainer.innerHTML = '';
-
-            const selectedCity = cityFilterSelect.value;
-
-            // Filter cities based on selection
-            const citiesToRender = selectedCity === 'all' ? cities : [selectedCity];
-
-            citiesToRender.forEach(city => {
-                const cityStaff = staffMembers.filter(staff => staff.city === city);
-
-                // Create city group element
-                const cityGroup = document.createElement('div');
-                cityGroup.className = 'city-group';
-
-                // Create city header
-                const cityHeader = document.createElement('div');
-                cityHeader.className = 'city-header';
-
-                const cityTitle = document.createElement('h3');
-                cityTitle.className = 'city-title';
-                cityTitle.textContent = city;
-
-                const cityButton = document.createElement('button');
-                cityButton.className = 'button city-button';
-                cityButton.textContent = 'Marquer Présents';
-                // Check if any staff member in this city has a defined status and disable the button accordingly
-                const cityHasDefinedStatus = cityStaff.some(staff => staff.status !== 'undefined');
-                cityButton.disabled = cityHasDefinedStatus && !adminMode;
-
-                cityButton.addEventListener('click', () => {
-                    if (!cityHasDefinedStatus || adminMode) {
-                        markCityPresent(city);
-                    } else {
-                        showMessage('Le statut a déjà été défini. Utilisez le mode admin pour modifier.', 'error');
-                    }
-                });
-
-                cityHeader.appendChild(cityTitle);
-                cityHeader.appendChild(cityButton);
-                cityGroup.appendChild(cityHeader);
-
-                // Create staff list for this city
-                const staffList = document.createElement('div');
-                staffList.className = 'staff-list';
-
-                cityStaff.forEach(staff => {
-                    const staffItem = document.createElement('div');
-                    staffItem.className = 'staff-item';
-
-                    const statusIndicator = document.createElement('span');
-                    statusIndicator.className = `status ${getStatusClass(staff.status)}`;
-
-                    const staffInfoContainer = document.createElement('div');
-                    staffInfoContainer.style.flexGrow = '1';
-
-                    const nameElement = document.createElement('span');
-                    nameElement.className = 'staff-info';
-                    nameElement.innerHTML = `
-                        ${statusIndicator.outerHTML}
-                        ${staff.name}
-                        ${staff.timestamp ? `<span class="timestamp">(${new Date(staff.timestamp).toLocaleTimeString()})</span>` : ''}
-                    `;
-
-                    staffInfoContainer.appendChild(nameElement);
-
-                    // Add absence reason if present
-                    if (staff.absence_reason) {
-                        const reasonElement = document.createElement('span');
-                        reasonElement.className = 'absence-reason';
-                        reasonElement.textContent = `Motif: ${staff.absence_reason}`;
-                        staffInfoContainer.appendChild(reasonElement);
-                    }
-
-                    const actionButtons = document.createElement('div');
-                    actionButtons.className = 'action-buttons';
-
-                    const presentButton = document.createElement('button');
-                    presentButton.className = 'button';
-                    presentButton.textContent = 'Présent';
-                    // Disable buttons if state is already set and not in admin mode
-                    presentButton.disabled = (staff.status !== 'undefined' && !adminMode);
-                    presentButton.addEventListener('click', () => {
-                        markStaffPresent(staff.id);
-                    });
-
-                    const absentButton = document.createElement('button');
-                    absentButton.className = 'button';
-                    absentButton.textContent = 'Absent';
-                    // Disable buttons if state is already set and not in admin mode
-                    absentButton.disabled = (staff.status !== 'undefined' && !adminMode);
-                    absentButton.addEventListener('click', () => {
-                        // Show absence reason modal
-                        showAbsenceModal(staff.id);
-                    });
-
-                    actionButtons.appendChild(presentButton);
-                    actionButtons.appendChild(absentButton);
-
-                    // Add a visual indicator if status has been set and locked
-                    if (staff.status !== 'undefined' && !adminMode) {
-                        const lockedIcon = document.createElement('span');
-                        lockedIcon.className = 'locked-icon';
-                        lockedIcon.innerHTML = '🔒';
-                        lockedIcon.title = 'Statut verrouillé - nécessite le mode admin pour modifier';
-                        actionButtons.appendChild(lockedIcon);
-                    }
-
-                    staffItem.appendChild(staffInfoContainer);
-                    staffItem.appendChild(actionButtons);
-                    staffList.appendChild(staffItem);
-                });
-
-                cityGroup.appendChild(staffList);
-                attendanceContainer.appendChild(cityGroup);
-            });
         }
 
         // Show absence reason modal
@@ -706,16 +1394,15 @@ body {
                 const data = await response.json();
 
                 if (data.success) {
-                    // Update local data
-                    const staffMember = staffMembers.find(s => s.id === staffId);
-                    if (staffMember) {
-                        staffMember.status = 'present';
-                        staffMember.absence_reason = null;
-                        staffMember.timestamp = new Date().toISOString();
-                    }
-
-                    renderStaffList();
                     showMessage(data.message, 'success');
+                    // Refresh staff data
+                    await loadAllStaff();
+                    await loadCities();
+                    renderCities();
+                    renderCongeList();
+                    if (currentCityId) {
+                        selectCity(currentCityId, currentCityName);
+                    }
                 } else {
                     showMessage(data.message, 'error');
                 }
@@ -743,16 +1430,14 @@ body {
                 const data = await response.json();
 
                 if (data.success) {
-                    // Update local data
-                    const staffMember = staffMembers.find(s => s.id === staffId);
-                    if (staffMember) {
-                        staffMember.status = 'absent';
-                        staffMember.absence_reason = reason;
-                        staffMember.timestamp = new Date().toISOString();
-                    }
-
-                    renderStaffList();
                     showMessage(data.message, 'success');
+                    // Refresh staff data
+                    await loadAllStaff();
+                    await loadCities();
+                    renderCities();
+                    if (currentCityId) {
+                        selectCity(currentCityId, currentCityName);
+                    }
                 } else {
                     showMessage(data.message, 'error');
                 }
@@ -762,8 +1447,86 @@ body {
             }
         }
 
-        // Mark all staff in a specific city as present
-        async function markCityPresent(city) {
+        // Mark staff member as on leave (congé)
+        async function markStaffConge(staffId) {
+            try {
+                const response = await fetch('/api/mark-conge/', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': csrftoken
+                    },
+                    body: JSON.stringify({ staff_id: staffId })
+                });
+
+                const data = await response.json();
+
+                if (data.success) {
+                    showMessage(data.message, 'success');
+                    // Refresh staff data
+                    await loadAllStaff();
+                    await loadCities();
+                    renderCities();
+                    renderCongeList();
+                    if (currentCityId) {
+                        selectCity(currentCityId, currentCityName);
+                    }
+                } else {
+                    showMessage(data.message, 'error');
+                }
+            } catch (error) {
+                showMessage('Erreur lors de la mise à jour', 'error');
+                console.error('Error marking congé:', error);
+            }
+        }
+
+        // Render congé list
+        function renderCongeList() {
+            const congeStaff = allStaff.filter(function(staff) {
+                return staff.status === 'conge';
+            });
+
+            if (congeStaff.length === 0) {
+                congeList.innerHTML =
+                    '<div class="conge-empty">' +
+                        '<div>Aucun personnel en congé</div>' +
+                    '</div>';
+            } else {
+                congeList.innerHTML = '';
+                congeStaff.forEach(function(staff) {
+                    const congeItem = document.createElement('div');
+                    congeItem.className = 'conge-item';
+                    congeItem.textContent = staff.name;
+                    congeList.appendChild(congeItem);
+                });
+            }
+        }
+
+        // Congé drag handlers
+        function handleCongeDragOver(e) {
+            e.preventDefault();
+            e.dataTransfer.dropEffect = 'move';
+
+            if (draggedStaffId) {
+                e.currentTarget.classList.add('drag-over');
+            }
+        }
+
+        function handleCongeDragLeave(e) {
+            e.currentTarget.classList.remove('drag-over');
+        }
+
+        async function handleCongeDrop(e) {
+            e.preventDefault();
+            e.currentTarget.classList.remove('drag-over');
+
+            if (!draggedStaffId) return;
+
+            // Mark staff as on leave
+            await markStaffConge(draggedStaffId);
+        }
+        // Mark all staff in current city as present
+        async function markCityPresent(cityName) {
             try {
                 const response = await fetch('/api/mark-city-present/', {
                     method: 'POST',
@@ -771,24 +1534,21 @@ body {
                         'Content-Type': 'application/json',
                         'X-CSRFToken': csrftoken
                     },
-                    body: JSON.stringify({ city: city })
+                    body: JSON.stringify({ city: cityName })
                 });
 
                 const data = await response.json();
 
                 if (data.success) {
-                    // Update local data
-                    const timestamp = new Date().toISOString();
-                    staffMembers.forEach(staff => {
-                        if (staff.city === city) {
-                            staff.status = 'present';
-                            staff.absence_reason = null;
-                            staff.timestamp = timestamp;
-                        }
-                    });
-
-                    renderStaffList();
                     showMessage(data.message, 'success');
+                    // Refresh staff data
+                    await loadAllStaff();
+                    await loadCities();
+                    renderCities();
+                    renderCongeList();
+                    if (currentCityId) {
+                        selectCity(currentCityId, currentCityName);
+                    }
                 } else {
                     showMessage(data.message, 'error');
                 }
@@ -798,190 +1558,107 @@ body {
             }
         }
 
-        // Mark all staff as present
-        markAllPresentButton.addEventListener('click', async () => {
-            // Check if any staff has defined status and we're not in admin mode
-            const hasDefinedStatus = staffMembers.some(staff => staff.status !== 'undefined');
+        // Staff drag handlers
+        function handleStaffDragStart(e) {
+            draggedStaffId = e.target.dataset.staffId;
+            e.target.classList.add('dragging');
 
-            if (hasDefinedStatus && !adminMode) {
-                showMessage('Le statut a déjà été défini pour certains membres. Utilisez le mode admin pour modifier.', 'error');
-                return;
+            // Set drag effect
+            e.dataTransfer.effectAllowed = 'move';
+            e.dataTransfer.setData('text/html', e.target.outerHTML);
+        }
+
+        function handleStaffDragEnd(e) {
+            e.target.classList.remove('dragging');
+            draggedStaffId = null;
+        }
+
+        // City drag handlers
+        function handleCityDragOver(e) {
+            e.preventDefault();
+            e.dataTransfer.dropEffect = 'move';
+
+            if (draggedStaffId && e.currentTarget.dataset.cityName != currentCityId) {
+                e.currentTarget.classList.add('drag-over');
             }
+        }
+
+        function handleCityDragLeave(e) {
+            e.currentTarget.classList.remove('drag-over');
+        }
+
+        async function handleCityDrop(e) {
+            e.preventDefault();
+            e.currentTarget.classList.remove('drag-over');
+
+            if (!draggedStaffId) return;
+
+            const targetCityName = e.currentTarget.dataset.cityName;
+
+            if (targetCityName == currentCityId) return; // Same city
+
+            // Update staff city
+            await updateStaffCityByName(draggedStaffId, targetCityName);
+        }
+
+        // Update staff city via API (modified to work with city names)
+        async function updateStaffCityByName(staffId, newCityName) {
             try {
-                const response = await fetch('/api/mark-all-present/', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'X-CSRFToken': csrftoken
-                    }
-                });
-
-                const data = await response.json();
-
-                if (data.success) {
-                    // Update local data
-                    const timestamp = new Date().toISOString();
-                    staffMembers.forEach(staff => {
-                        staff.status = 'present';
-                        staff.absence_reason = null;
-                        staff.timestamp = timestamp;
-                    });
-
-                    renderStaffList();
-                    showMessage(data.message, 'success');
-                } else {
-                    showMessage(data.message, 'error');
-                }
-            } catch (error) {
-                showMessage('Erreur lors de la mise à jour', 'error');
-                console.error('Error marking all present:', error);
-            }
-        });
-
-        // Mark selected city staff as present
-        markCityPresentButton.addEventListener('click', () => {
-            const selectedCity = cityFilterSelect.value;
-            if (selectedCity === 'all') {
-                showMessage('Veuillez sélectionner une ville spécifique', 'error');
-                return;
-            }
-
-            // Check if any staff member in the selected city has defined status
-            const cityStaff = staffMembers.filter(staff => staff.city === selectedCity);
-            const cityHasDefinedStatus = cityStaff.some(staff => staff.status !== 'undefined');
-
-            if (cityHasDefinedStatus && !adminMode) {
-                showMessage('Le statut a déjà été défini pour certains membres. Utilisez le mode admin pour modifier.', 'error');
-                return;
-            }
-
-            markCityPresent(selectedCity);
-        });
-
-        // Admin modify button click
-        adminModifyButton.addEventListener('click', () => {
-            adminModal.style.display = 'block';
-            adminPasswordInput.value = '';
-        });
-
-        // Close all modals
-        closeModalButtons.forEach(button => {
-            button.addEventListener('click', () => {
-                adminModal.style.display = 'none';
-                absenceModal.style.display = 'none';
-            });
-        });
-
-        // Click outside modal to close
-        window.addEventListener('click', (e) => {
-            if (e.target === adminModal) {
-                adminModal.style.display = 'none';
-            }
-            if (e.target === absenceModal) {
-                absenceModal.style.display = 'none';
-            }
-        });
-
-        // Submit password
-        submitPasswordButton.addEventListener('click', async () => {
-            try {
-                const response = await fetch('/api/verify-admin/', {
+                const updateResponse = await fetch('/api/update-staff-city/', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
                         'X-CSRFToken': csrftoken
                     },
-                    body: JSON.stringify({ password: adminPasswordInput.value })
+                    body: JSON.stringify({
+                        staff_id: staffId,
+                        city_name: newCityName
+                    })
                 });
 
-                const data = await response.json();
+                const updateData = await updateResponse.json();
 
-                if (data.success) {
-                    adminMode = true;
-                    adminModal.style.display = 'none';
-                    adminModeIndicator.style.display = 'flex';
-                    adminModifyButton.style.display = 'none';
-                    showMessage('Mode administrateur activé. Vous pouvez maintenant modifier les présences.', 'success');
-                    renderStaffList();
+                if (updateData.success) {
+                    showMessage(updateData.message, 'success');
+
+                    // Refresh data
+                    await loadAllStaff();
+                    await loadCities();
+                    renderCities();
+
+                    // Refresh current staff view if a city is selected
+                    if (currentCityId) {
+                        const cityStaff = allStaff.filter(function(staff) {
+                            return staff.city === currentCityId;
+                        });
+                        renderStaff(cityStaff);
+                    }
                 } else {
-                    showMessage('Mot de passe incorrect !', 'error');
+                    showMessage(updateData.message, 'error');
                 }
             } catch (error) {
-                showMessage('Erreur lors de la vérification', 'error');
-                console.error('Error verifying admin:', error);
+                showMessage('Erreur lors de la mise à jour', 'error');
+                console.error('Error updating staff city:', error);
             }
-        });
-
-        // Submit absence reason
-        submitAbsenceButton.addEventListener('click', () => {
-            if (currentAbsentStaffId) {
-                const reason = absenceReasonInput.value.trim();
-                markStaffAbsent(currentAbsentStaffId, reason);
-                absenceModal.style.display = 'none';
-                currentAbsentStaffId = null;
-            }
-        });
+        }
 
         // Show message
         function showMessage(text, type) {
             messageElement.textContent = text;
-            messageElement.className = `message ${type}`;
+            messageElement.className = 'message ' + type;
             messageElement.style.display = 'block';
+            messageElement.classList.add('show');
 
-            setTimeout(() => {
-                messageElement.style.display = 'none';
+            setTimeout(function() {
+                messageElement.classList.remove('show');
+                setTimeout(function() {
+                    messageElement.style.display = 'none';
+                }, 300);
             }, 3000);
         }
 
-        // Generate PDF function
-        generatePdfButton.addEventListener('click', async () => {
-            try {
-                const response = await fetch('/api/generate-pdf/', {
-                    method: 'POST',
-                    headers: {
-                        'X-CSRFToken': csrftoken
-                    }
-                });
-
-                if (response.ok) {
-                    // Create a blob from the PDF stream
-                    const blob = await response.blob();
-                    // Create a link to download it
-                    const downloadUrl = window.URL.createObjectURL(blob);
-                    const a = document.createElement('a');
-                    a.href = downloadUrl;
-                    a.download = 'rapport-presences.pdf';
-                    document.body.appendChild(a);
-                    a.click();
-                    // Clean up
-                    window.URL.revokeObjectURL(downloadUrl);
-                    document.body.removeChild(a);
-
-                    showMessage('PDF généré avec succès !', 'success');
-                } else {
-                    const errorData = await response.json();
-                    showMessage(errorData.message || 'Erreur lors de la génération du PDF', 'error');
-                }
-            } catch (error) {
-                showMessage('Erreur lors de la génération du PDF', 'error');
-                console.error('Error generating PDF:', error);
-            }
-        });
-
-        // Exit admin mode handler
-        exitAdminModeButton.addEventListener('click', () => {
-            adminMode = false;
-            adminModeIndicator.style.display = 'none';
-            adminModifyButton.style.display = 'inline-block';
-            showMessage('Mode administrateur désactivé.', 'info');
-            renderStaffList();
-        });
-
-        // City filter change handler
-        cityFilterSelect.addEventListener('change', renderStaffList);
-
-        // Initialize by fetching data
-        fetchStaffData();
-        </script>
+        // Initialize the application
+        init();
+    </script>
 </body>
 </html>

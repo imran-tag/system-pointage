@@ -28,6 +28,7 @@ def attendance_page(request):
         'admin_password': admin_password,
     })
 
+
 def attendance_history(request):
     """Render the attendance history page"""
     cities = City.objects.all()
@@ -35,6 +36,14 @@ def attendance_history(request):
     return render(request, 'staff_attendance/attendance_history.html', {
         'cities': cities,
         'admin_password': admin_password,
+    })
+
+
+def staff_management(request):
+    """Render the staff management page for drag and drop functionality"""
+    cities = City.objects.all()
+    return render(request, 'staff_attendance/staff_management.html', {
+        'cities': cities,
     })
 
 
@@ -72,7 +81,9 @@ def get_attendance_history(request):
     for attendance in attendances:
         date_key = attendance.date.isoformat()
         if date_key in attendance_by_date:
-            if attendance.present is True:
+            if attendance.absence_reason == 'CONGE_STATUS':
+                status = 'conge'
+            elif attendance.present is True:
                 status = 'present'
             elif attendance.present is False:
                 status = 'absent'
@@ -81,7 +92,7 @@ def get_attendance_history(request):
 
             attendance_by_date[date_key]['staff'][attendance.staff_member_id] = {
                 'status': status,
-                'absence_reason': attendance.absence_reason if attendance.present is False else None,
+                'absence_reason': attendance.absence_reason if attendance.present is False and attendance.absence_reason != 'CONGE_STATUS' else None,
                 'timestamp': attendance.timestamp.isoformat() if attendance.timestamp else None
             }
 
@@ -188,7 +199,9 @@ def generate_history_pdf(request):
                         attendance = attendance_dict.get(key)
 
                         if attendance:
-                            if attendance.present is True:
+                            if attendance.absence_reason == 'CONGE_STATUS':
+                                status = "C"  # Congé
+                            elif attendance.present is True:
                                 status = "P"  # Present
                             elif attendance.present is False:
                                 status = "A"  # Absent
@@ -227,6 +240,9 @@ def generate_history_pdf(request):
                         elif data[i][j] == "A" or data[i][j] == "A*":
                             table_style.add('BACKGROUND', (j, i), (j, i), colors.red)
                             table_style.add('TEXTCOLOR', (j, i), (j, i), colors.white)
+                        elif data[i][j] == "C":
+                            table_style.add('BACKGROUND', (j, i), (j, i), colors.purple)
+                            table_style.add('TEXTCOLOR', (j, i), (j, i), colors.white)
 
                 table.setStyle(table_style)
                 elements.append(table)
@@ -237,6 +253,7 @@ def generate_history_pdf(request):
                 elements.append(Paragraph("P = Présent", normal_style))
                 elements.append(Paragraph("A = Absent", normal_style))
                 elements.append(Paragraph("A* = Absent avec motif", normal_style))
+                elements.append(Paragraph("C = En congé", normal_style))
                 elements.append(Paragraph("- = Non défini", normal_style))
                 elements.append(Spacer(1, 30))
 
@@ -280,7 +297,9 @@ def get_staff_list(request):
         attendance = attendance_dict.get(staff.id)
         # Determine status based on attendance record
         if attendance:
-            if attendance.present is True:
+            if attendance.absence_reason == 'CONGE_STATUS':
+                status = 'conge'
+            elif attendance.present is True:
                 status = 'present'
             elif attendance.present is False:
                 status = 'absent'
@@ -294,11 +313,58 @@ def get_staff_list(request):
             'name': staff.name,
             'city': staff.city.name,
             'status': status,
-            'absence_reason': attendance.absence_reason if attendance and attendance.present is False else None,
+            'absence_reason': attendance.absence_reason if attendance and attendance.present is False and attendance.absence_reason != 'CONGE_STATUS' else None,
             'timestamp': attendance.timestamp.isoformat() if attendance and attendance.timestamp else None
         })
 
     return JsonResponse({'staffMembers': staff_data})
+
+
+@csrf_exempt
+def get_staff_by_city(request):
+    """API endpoint to get staff members by city"""
+    if request.method == 'GET':
+        city_id = request.GET.get('city_id')
+
+        if city_id:
+            try:
+                city = City.objects.get(id=city_id)
+                staff_members = StaffMember.objects.filter(city=city)
+
+                staff_data = []
+                for staff in staff_members:
+                    staff_data.append({
+                        'id': staff.id,
+                        'name': staff.name,
+                        'city_id': staff.city.id,
+                        'city_name': staff.city.name
+                    })
+
+                return JsonResponse({
+                    'success': True,
+                    'staff': staff_data,
+                    'city_name': city.name
+                })
+            except City.DoesNotExist:
+                return JsonResponse({'success': False, 'message': 'Ville non trouvée'}, status=404)
+        else:
+            # Return all staff if no city specified
+            staff_members = StaffMember.objects.select_related('city').all()
+            staff_data = []
+            for staff in staff_members:
+                staff_data.append({
+                    'id': staff.id,
+                    'name': staff.name,
+                    'city_id': staff.city.id,
+                    'city_name': staff.city.name
+                })
+
+            return JsonResponse({
+                'success': True,
+                'staff': staff_data
+            })
+
+    return JsonResponse({'success': False, 'message': 'Méthode non autorisée'}, status=405)
 
 
 @csrf_exempt
@@ -368,6 +434,44 @@ def mark_absent(request):
             return JsonResponse({
                 'success': True,
                 'message': f"{staff.name} marqué absent à {timezone.now().strftime('%H:%M:%S')}"
+            })
+
+        except StaffMember.DoesNotExist:
+            return JsonResponse({'success': False, 'message': 'Personnel non trouvé'}, status=404)
+        except Exception as e:
+            return JsonResponse({'success': False, 'message': str(e)}, status=500)
+
+    return JsonResponse({'success': False, 'message': 'Méthode non autorisée'}, status=405)
+
+
+@csrf_exempt
+def mark_conge(request):
+    """API endpoint to mark a staff member as on leave (congé)"""
+    if request.method == 'POST':
+        data = json.loads(request.body)
+        staff_id = data.get('staff_id')
+
+        try:
+            staff = StaffMember.objects.get(id=staff_id)
+            today = timezone.now().date()
+
+            # Get or create attendance record
+            attendance, created = Attendance.objects.get_or_create(
+                staff_member=staff,
+                date=today,
+                defaults={'present': None, 'timestamp': timezone.now(), 'absence_reason': 'CONGE_STATUS'}
+            )
+
+            # Update if already exists
+            if not created:
+                attendance.present = None  # NULL for congé status
+                attendance.absence_reason = 'CONGE_STATUS'  # Special identifier for congé
+                attendance.timestamp = timezone.now()
+                attendance.save()
+
+            return JsonResponse({
+                'success': True,
+                'message': f"{staff.name} marqué en congé à {timezone.now().strftime('%H:%M:%S')}"
             })
 
         except StaffMember.DoesNotExist:
@@ -453,6 +557,45 @@ def mark_all_present(request):
 
 
 @csrf_exempt
+def update_staff_city(request):
+    """API endpoint to update staff member's city"""
+    if request.method == 'POST':
+        data = json.loads(request.body)
+        staff_id = data.get('staff_id')
+        new_city_id = data.get('city_id')
+        new_city_name = data.get('city_name')
+
+        try:
+            staff = StaffMember.objects.get(id=staff_id)
+
+            # Handle both city_id and city_name parameters
+            if new_city_id:
+                new_city = City.objects.get(id=new_city_id)
+            elif new_city_name:
+                new_city = City.objects.get(name=new_city_name)
+            else:
+                return JsonResponse({'success': False, 'message': 'City ID ou nom de ville requis'}, status=400)
+
+            old_city_name = staff.city.name
+            staff.city = new_city
+            staff.save()
+
+            return JsonResponse({
+                'success': True,
+                'message': f"{staff.name} déplacé de {old_city_name} vers {new_city.name}"
+            })
+
+        except StaffMember.DoesNotExist:
+            return JsonResponse({'success': False, 'message': 'Personnel non trouvé'}, status=404)
+        except City.DoesNotExist:
+            return JsonResponse({'success': False, 'message': 'Ville non trouvée'}, status=404)
+        except Exception as e:
+            return JsonResponse({'success': False, 'message': str(e)}, status=500)
+
+    return JsonResponse({'success': False, 'message': 'Méthode non autorisée'}, status=405)
+
+
+@csrf_exempt
 def verify_admin(request):
     """API endpoint to verify admin password"""
     if request.method == 'POST':
@@ -517,7 +660,9 @@ def generate_pdf(request):
 
                 # Determine status
                 if attendance:
-                    if attendance.present is True:
+                    if attendance.absence_reason == 'CONGE_STATUS':
+                        status = "En congé"
+                    elif attendance.present is True:
                         status = "Présent"
                     elif attendance.present is False:
                         status = "Absent"
@@ -534,7 +679,9 @@ def generate_pdf(request):
                     time = local_time.strftime("%H:%M:%S")
 
                 # Get absence reason
-                absence_reason = attendance.absence_reason if attendance and attendance.present is False else ""
+                absence_reason = ""
+                if attendance and attendance.present is False and attendance.absence_reason != 'CONGE_STATUS':
+                    absence_reason = attendance.absence_reason
 
                 data.append([staff.name, staff.city.name, status, time, absence_reason])
 
@@ -553,13 +700,16 @@ def generate_pdf(request):
                 ('ALIGN', (4, 1), (4, -1), 'LEFT'),  # Left align reason text
             ])
 
-            # Add conditional formatting for present/absent status
+            # Add conditional formatting for present/absent/conge status
             for i in range(1, len(data)):
                 if data[i][2] == "Présent":
                     table_style.add('BACKGROUND', (2, i), (2, i), colors.green)
                     table_style.add('TEXTCOLOR', (2, i), (2, i), colors.white)
                 elif data[i][2] == "Absent":
                     table_style.add('BACKGROUND', (2, i), (2, i), colors.red)
+                    table_style.add('TEXTCOLOR', (2, i), (2, i), colors.white)
+                elif data[i][2] == "En congé":
+                    table_style.add('BACKGROUND', (2, i), (2, i), colors.purple)
                     table_style.add('TEXTCOLOR', (2, i), (2, i), colors.white)
                 else:  # Undefined
                     table_style.add('BACKGROUND', (2, i), (2, i), colors.orange)
@@ -578,16 +728,23 @@ def generate_pdf(request):
             present_staff = sum(
                 1 for s in staff_members if attendance_dict.get(s.id) and attendance_dict[s.id].present is True)
             absent_staff = sum(
-                1 for s in staff_members if attendance_dict.get(s.id) and attendance_dict[s.id].present is False)
-            undefined_staff = total_staff - present_staff - absent_staff
+                1 for s in staff_members if
+                attendance_dict.get(s.id) and attendance_dict[s.id].present is False and attendance_dict[
+                    s.id].absence_reason != 'CONGE_STATUS')
+            conge_staff = sum(
+                1 for s in staff_members if
+                attendance_dict.get(s.id) and attendance_dict[s.id].absence_reason == 'CONGE_STATUS')
+            undefined_staff = total_staff - present_staff - absent_staff - conge_staff
 
             present_percentage = round(present_staff / total_staff * 100, 1) if total_staff > 0 else 0
             absent_percentage = round(absent_staff / total_staff * 100, 1) if total_staff > 0 else 0
+            conge_percentage = round(conge_staff / total_staff * 100, 1) if total_staff > 0 else 0
             undefined_percentage = round(undefined_staff / total_staff * 100, 1) if total_staff > 0 else 0
 
             elements.append(Paragraph(f"Nombre total de personnel: {total_staff}", normal_style))
             elements.append(Paragraph(f"Personnel présent: {present_staff} ({present_percentage}%)", normal_style))
             elements.append(Paragraph(f"Personnel absent: {absent_staff} ({absent_percentage}%)", normal_style))
+            elements.append(Paragraph(f"Personnel en congé: {conge_staff} ({conge_percentage}%)", normal_style))
             elements.append(
                 Paragraph(f"Personnel non défini: {undefined_staff} ({undefined_percentage}%)", normal_style))
 
@@ -605,14 +762,19 @@ def generate_pdf(request):
                 city_present = sum(
                     1 for s in city_staff if attendance_dict.get(s.id) and attendance_dict[s.id].present is True)
                 city_absent = sum(
-                    1 for s in city_staff if attendance_dict.get(s.id) and attendance_dict[s.id].present is False)
-                city_undefined = city_total - city_present - city_absent
+                    1 for s in city_staff if
+                    attendance_dict.get(s.id) and attendance_dict[s.id].present is False and attendance_dict[
+                        s.id].absence_reason != 'CONGE_STATUS')
+                city_conge = sum(
+                    1 for s in city_staff if
+                    attendance_dict.get(s.id) and attendance_dict[s.id].absence_reason == 'CONGE_STATUS')
+                city_undefined = city_total - city_present - city_absent - city_conge
 
                 city_present_percentage = round(city_present / city_total * 100, 1) if city_total > 0 else 0
 
                 elements.append(
                     Paragraph(
-                        f"{city.name}: {city_present}/{city_total} présent(s) ({city_present_percentage}%), {city_absent} absent(s), {city_undefined} non défini(s)",
+                        f"{city.name}: {city_present}/{city_total} présent(s) ({city_present_percentage}%), {city_absent} absent(s), {city_conge} en congé, {city_undefined} non défini(s)",
                         normal_style
                     )
                 )
