@@ -8,7 +8,7 @@ import datetime
 from django.db.models import Count, Q
 import os
 
-from .models import City, StaffMember, Attendance
+from .models import City, StaffMember, Attendance, CongeReservation
 
 # Generate PDF
 from reportlab.pdfgen import canvas
@@ -47,6 +47,263 @@ def staff_management(request):
     })
 
 
+@csrf_exempt
+def add_city(request):
+    """API endpoint to add a new city"""
+    if request.method == 'POST':
+        data = json.loads(request.body)
+        city_name = data.get('name', '').strip()
+
+        if not city_name:
+            return JsonResponse({'success': False, 'message': 'Le nom de la ville est requis'}, status=400)
+
+        try:
+            city = City.objects.create(name=city_name)
+            return JsonResponse({
+                'success': True,
+                'message': f'Ville "{city_name}" ajoutée avec succès',
+                'city': {
+                    'id': city.id,
+                    'name': city.name
+                }
+            })
+        except Exception as e:
+            return JsonResponse({'success': False, 'message': f'Erreur: {str(e)}'}, status=500)
+
+    return JsonResponse({'success': False, 'message': 'Méthode non autorisée'}, status=405)
+
+
+@csrf_exempt
+def update_city_name(request):
+    """API endpoint to update a city's name"""
+    if request.method == 'POST':
+        data = json.loads(request.body)
+        city_id = data.get('city_id')
+        new_name = data.get('new_name', '').strip()
+
+        if not new_name:
+            return JsonResponse({'success': False, 'message': 'Le nouveau nom est requis'}, status=400)
+
+        try:
+            city = City.objects.get(id=city_id)
+            old_name = city.name
+            city.name = new_name
+            city.save()
+
+            return JsonResponse({
+                'success': True,
+                'message': f'Ville renommée de "{old_name}" à "{new_name}"',
+                'city': {
+                    'id': city.id,
+                    'name': city.name
+                }
+            })
+        except City.DoesNotExist:
+            return JsonResponse({'success': False, 'message': 'Ville non trouvée'}, status=404)
+        except Exception as e:
+            return JsonResponse({'success': False, 'message': f'Erreur: {str(e)}'}, status=500)
+
+    return JsonResponse({'success': False, 'message': 'Méthode non autorisée'}, status=405)
+
+
+@csrf_exempt
+def delete_city(request):
+    """API endpoint to delete a city"""
+    if request.method == 'POST':
+        data = json.loads(request.body)
+        city_id = data.get('city_id')
+
+        try:
+            city = City.objects.get(id=city_id)
+
+            # Check if city has staff members
+            staff_count = StaffMember.objects.filter(city=city).count()
+            if staff_count > 0:
+                return JsonResponse({
+                    'success': False,
+                    'message': f'Impossible de supprimer "{city.name}". Elle contient {staff_count} membre(s) du personnel.'
+                }, status=400)
+
+            city_name = city.name
+            city.delete()
+
+            return JsonResponse({
+                'success': True,
+                'message': f'Ville "{city_name}" supprimée avec succès'
+            })
+        except City.DoesNotExist:
+            return JsonResponse({'success': False, 'message': 'Ville non trouvée'}, status=404)
+        except Exception as e:
+            return JsonResponse({'success': False, 'message': f'Erreur: {str(e)}'}, status=500)
+
+    return JsonResponse({'success': False, 'message': 'Méthode non autorisée'}, status=405)
+
+
+@csrf_exempt
+def mark_conge_with_period(request):
+    """API endpoint to mark a staff member as on leave with date period"""
+    if request.method == 'POST':
+        data = json.loads(request.body)
+        staff_id = data.get('staff_id')
+        start_date = data.get('start_date')
+        end_date = data.get('end_date')
+        reason = data.get('reason', '')
+
+        try:
+            staff = StaffMember.objects.get(id=staff_id)
+
+            # Parse dates
+            start_date_obj = datetime.datetime.strptime(start_date, '%Y-%m-%d').date()
+            end_date_obj = datetime.datetime.strptime(end_date, '%Y-%m-%d').date()
+
+            # Validate dates
+            if start_date_obj > end_date_obj:
+                return JsonResponse(
+                    {'success': False, 'message': 'La date de début doit être antérieure à la date de fin'}, status=400)
+
+            # Check for overlapping congé periods
+            overlapping = CongeReservation.objects.filter(
+                staff_member=staff,
+                start_date__lte=end_date_obj,
+                end_date__gte=start_date_obj
+            ).exists()
+
+            if overlapping:
+                return JsonResponse(
+                    {'success': False, 'message': 'Cette période de congé chevauche avec une période existante'},
+                    status=400)
+
+            # Create congé reservation
+            conge = CongeReservation.objects.create(
+                staff_member=staff,
+                start_date=start_date_obj,
+                end_date=end_date_obj,
+                reason=reason
+            )
+
+            return JsonResponse({
+                'success': True,
+                'message': f"{staff.name} en congé du {start_date_obj.strftime('%d/%m/%Y')} au {end_date_obj.strftime('%d/%m/%Y')}"
+            })
+
+        except StaffMember.DoesNotExist:
+            return JsonResponse({'success': False, 'message': 'Personnel non trouvé'}, status=404)
+        except ValueError:
+            return JsonResponse({'success': False, 'message': 'Format de date invalide'}, status=400)
+        except Exception as e:
+            return JsonResponse({'success': False, 'message': str(e)}, status=500)
+
+    return JsonResponse({'success': False, 'message': 'Méthode non autorisée'}, status=405)
+
+
+@csrf_exempt
+def get_conge_reservations(request):
+    """API endpoint to get all congé reservations"""
+    try:
+        today = timezone.now().date()
+
+        # Get active congé reservations (current and future)
+        reservations = CongeReservation.objects.filter(
+            end_date__gte=today
+        ).select_related('staff_member__city').order_by('start_date')
+
+        conge_data = []
+        for reservation in reservations:
+            conge_data.append({
+                'id': reservation.id,
+                'staff_id': reservation.staff_member.id,
+                'staff_name': reservation.staff_member.name,
+                'city': reservation.staff_member.city.name,
+                'start_date': reservation.start_date.isoformat(),
+                'end_date': reservation.end_date.isoformat(),
+                'start_date_display': reservation.start_date.strftime('%d/%m/%Y'),
+                'end_date_display': reservation.end_date.strftime('%d/%m/%Y'),
+                'reason': reservation.reason,
+                'is_current': reservation.start_date <= today <= reservation.end_date
+            })
+
+        return JsonResponse({'success': True, 'reservations': conge_data})
+    except Exception as e:
+        return JsonResponse({'success': False, 'message': str(e)}, status=500)
+
+
+@csrf_exempt
+def remove_conge_reservation(request):
+    """API endpoint to remove a congé reservation"""
+    if request.method == 'POST':
+        data = json.loads(request.body)
+        reservation_id = data.get('reservation_id')
+
+        try:
+            reservation = CongeReservation.objects.get(id=reservation_id)
+            staff_name = reservation.staff_member.name
+            reservation.delete()  # This will also remove related attendance records
+
+            return JsonResponse({
+                'success': True,
+                'message': f'Congé de {staff_name} supprimé avec succès'
+            })
+        except CongeReservation.DoesNotExist:
+            return JsonResponse({'success': False, 'message': 'Réservation de congé non trouvée'}, status=404)
+        except Exception as e:
+            return JsonResponse({'success': False, 'message': str(e)}, status=500)
+
+    return JsonResponse({'success': False, 'message': 'Méthode non autorisée'}, status=405)
+
+
+@csrf_exempt
+def get_staff_list(request):
+    """API endpoint to get the list of staff members with attendance status"""
+    today = timezone.now().date()
+
+    # Get all staff members with their cities
+    staff_members = StaffMember.objects.select_related('city').all()
+
+    # Get today's attendance records
+    attendances = Attendance.objects.filter(date=today)
+
+    # Create a dictionary for quick lookup
+    attendance_dict = {att.staff_member_id: att for att in attendances}
+
+    # Check for active congé reservations
+    active_conge = CongeReservation.objects.filter(
+        start_date__lte=today,
+        end_date__gte=today
+    ).values_list('staff_member_id', flat=True)
+
+    # Prepare response data
+    staff_data = []
+    for staff in staff_members:
+        attendance = attendance_dict.get(staff.id)
+
+        # Check if staff is in congé today
+        if staff.id in active_conge:
+            status = 'conge'
+        elif attendance:
+            if attendance.absence_reason == 'CONGE_STATUS':
+                status = 'conge'
+            elif attendance.present is True:
+                status = 'present'
+            elif attendance.present is False:
+                status = 'absent'
+            else:
+                status = 'undefined'
+        else:
+            status = 'undefined'
+
+        staff_data.append({
+            'id': staff.id,
+            'name': staff.name,
+            'city': staff.city.name,
+            'status': status,
+            'absence_reason': attendance.absence_reason if attendance and attendance.present is False and attendance.absence_reason != 'CONGE_STATUS' else None,
+            'timestamp': attendance.timestamp.isoformat() if attendance and attendance.timestamp else None
+        })
+
+    return JsonResponse({'staffMembers': staff_data})
+
+
+# Keep all the other existing functions unchanged...
 @csrf_exempt
 def get_attendance_history(request):
     """API endpoint to get attendance history for the past 30 days"""
@@ -113,211 +370,6 @@ def get_attendance_history(request):
         'history': history_data,
         'staff': staff_info
     })
-
-
-@csrf_exempt
-def generate_history_pdf(request):
-    """API endpoint to generate a PDF report of attendance history"""
-    if request.method == 'POST':
-        try:
-            # Get time period
-            end_date = timezone.now().date()
-            start_date = end_date - datetime.timedelta(days=30)
-
-            # Get all staff with their attendance
-            staff_members = StaffMember.objects.select_related('city').all()
-
-            # Get attendance records for the period
-            attendances = Attendance.objects.filter(
-                date__gte=start_date,
-                date__lte=end_date
-            ).order_by('-date')
-
-            # Create a dictionary for quick lookup
-            attendance_dict = {}
-            for attendance in attendances:
-                key = (attendance.date, attendance.staff_member_id)
-                attendance_dict[key] = attendance
-
-            # Create a BytesIO buffer for the PDF
-            buffer = BytesIO()
-
-            # Create the PDF object
-            doc = SimpleDocTemplate(buffer, pagesize=A4, topMargin=30, bottomMargin=30)
-            elements = []
-
-            # Set up styles
-            styles = getSampleStyleSheet()
-            title_style = styles['Heading1']
-            subtitle_style = styles['Heading2']
-            normal_style = styles['Normal']
-            date_style = styles['Heading3']
-
-            # Add title
-            elements.append(Paragraph("Historique de Présence du Personnel", title_style))
-            elements.append(Spacer(1, 12))
-
-            # Add date range
-            date_range = f"Période: {start_date.strftime('%d/%m/%Y')} - {end_date.strftime('%d/%m/%Y')}"
-            elements.append(Paragraph(date_range, subtitle_style))
-            elements.append(Spacer(1, 20))
-
-            # Group staff by city
-            staff_by_city = {}
-            for staff in staff_members:
-                if staff.city.name not in staff_by_city:
-                    staff_by_city[staff.city.name] = []
-                staff_by_city[staff.city.name].append(staff)
-
-            # For each city, create a section
-            for city_name, city_staff in staff_by_city.items():
-                elements.append(Paragraph(f"Ville: {city_name}", subtitle_style))
-                elements.append(Spacer(1, 10))
-
-                # Get all dates in the range
-                dates = []
-                current_date = start_date
-                while current_date <= end_date:
-                    dates.append(current_date)
-                    current_date += datetime.timedelta(days=1)
-
-                # Create table header with dates
-                header = ["Nom"]
-                for date in dates:
-                    header.append(date.strftime('%d/%m'))
-
-                # Create table data
-                data = [header]
-
-                # Add staff rows
-                for staff in city_staff:
-                    row = [staff.name]
-
-                    # Add status for each date
-                    for date in dates:
-                        key = (date, staff.id)
-                        attendance = attendance_dict.get(key)
-
-                        if attendance:
-                            if attendance.absence_reason == 'CONGE_STATUS':
-                                status = "C"  # Congé
-                            elif attendance.present is True:
-                                status = "P"  # Present
-                            elif attendance.present is False:
-                                status = "A"  # Absent
-                                if attendance.absence_reason:
-                                    status = "A*"  # Absent with reason
-                            else:
-                                status = "-"  # Undefined
-                        else:
-                            status = "-"  # No record
-
-                        row.append(status)
-
-                    data.append(row)
-
-                # Create the table
-                col_widths = [120] + [20] * len(dates)  # Name column wider than date columns
-                table = Table(data, colWidths=col_widths)
-
-                # Style the table
-                table_style = TableStyle([
-                    ('BACKGROUND', (0, 0), (-1, 0), colors.blue),
-                    ('TEXTCOLOR', (0, 0), (-1, 0), colors.white),
-                    ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
-                    ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
-                    ('BOTTOMPADDING', (0, 0), (-1, 0), 12),
-                    ('BACKGROUND', (0, 1), (-1, -1), colors.white),
-                    ('GRID', (0, 0), (-1, -1), 1, colors.black),
-                ])
-
-                # Add conditional formatting
-                for i in range(1, len(data)):
-                    for j in range(1, len(data[i])):
-                        if data[i][j] == "P":
-                            table_style.add('BACKGROUND', (j, i), (j, i), colors.green)
-                            table_style.add('TEXTCOLOR', (j, i), (j, i), colors.white)
-                        elif data[i][j] == "A" or data[i][j] == "A*":
-                            table_style.add('BACKGROUND', (j, i), (j, i), colors.red)
-                            table_style.add('TEXTCOLOR', (j, i), (j, i), colors.white)
-                        elif data[i][j] == "C":
-                            table_style.add('BACKGROUND', (j, i), (j, i), colors.purple)
-                            table_style.add('TEXTCOLOR', (j, i), (j, i), colors.white)
-
-                table.setStyle(table_style)
-                elements.append(table)
-                elements.append(Spacer(1, 20))
-
-                # Add legend
-                elements.append(Paragraph("Légende:", normal_style))
-                elements.append(Paragraph("P = Présent", normal_style))
-                elements.append(Paragraph("A = Absent", normal_style))
-                elements.append(Paragraph("A* = Absent avec motif", normal_style))
-                elements.append(Paragraph("C = En congé", normal_style))
-                elements.append(Paragraph("- = Non défini", normal_style))
-                elements.append(Spacer(1, 30))
-
-            # Build PDF document
-            doc.build(elements)
-
-            # Get the value of the BytesIO buffer
-            pdf = buffer.getvalue()
-            buffer.close()
-
-            # Create the HttpResponse with PDF
-            response = HttpResponse(content_type='application/pdf')
-            response['Content-Disposition'] = 'attachment; filename="historique-presences.pdf"'
-            response.write(pdf)
-
-            return response
-
-        except Exception as e:
-            return JsonResponse({'success': False, 'message': str(e)}, status=500)
-
-    return JsonResponse({'success': False, 'message': 'Méthode non autorisée'}, status=405)
-
-
-@csrf_exempt
-def get_staff_list(request):
-    """API endpoint to get the list of staff members with attendance status"""
-    today = timezone.now().date()
-
-    # Get all staff members with their cities
-    staff_members = StaffMember.objects.select_related('city').all()
-
-    # Get today's attendance records
-    attendances = Attendance.objects.filter(date=today)
-
-    # Create a dictionary for quick lookup
-    attendance_dict = {att.staff_member_id: att for att in attendances}
-
-    # Prepare response data
-    staff_data = []
-    for staff in staff_members:
-        attendance = attendance_dict.get(staff.id)
-        # Determine status based on attendance record
-        if attendance:
-            if attendance.absence_reason == 'CONGE_STATUS':
-                status = 'conge'
-            elif attendance.present is True:
-                status = 'present'
-            elif attendance.present is False:
-                status = 'absent'
-            else:
-                status = 'undefined'
-        else:
-            status = 'undefined'
-
-        staff_data.append({
-            'id': staff.id,
-            'name': staff.name,
-            'city': staff.city.name,
-            'status': status,
-            'absence_reason': attendance.absence_reason if attendance and attendance.present is False and attendance.absence_reason != 'CONGE_STATUS' else None,
-            'timestamp': attendance.timestamp.isoformat() if attendance and attendance.timestamp else None
-        })
-
-    return JsonResponse({'staffMembers': staff_data})
 
 
 @csrf_exempt
@@ -446,7 +498,7 @@ def mark_absent(request):
 
 @csrf_exempt
 def mark_conge(request):
-    """API endpoint to mark a staff member as on leave (congé)"""
+    """API endpoint to mark a staff member as on leave (congé) for today only"""
     if request.method == 'POST':
         data = json.loads(request.body)
         staff_id = data.get('staff_id')
@@ -795,5 +847,298 @@ def generate_pdf(request):
 
         except Exception as e:
             return JsonResponse({'success': False, 'message': str(e)}, status=500)
+
+    return JsonResponse({'success': False, 'message': 'Méthode non autorisée'}, status=405)
+
+
+@csrf_exempt
+def generate_history_pdf(request):
+    """API endpoint to generate a PDF report of attendance history"""
+    if request.method == 'POST':
+        try:
+            # Get time period
+            end_date = timezone.now().date()
+            start_date = end_date - datetime.timedelta(days=30)
+
+            # Get all staff with their attendance
+            staff_members = StaffMember.objects.select_related('city').all()
+
+            # Get attendance records for the period
+            attendances = Attendance.objects.filter(
+                date__gte=start_date,
+                date__lte=end_date
+            ).order_by('-date')
+
+            # Create a dictionary for quick lookup
+            attendance_dict = {}
+            for attendance in attendances:
+                key = (attendance.date, attendance.staff_member_id)
+                attendance_dict[key] = attendance
+
+            # Create a BytesIO buffer for the PDF
+            buffer = BytesIO()
+
+            # Create the PDF object
+            doc = SimpleDocTemplate(buffer, pagesize=A4, topMargin=30, bottomMargin=30)
+            elements = []
+
+            # Set up styles
+            styles = getSampleStyleSheet()
+            title_style = styles['Heading1']
+            subtitle_style = styles['Heading2']
+            normal_style = styles['Normal']
+            date_style = styles['Heading3']
+
+            # Add title
+            elements.append(Paragraph("Historique de Présence du Personnel", title_style))
+            elements.append(Spacer(1, 12))
+
+            # Add date range
+            date_range = f"Période: {start_date.strftime('%d/%m/%Y')} - {end_date.strftime('%d/%m/%Y')}"
+            elements.append(Paragraph(date_range, subtitle_style))
+            elements.append(Spacer(1, 20))
+
+            # Group staff by city
+            staff_by_city = {}
+            for staff in staff_members:
+                if staff.city.name not in staff_by_city:
+                    staff_by_city[staff.city.name] = []
+                staff_by_city[staff.city.name].append(staff)
+
+            # For each city, create a section
+            for city_name, city_staff in staff_by_city.items():
+                elements.append(Paragraph(f"Ville: {city_name}", subtitle_style))
+                elements.append(Spacer(1, 10))
+
+                # Get all dates in the range
+                dates = []
+                current_date = start_date
+                while current_date <= end_date:
+                    dates.append(current_date)
+                    current_date += datetime.timedelta(days=1)
+
+                # Create table header with dates
+                header = ["Nom"]
+                for date in dates:
+                    header.append(date.strftime('%d/%m'))
+
+                # Create table data
+                data = [header]
+
+                # Add staff rows
+                for staff in city_staff:
+                    row = [staff.name]
+
+                    # Add status for each date
+                    for date in dates:
+                        key = (date, staff.id)
+                        attendance = attendance_dict.get(key)
+
+                        if attendance:
+                            if attendance.absence_reason == 'CONGE_STATUS':
+                                status = "C"  # Congé
+                            elif attendance.present is True:
+                                status = "P"  # Present
+                            elif attendance.present is False:
+                                status = "A"  # Absent
+                                if attendance.absence_reason:
+                                    status = "A*"  # Absent with reason
+                            else:
+                                status = "-"  # Undefined
+                        else:
+                            status = "-"  # No record
+
+                        row.append(status)
+
+                    data.append(row)
+
+                # Create the table
+                col_widths = [120] + [20] * len(dates)  # Name column wider than date columns
+                table = Table(data, colWidths=col_widths)
+
+                # Style the table
+                table_style = TableStyle([
+                    ('BACKGROUND', (0, 0), (-1, 0), colors.blue),
+                    ('TEXTCOLOR', (0, 0), (-1, 0), colors.white),
+                    ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
+                    ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+                    ('BOTTOMPADDING', (0, 0), (-1, 0), 12),
+                    ('BACKGROUND', (0, 1), (-1, -1), colors.white),
+                    ('GRID', (0, 0), (-1, -1), 1, colors.black),
+                ])
+
+                # Add conditional formatting
+                for i in range(1, len(data)):
+                    for j in range(1, len(data[i])):
+                        if data[i][j] == "P":
+                            table_style.add('BACKGROUND', (j, i), (j, i), colors.green)
+                            table_style.add('TEXTCOLOR', (j, i), (j, i), colors.white)
+                        elif data[i][j] == "A" or data[i][j] == "A*":
+                            table_style.add('BACKGROUND', (j, i), (j, i), colors.red)
+                            table_style.add('TEXTCOLOR', (j, i), (j, i), colors.white)
+                        elif data[i][j] == "C":
+                            table_style.add('BACKGROUND', (j, i), (j, i), colors.purple)
+                            table_style.add('TEXTCOLOR', (j, i), (j, i), colors.white)
+
+                table.setStyle(table_style)
+                elements.append(table)
+                elements.append(Spacer(1, 20))
+
+                # Add legend
+                elements.append(Paragraph("Légende:", normal_style))
+                elements.append(Paragraph("P = Présent", normal_style))
+                elements.append(Paragraph("A = Absent", normal_style))
+                elements.append(Paragraph("A* = Absent avec motif", normal_style))
+                elements.append(Paragraph("C = En congé", normal_style))
+                elements.append(Paragraph("- = Non défini", normal_style))
+                elements.append(Spacer(1, 30))
+
+            # Build PDF document
+            doc.build(elements)
+
+            # Get the value of the BytesIO buffer
+            pdf = buffer.getvalue()
+            buffer.close()
+
+            # Create the HttpResponse with PDF
+            response = HttpResponse(content_type='application/pdf')
+            response['Content-Disposition'] = 'attachment; filename="historique-presences.pdf"'
+            response.write(pdf)
+
+            return response
+
+        except Exception as e:
+            return JsonResponse({'success': False, 'message': str(e)}, status=500)
+
+    return JsonResponse({'success': False, 'message': 'Méthode non autorisée'}, status=405)
+
+
+# Ajoutez ces vues corrigées dans views.py
+
+@csrf_exempt
+def get_cities_list(request):
+    """API endpoint to get the list of all cities with their IDs"""
+    try:
+        cities = City.objects.all().order_by('name')
+        cities_data = []
+        for city in cities:
+            staff_count = StaffMember.objects.filter(city=city).count()
+            cities_data.append({
+                'id': city.id,
+                'name': city.name,
+                'staff_count': staff_count
+            })
+
+        return JsonResponse({'success': True, 'cities': cities_data})
+    except Exception as e:
+        return JsonResponse({'success': False, 'message': str(e)}, status=500)
+
+
+@csrf_exempt
+def add_city(request):
+    """API endpoint to add a new city"""
+    if request.method == 'POST':
+        data = json.loads(request.body)
+        city_name = data.get('name', '').strip()
+
+        if not city_name:
+            return JsonResponse({'success': False, 'message': 'Le nom de la ville est requis'}, status=400)
+
+        # Check if city already exists
+        if City.objects.filter(name__iexact=city_name).exists():
+            return JsonResponse({'success': False, 'message': 'Cette ville existe déjà'}, status=400)
+
+        try:
+            city = City.objects.create(name=city_name)
+            return JsonResponse({
+                'success': True,
+                'message': f'Ville "{city_name}" ajoutée avec succès',
+                'city': {
+                    'id': city.id,
+                    'name': city.name,
+                    'staff_count': 0
+                }
+            })
+        except Exception as e:
+            return JsonResponse({'success': False, 'message': f'Erreur: {str(e)}'}, status=500)
+
+    return JsonResponse({'success': False, 'message': 'Méthode non autorisée'}, status=405)
+
+
+@csrf_exempt
+def update_city_name(request):
+    """API endpoint to update a city's name"""
+    if request.method == 'POST':
+        data = json.loads(request.body)
+        city_id = data.get('city_id')
+        new_name = data.get('new_name', '').strip()
+
+        if not new_name:
+            return JsonResponse({'success': False, 'message': 'Le nouveau nom est requis'}, status=400)
+
+        if not city_id:
+            return JsonResponse({'success': False, 'message': 'ID de la ville requis'}, status=400)
+
+        try:
+            city = City.objects.get(id=city_id)
+
+            # Check if new name already exists (excluding current city)
+            if City.objects.filter(name__iexact=new_name).exclude(id=city_id).exists():
+                return JsonResponse({'success': False, 'message': 'Une ville avec ce nom existe déjà'}, status=400)
+
+            old_name = city.name
+            city.name = new_name
+            city.save()
+
+            return JsonResponse({
+                'success': True,
+                'message': f'Ville renommée de "{old_name}" à "{new_name}"',
+                'city': {
+                    'id': city.id,
+                    'name': city.name,
+                    'old_name': old_name
+                }
+            })
+        except City.DoesNotExist:
+            return JsonResponse({'success': False, 'message': 'Ville non trouvée'}, status=404)
+        except Exception as e:
+            return JsonResponse({'success': False, 'message': f'Erreur: {str(e)}'}, status=500)
+
+    return JsonResponse({'success': False, 'message': 'Méthode non autorisée'}, status=405)
+
+
+@csrf_exempt
+def delete_city(request):
+    """API endpoint to delete a city"""
+    if request.method == 'POST':
+        data = json.loads(request.body)
+        city_id = data.get('city_id')
+
+        if not city_id:
+            return JsonResponse({'success': False, 'message': 'ID de la ville requis'}, status=400)
+
+        try:
+            city = City.objects.get(id=city_id)
+
+            # Check if city has staff members
+            staff_count = StaffMember.objects.filter(city=city).count()
+            if staff_count > 0:
+                return JsonResponse({
+                    'success': False,
+                    'message': f'Impossible de supprimer "{city.name}". Elle contient {staff_count} membre(s) du personnel.'
+                }, status=400)
+
+            city_name = city.name
+            city.delete()
+
+            return JsonResponse({
+                'success': True,
+                'message': f'Ville "{city_name}" supprimée avec succès',
+                'deleted_city_name': city_name
+            })
+        except City.DoesNotExist:
+            return JsonResponse({'success': False, 'message': 'Ville non trouvée'}, status=404)
+        except Exception as e:
+            return JsonResponse({'success': False, 'message': f'Erreur: {str(e)}'}, status=500)
 
     return JsonResponse({'success': False, 'message': 'Méthode non autorisée'}, status=405)
