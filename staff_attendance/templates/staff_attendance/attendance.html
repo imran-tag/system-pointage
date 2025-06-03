@@ -456,6 +456,27 @@ body {
     width: fit-content;
 }
 
+.hours-worked {
+    font-size: 11px;
+    color: #2ecc71;
+    background: rgba(46, 204, 113, 0.1);
+    padding: 2px 6px;
+    border-radius: 3px;
+    width: fit-content;
+    font-weight: 500;
+}
+
+.grand-deplacement {
+    font-size: 10px;
+    color: #8e44ad;
+    background: rgba(142, 68, 173, 0.1);
+    padding: 2px 6px;
+    border-radius: 3px;
+    width: fit-content;
+    font-weight: 500;
+    text-transform: uppercase;
+}
+
 .attendance-actions {
     display: flex;
     gap: 6px;
@@ -532,7 +553,47 @@ body {
     flex-wrap: wrap;
     gap: 10px;
 }
+/* Add these CSS rules to distinguish current vs future congés */
 
+.conge-item.current-conge {
+    background: rgba(255, 255, 255, 0.3);
+    border: 2px solid rgba(255, 255, 255, 0.5);
+    box-shadow: 0 0 10px rgba(255, 255, 255, 0.2);
+}
+
+.conge-item.future-conge {
+    background: rgba(255, 255, 255, 0.15);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    opacity: 0.8;
+}
+
+.conge-item.current-conge .conge-item-header {
+    font-weight: 700;
+    color: #fff;
+}
+
+.conge-item.future-conge .conge-item-header {
+    font-weight: 500;
+    color: rgba(255, 255, 255, 0.9);
+}
+
+.conge-separator {
+    margin: 8px 0;
+}
+
+/* Optional: Add a subtle animation for current congés */
+.conge-item.current-conge {
+    animation: subtlePulse 3s ease-in-out infinite;
+}
+
+@keyframes subtlePulse {
+    0%, 100% {
+        box-shadow: 0 0 10px rgba(255, 255, 255, 0.2);
+    }
+    50% {
+        box-shadow: 0 0 15px rgba(255, 255, 255, 0.4);
+    }
+}
 .attendance-controls {
     display: flex;
     gap: 10px;
@@ -813,6 +874,71 @@ body {
     flex: 1;
 }
 
+/* Slider styles */
+.slider-container {
+    margin: 15px 0;
+}
+
+.slider-input {
+    width: 100%;
+    -webkit-appearance: none;
+    height: 8px;
+    border-radius: 5px;
+    background: #ddd;
+    outline: none;
+    margin: 10px 0;
+}
+
+.slider-input::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    background: var(--button-primary);
+    cursor: pointer;
+}
+
+.slider-input::-moz-range-thumb {
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    background: var(--button-primary);
+    cursor: pointer;
+    border: none;
+}
+
+.slider-value {
+    display: flex;
+    justify-content: space-between;
+    font-size: 14px;
+    color: var(--text-color);
+    margin-top: 5px;
+}
+
+.current-value {
+    font-weight: bold;
+    color: var(--button-primary);
+}
+
+/* Checkbox styles */
+.checkbox-container {
+    display: flex;
+    align-items: center;
+    margin: 15px 0;
+}
+
+.checkbox-container input[type="checkbox"] {
+    width: auto;
+    margin-right: 10px;
+    transform: scale(1.2);
+}
+
+.checkbox-container label {
+    margin: 0;
+    cursor: pointer;
+}
+
 @media (max-width: 768px) {
     .container {
         grid-template-columns: 1fr;
@@ -898,12 +1024,13 @@ body {
         <strong>Instructions:</strong>
         1. Cliquez sur un chantier pour voir son personnel et gérer les présences du jour
         2. Utilisez les boutons "Présent/Absent/Congé" pour marquer la présence de chaque membre
-        3. Pour les congés avec période, utilisez le bouton "Congé Période" pour définir les dates
-        4. Glissez-déposez un membre du personnel (utilisez l'icône ⋮⋮) vers un autre chantier pour le déplacer
-        5. Glissez vers la zone "Congé" pour mettre un membre en congé aujourd'hui uniquement
-        6. Les changements sont sauvegardés automatiquement
-        7. Utilisez le mode admin pour modifier les présences verrouillées
-        8. Ajoutez de nouveaux chantiers avec le bouton "+" et modifiez les noms en cliquant sur l'icône d'édition
+        3. Lors du marquage présent, définissez les heures travaillées (0-9h) et si c'est un grand déplacement (nuit)
+        4. Pour les congés avec période, utilisez le bouton "Congé Période" pour définir les dates
+        5. Glissez-déposez un membre du personnel (utilisez l'icône ⋮⋮) vers un autre chantier pour le déplacer
+        6. Glissez vers la zone "Congé" pour mettre un membre en congé aujourd'hui uniquement
+        7. Les changements sont sauvegardés automatiquement
+        8. Utilisez le mode admin pour modifier les présences verrouillées
+        9. Ajoutez de nouveaux chantiers avec le bouton "+" et modifiez les noms en cliquant sur l'icône d'édition
     </div>
 
     <div id="message" class="message" style="display: none;"></div>
@@ -912,7 +1039,7 @@ body {
         <div class="cities-panel">
             <div class="panel-title">
                 <span>Chantiers</span>
-                <button id="add-city-btn" class="add-city-btn" title="Ajouter un chnatier">+</button>
+                <button id="add-city-btn" class="add-city-btn" title="Ajouter un chantier">+</button>
             </div>
             <ul class="city-list" id="city-list">
                 <!-- Cities will be populated here -->
@@ -950,6 +1077,34 @@ body {
             <div class="conge-instructions">
                 Glissez le personnel ici pour le mettre en congé aujourd'hui uniquement
             </div>
+        </div>
+    </div>
+
+    <!-- Present Modal with Hours and Grand Déplacement -->
+    <div id="present-modal" class="modal">
+        <div class="modal-content wide">
+            <span class="close">&times;</span>
+            <h3>Marquer comme présent</h3>
+            <div id="present-staff-name" style="margin-bottom: 15px; font-weight: bold; color: var(--button-primary);"></div>
+
+            <div class="form-group">
+                <label for="hours-worked">Heures travaillées :</label>
+                <div class="slider-container">
+                    <input type="range" id="hours-worked" class="slider-input" min="0" max="9" step="0.5" value="8">
+                    <div class="slider-value">
+                        <span>0h</span>
+                        <span class="current-value" id="hours-value">8h</span>
+                        <span>9h</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="checkbox-container">
+                <input type="checkbox" id="grand-deplacement">
+                <label for="grand-deplacement">Grand déplacement (nuit)</label>
+            </div>
+
+            <button id="submit-present" class="button success">Valider</button>
         </div>
     </div>
 
@@ -1044,6 +1199,7 @@ body {
         let currentAbsentStaffId = null;
         let currentCongeStaffId = null;
         let currentEditCityId = null;
+        let currentPresentStaffId = null;
 
         // DOM elements
         const cityList = document.getElementById('city-list');
@@ -1060,6 +1216,7 @@ body {
         const congeList = document.getElementById('conge-list');
 
         // Modal elements
+        const presentModal = document.getElementById('present-modal');
         const addCityModal = document.getElementById('add-city-modal');
         const editCityModal = document.getElementById('edit-city-modal');
         const adminModal = document.getElementById('admin-modal');
@@ -1069,6 +1226,7 @@ body {
 
         // Button elements
         const addCityButton = document.getElementById('add-city-btn');
+        const submitPresentButton = document.getElementById('submit-present');
         const submitNewCityButton = document.getElementById('submit-new-city');
         const submitEditCityButton = document.getElementById('submit-edit-city');
         const submitPasswordButton = document.getElementById('submit-password');
@@ -1076,6 +1234,10 @@ body {
         const submitCongePeriodButton = document.getElementById('submit-conge-period');
 
         // Input elements
+        const presentStaffNameElement = document.getElementById('present-staff-name');
+        const hoursWorkedSlider = document.getElementById('hours-worked');
+        const hoursValueDisplay = document.getElementById('hours-value');
+        const grandDeplacementCheckbox = document.getElementById('grand-deplacement');
         const newCityNameInput = document.getElementById('new-city-name');
         const editCityNameInput = document.getElementById('edit-city-name');
         const adminPasswordInput = document.getElementById('admin-password');
@@ -1083,6 +1245,11 @@ body {
         const congeStartDateInput = document.getElementById('conge-start-date');
         const congeEndDateInput = document.getElementById('conge-end-date');
         const congeReasonInput = document.getElementById('conge-reason');
+
+        // Hours slider functionality
+        hoursWorkedSlider.addEventListener('input', function() {
+            hoursValueDisplay.textContent = this.value + 'h';
+        });
 
         // Dark mode toggle functionality
         const darkModeToggle = document.getElementById('dark-mode-toggle');
@@ -1141,6 +1308,19 @@ body {
                 });
             }
 
+            // Submit present
+            if (submitPresentButton) {
+                submitPresentButton.addEventListener('click', function() {
+                    if (currentPresentStaffId) {
+                        const hoursWorked = parseFloat(hoursWorkedSlider.value);
+                        const grandDeplacement = grandDeplacementCheckbox.checked;
+                        markStaffPresent(currentPresentStaffId, hoursWorked, grandDeplacement);
+                        presentModal.style.display = 'none';
+                        currentPresentStaffId = null;
+                    }
+                });
+            }
+
             // Submit new city
             if (submitNewCityButton) {
                 submitNewCityButton.addEventListener('click', addNewCity);
@@ -1191,6 +1371,7 @@ body {
             // Close modals
             closeModalButtons.forEach(function(button) {
                 button.addEventListener('click', function() {
+                    presentModal.style.display = 'none';
                     addCityModal.style.display = 'none';
                     editCityModal.style.display = 'none';
                     adminModal.style.display = 'none';
@@ -1201,6 +1382,7 @@ body {
 
             // Click outside modal to close
             window.addEventListener('click', function(e) {
+                if (e.target === presentModal) presentModal.style.display = 'none';
                 if (e.target === addCityModal) addCityModal.style.display = 'none';
                 if (e.target === editCityModal) editCityModal.style.display = 'none';
                 if (e.target === adminModal) adminModal.style.display = 'none';
@@ -1294,162 +1476,173 @@ body {
             });
         }
 
+        // Show present modal
+        function showPresentModal(staffId, staffName) {
+            currentPresentStaffId = staffId;
+            presentStaffNameElement.textContent = staffName;
+
+            // Reset to defaults
+            hoursWorkedSlider.value = 8;
+            hoursValueDisplay.textContent = '8h';
+            grandDeplacementCheckbox.checked = false;
+
+            presentModal.style.display = 'block';
+        }
+
         // Add new city
         async function addNewCity() {
-    const cityName = newCityNameInput.value.trim();
-    if (!cityName) {
-        showMessage('Veuillez entrer un nom du chantier.', 'error');
-        return;
-    }
+            const cityName = newCityNameInput.value.trim();
+            if (!cityName) {
+                showMessage('Veuillez entrer un nom du chantier.', 'error');
+                return;
+            }
 
-    try {
-        const response = await fetch('/api/add-city/', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'X-CSRFToken': csrftoken
-            },
-            body: JSON.stringify({ name: cityName })
-        });
+            try {
+                const response = await fetch('/api/add-city/', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': csrftoken
+                    },
+                    body: JSON.stringify({ name: cityName })
+                });
 
-        const data = await response.json();
+                const data = await response.json();
 
-        if (data.success) {
-            showMessage(data.message, 'success');
-            addCityModal.style.display = 'none';
-            await loadCities();
-            renderCities();
-        } else {
-            showMessage(data.message, 'error');
+                if (data.success) {
+                    showMessage(data.message, 'success');
+                    addCityModal.style.display = 'none';
+                    await loadCities();
+                    renderCities();
+                } else {
+                    showMessage(data.message, 'error');
+                }
+            } catch (error) {
+                showMessage('Erreur lors de l\'ajout du chantier', 'error');
+                console.error('Error adding city:', error);
+            }
         }
-    } catch (error) {
-        showMessage('Erreur lors de l\'ajout du chantier', 'error');
-        console.error('Error adding city:', error);
-    }
-}
 
         // Update city name
         async function updateCityName() {
-    const newName = editCityNameInput.value.trim();
-    if (!newName || !currentEditCityId) {
-        showMessage('Veuillez entrer un nouveau nom.', 'error');
-        return;
-    }
-
-    try {
-        const response = await fetch('/api/update-city-name/', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'X-CSRFToken': csrftoken
-            },
-            body: JSON.stringify({
-                city_id: currentEditCityId,
-                new_name: newName
-            })
-        });
-
-        const data = await response.json();
-
-        if (data.success) {
-            showMessage(data.message, 'success');
-            editCityModal.style.display = 'none';
-            currentEditCityId = null;
-
-            // Update current city name if it was the one being edited
-            if (currentCityName === data.city.old_name) {
-                currentCityName = data.city.name;
-                currentCityId = data.city.name; // Update this too for consistency
-                staffPanelTitle.textContent = 'Personnel - ' + data.city.name;
+            const newName = editCityNameInput.value.trim();
+            if (!newName || !currentEditCityId) {
+                showMessage('Veuillez entrer un nouveau nom.', 'error');
+                return;
             }
 
-            await loadCities();
-            renderCities();
-        } else {
-            showMessage(data.message, 'error');
-        }
-    } catch (error) {
-        showMessage('Erreur lors de la modification', 'error');
-        console.error('Error updating city name:', error);
-    }
-}
+            try {
+                const response = await fetch('/api/update-city-name/', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': csrftoken
+                    },
+                    body: JSON.stringify({
+                        city_id: currentEditCityId,
+                        new_name: newName
+                    })
+                });
 
+                const data = await response.json();
+
+                if (data.success) {
+                    showMessage(data.message, 'success');
+                    editCityModal.style.display = 'none';
+                    currentEditCityId = null;
+
+                    // Update current city name if it was the one being edited
+                    if (currentCityName === data.city.old_name) {
+                        currentCityName = data.city.name;
+                        currentCityId = data.city.name; // Update this too for consistency
+                        staffPanelTitle.textContent = 'Personnel - ' + data.city.name;
+                    }
+
+                    await loadCities();
+                    renderCities();
+                } else {
+                    showMessage(data.message, 'error');
+                }
+            } catch (error) {
+                showMessage('Erreur lors de la modification', 'error');
+                console.error('Error updating city name:', error);
+            }
+        }
 
         // Delete city
         async function deleteCity(cityId, cityName) {
-    if (!confirm(`Êtes-vous sûr de vouloir supprimer le chantier "${cityName}" ?`)) {
-        return;
-    }
-
-    try {
-        const response = await fetch('/api/delete-city/', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'X-CSRFToken': csrftoken
-            },
-            body: JSON.stringify({ city_id: cityId })
-        });
-
-        const data = await response.json();
-
-        if (data.success) {
-            showMessage(data.message, 'success');
-
-            // Clear selection if deleted city was selected
-            if (currentCityName === data.deleted_city_name) {
-                currentCityId = null;
-                currentCityName = null;
-                attendanceControls.style.display = 'none';
-                currentDateElement.style.display = 'none';
-                staffList.innerHTML = '<div class="empty-state">Sélectionnez un chantier pour voir son personnel</div>';
-                staffPanelTitle.textContent = 'Personnel';
+            if (!confirm(`Êtes-vous sûr de vouloir supprimer le chantier "${cityName}" ?`)) {
+                return;
             }
 
-            await loadCities();
-            renderCities();
-        } else {
-            showMessage(data.message, 'error');
+            try {
+                const response = await fetch('/api/delete-city/', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': csrftoken
+                    },
+                    body: JSON.stringify({ city_id: cityId })
+                });
+
+                const data = await response.json();
+
+                if (data.success) {
+                    showMessage(data.message, 'success');
+
+                    // Clear selection if deleted city was selected
+                    if (currentCityName === data.deleted_city_name) {
+                        currentCityId = null;
+                        currentCityName = null;
+                        attendanceControls.style.display = 'none';
+                        currentDateElement.style.display = 'none';
+                        staffList.innerHTML = '<div class="empty-state">Sélectionnez un chantier pour voir son personnel</div>';
+                        staffPanelTitle.textContent = 'Personnel';
+                    }
+
+                    await loadCities();
+                    renderCities();
+                } else {
+                    showMessage(data.message, 'error');
+                }
+            } catch (error) {
+                showMessage('Erreur lors de la suppression', 'error');
+                console.error('Error deleting city:', error);
+            }
         }
-    } catch (error) {
-        showMessage('Erreur lors de la suppression', 'error');
-        console.error('Error deleting city:', error);
-    }
-}
 
         let citiesWithIds = [];
 
-
         // Load cities
         async function loadCities() {
-    try {
-        // Charger les villes avec leurs IDs
-        const citiesResponse = await fetch('/api/cities/');
-        const citiesData = await citiesResponse.json();
+            try {
+                // Charger les villes avec leurs IDs
+                const citiesResponse = await fetch('/api/cities/');
+                const citiesData = await citiesResponse.json();
 
-        if (citiesData.success) {
-            citiesWithIds = citiesData.cities;
+                if (citiesData.success) {
+                    citiesWithIds = citiesData.cities;
+                }
+
+                // Charger aussi les données du personnel pour le comptage
+                const staffResponse = await fetch('/api/staff/');
+                const staffData = await staffResponse.json();
+
+                if (staffData.staffMembers) {
+                    allStaff = staffData.staffMembers;
+
+                    // Mettre à jour le comptage du personnel pour chaque ville
+                    citiesWithIds.forEach(function(city) {
+                        city.staff_count = allStaff.filter(staff => staff.city === city.name).length;
+                    });
+
+                    cities = citiesWithIds; // Pour la compatibilité avec le code existant
+                }
+            } catch (error) {
+                showMessage('Erreur lors du chargement des chantiers', 'error');
+                console.error('Error loading cities:', error);
+            }
         }
-
-        // Charger aussi les données du personnel pour le comptage
-        const staffResponse = await fetch('/api/staff/');
-        const staffData = await staffResponse.json();
-
-        if (staffData.staffMembers) {
-            allStaff = staffData.staffMembers;
-
-            // Mettre à jour le comptage du personnel pour chaque ville
-            citiesWithIds.forEach(function(city) {
-                city.staff_count = allStaff.filter(staff => staff.city === city.name).length;
-            });
-
-            cities = citiesWithIds; // Pour la compatibilité avec le code existant
-        }
-    } catch (error) {
-        showMessage('Erreur lors du chargement des chantiers', 'error');
-        console.error('Error loading cities:', error);
-    }
-}
 
         // Load all staff with attendance data
         async function loadAllStaff() {
@@ -1468,64 +1661,88 @@ body {
 
         // Load congé reservations
         async function loadCongeReservations() {
-            try {
-                const response = await fetch('/api/conge-reservations/');
-                const data = await response.json();
+    try {
+        const response = await fetch('/api/conge-reservations/');
+        const data = await response.json();
 
-                if (data.success) {
-                    congeReservations = data.reservations;
-                }
-            } catch (error) {
-                showMessage('Erreur lors du chargement des congés', 'error');
-                console.error('Error loading congé reservations:', error);
-            }
+        if (data.success) {
+            // The API now only returns current and future congés
+            congeReservations = data.reservations;
         }
+    } catch (error) {
+        showMessage('Erreur lors du chargement des congés', 'error');
+        console.error('Error loading congé reservations:', error);
+    }
+}
 
-        // Render cities
-        function renderCities() {
-    cityList.innerHTML = '';
-
-    citiesWithIds.forEach(function(city) {
-        const cityItem = document.createElement('li');
-        cityItem.className = 'city-item';
-        cityItem.dataset.cityName = city.name;
-        cityItem.dataset.cityId = city.id;
-
-        cityItem.innerHTML = `
-            <div class="city-content">
-                <div class="city-name">${city.name}</div>
-                <div class="staff-count">${city.staff_count} membre(s)</div>
-            </div>
-            <div class="city-actions">
-                <button class="city-action-btn" onclick="editCityName(${city.id}, '${city.name}')" title="Modifier le nom">✏️</button>
-                <button class="city-action-btn" onclick="deleteCity(${city.id}, '${city.name}')" title="Supprimer le chantier">🗑️</button>
-            </div>
-        `;
-
-        // Add click event
-        cityItem.addEventListener('click', function(e) {
-            // Don't trigger city selection if clicking on action buttons
-            if (!e.target.classList.contains('city-action-btn')) {
-                selectCity(city.name, city.name);
+// Optional: Add a function to clean up old data (call this periodically or manually)
+async function cleanupPastConges() {
+    try {
+        const response = await fetch('/api/cleanup-past-conges/', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': csrftoken
             }
         });
 
-        // Add drag and drop events for cities
-        cityItem.addEventListener('dragover', handleCityDragOver);
-        cityItem.addEventListener('drop', handleCityDrop);
-        cityItem.addEventListener('dragleave', handleCityDragLeave);
+        const data = await response.json();
 
-        cityList.appendChild(cityItem);
-    });
+        if (data.success) {
+            showMessage(`${data.cleaned_count} anciens congés supprimés`, 'info');
+            await refreshData();
+        }
+    } catch (error) {
+        console.error('Error cleaning up past congés:', error);
+    }
 }
+
+        // Render cities
+        function renderCities() {
+            cityList.innerHTML = '';
+
+            citiesWithIds.forEach(function(city) {
+                const cityItem = document.createElement('li');
+                cityItem.className = 'city-item';
+                cityItem.dataset.cityName = city.name;
+                cityItem.dataset.cityId = city.id;
+
+                cityItem.innerHTML = `
+                    <div class="city-content">
+                        <div class="city-name">${city.name}</div>
+                        <div class="staff-count">${city.staff_count} membre(s)</div>
+                    </div>
+                    <div class="city-actions">
+                        <button class="city-action-btn" onclick="editCityName(${city.id}, '${city.name}')" title="Modifier le nom">✏️</button>
+                        <button class="city-action-btn" onclick="deleteCity(${city.id}, '${city.name}')" title="Supprimer le chantier">🗑️</button>
+                    </div>
+                `;
+
+                // Add click event
+                cityItem.addEventListener('click', function(e) {
+                    // Don't trigger city selection if clicking on action buttons
+                    if (!e.target.classList.contains('city-action-btn')) {
+                        selectCity(city.name, city.name);
+                    }
+                });
+
+                // Add drag and drop events for cities
+                cityItem.addEventListener('dragover', handleCityDragOver);
+                cityItem.addEventListener('drop', handleCityDrop);
+                cityItem.addEventListener('dragleave', handleCityDragLeave);
+
+                cityList.appendChild(cityItem);
+            });
+        }
+
         // Edit city name
         function editCityName(cityId, cityName) {
-    currentEditCityId = cityId;
-    editCityNameInput.value = cityName;
-    editCityModal.style.display = 'block';
-    editCityNameInput.focus();
-    editCityNameInput.select();
-}
+            currentEditCityId = cityId;
+            editCityNameInput.value = cityName;
+            editCityModal.style.display = 'block';
+            editCityNameInput.focus();
+            editCityNameInput.select();
+        }
 
         // Select city and show its staff
         function selectCity(cityName, displayName) {
@@ -1587,6 +1804,18 @@ body {
                     absenceReasonHtml = '<div class="absence-reason">Motif: ' + member.absence_reason + '</div>';
                 }
 
+                // Create hours worked display
+                let hoursWorkedHtml = '';
+                if (member.hours_worked && member.status === 'present') {
+                    hoursWorkedHtml = '<div class="hours-worked">' + member.hours_worked + 'h travaillées</div>';
+                }
+
+                // Create grand déplacement display
+                let grandDeplacementHtml = '';
+                if (member.grand_deplacement && member.status === 'present') {
+                    grandDeplacementHtml = '<div class="grand-deplacement">Grand déplacement (nuit)</div>';
+                }
+
                 // Create attendance actions
                 const isLocked = member.status !== 'undefined' && !adminMode;
                 const lockedIcon = isLocked ? '<span class="locked-icon" title="Statut verrouillé">🔒</span>' : '';
@@ -1602,11 +1831,13 @@ body {
                         <div class="attendance-info">
                             <div class="status-text">${statusText}</div>
                             ${timestampHtml}
+                            ${hoursWorkedHtml}
+                            ${grandDeplacementHtml}
                             ${absenceReasonHtml}
                         </div>
                     </div>
                     <div class="attendance-actions">
-                        <button class="button small present-btn" onclick="markStaffPresent(${member.id})" ${isLocked ? 'disabled' : ''}>
+                        <button class="button small present-btn" onclick="showPresentModal(${member.id}, '${member.name}')" ${isLocked ? 'disabled' : ''}>
                             Présent
                         </button>
                         <button class="button small absent-btn" onclick="showAbsenceModal(${member.id})" ${isLocked ? 'disabled' : ''}>
@@ -1679,7 +1910,7 @@ body {
         }
 
         // Mark staff member as present via API
-        async function markStaffPresent(staffId) {
+        async function markStaffPresent(staffId, hoursWorked, grandDeplacement) {
             try {
                 const response = await fetch('/api/mark-present/', {
                     method: 'POST',
@@ -1687,7 +1918,11 @@ body {
                         'Content-Type': 'application/json',
                         'X-CSRFToken': csrftoken
                     },
-                    body: JSON.stringify({ staff_id: staffId })
+                    body: JSON.stringify({
+                        staff_id: staffId,
+                        hours_worked: hoursWorked,
+                        grand_deplacement: grandDeplacement
+                    })
                 });
 
                 const data = await response.json();
@@ -1822,31 +2057,62 @@ body {
 
         // Render congé list
         function renderCongeList() {
-            if (congeReservations.length === 0) {
-                congeList.innerHTML = `
-                    <div class="conge-empty">
-                        <div>Aucun personnel en congé</div>
-                    </div>
+    if (congeReservations.length === 0) {
+        congeList.innerHTML = `
+            <div class="conge-empty">
+                <div>Aucun personnel en congé</div>
+            </div>
+        `;
+    } else {
+        congeList.innerHTML = '';
+
+        // Separate current and future congés
+        const currentConges = congeReservations.filter(res => res.is_current);
+        const futureConges = congeReservations.filter(res => !res.is_current);
+
+        // Render current congés first
+        if (currentConges.length > 0) {
+            currentConges.forEach(function(reservation) {
+                const congeItem = document.createElement('div');
+                congeItem.className = 'conge-item current-conge';
+
+                congeItem.innerHTML = `
+                    <div class="conge-item-header">${reservation.staff_name} (En cours)</div>
+                    <div class="conge-item-dates">Du ${reservation.start_date_display} au ${reservation.end_date_display}</div>
+                    ${reservation.reason ? `<div class="conge-item-reason">${reservation.reason}</div>` : ''}
+                    <button class="conge-item-remove" onclick="removeCongeReservation(${reservation.id})" title="Supprimer">&times;</button>
                 `;
-            } else {
-                congeList.innerHTML = '';
-                congeReservations.forEach(function(reservation) {
-                    const congeItem = document.createElement('div');
-                    congeItem.className = 'conge-item';
 
-                    const currentClass = reservation.is_current ? ' (En cours)' : '';
-
-                    congeItem.innerHTML = `
-                        <div class="conge-item-header">${reservation.staff_name}${currentClass}</div>
-                        <div class="conge-item-dates">Du ${reservation.start_date_display} au ${reservation.end_date_display}</div>
-                        ${reservation.reason ? `<div class="conge-item-reason">${reservation.reason}</div>` : ''}
-                        <button class="conge-item-remove" onclick="removeCongeReservation(${reservation.id})" title="Supprimer">&times;</button>
-                    `;
-
-                    congeList.appendChild(congeItem);
-                });
-            }
+                congeList.appendChild(congeItem);
+            });
         }
+
+        // Add separator if both current and future exist
+        if (currentConges.length > 0 && futureConges.length > 0) {
+            const separator = document.createElement('div');
+            separator.className = 'conge-separator';
+            separator.innerHTML = '<div style="text-align: center; font-size: 11px; opacity: 0.7; margin: 10px 0; border-top: 1px solid rgba(255,255,255,0.3); padding-top: 8px;">Congés à venir</div>';
+            congeList.appendChild(separator);
+        }
+
+        // Render future congés
+        if (futureConges.length > 0) {
+            futureConges.forEach(function(reservation) {
+                const congeItem = document.createElement('div');
+                congeItem.className = 'conge-item future-conge';
+
+                congeItem.innerHTML = `
+                    <div class="conge-item-header">${reservation.staff_name} (À venir)</div>
+                    <div class="conge-item-dates">Du ${reservation.start_date_display} au ${reservation.end_date_display}</div>
+                    ${reservation.reason ? `<div class="conge-item-reason">${reservation.reason}</div>` : ''}
+                    <button class="conge-item-remove" onclick="removeCongeReservation(${reservation.id})" title="Supprimer">&times;</button>
+                `;
+
+                congeList.appendChild(congeItem);
+            });
+        }
+    }
+}
 
         // Refresh all data
         async function refreshData() {

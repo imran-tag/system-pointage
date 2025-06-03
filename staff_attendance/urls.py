@@ -38,4 +38,6 @@ urlpatterns = [
     path('api/generate-pdf/', views.generate_pdf, name='generate_pdf'),
     path('api/attendance-history/', views.get_attendance_history, name='get_attendance_history'),
     path('api/generate-history-pdf/', views.generate_history_pdf, name='generate_history_pdf'),
+    path('api/cleanup-past-conges/', views.cleanup_past_conges, name='cleanup_past_conges'),
+
 ]

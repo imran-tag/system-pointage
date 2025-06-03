@@ -26,6 +26,8 @@ class Attendance(models.Model):
     present = models.BooleanField(null=True, blank=True)  # Now allows NULL for congé
     timestamp = models.DateTimeField(null=True, blank=True)
     absence_reason = models.TextField(verbose_name="Motif d'absence", null=True, blank=True)
+    hours_worked = models.DecimalField(max_digits=3, decimal_places=1, null=True, blank=True, verbose_name="Heures travaillées")
+    grand_deplacement = models.BooleanField(default=False, verbose_name="Grand déplacement (nuit)")
 
     class Meta:
         unique_together = ['staff_member', 'date']
@@ -34,7 +36,9 @@ class Attendance(models.Model):
         if self.absence_reason == 'CONGE_STATUS':
             status = "En congé"
         elif self.present is True:
-            status = "Present"
+            status = f"Present ({self.hours_worked}h)" if self.hours_worked else "Present"
+            if self.grand_deplacement:
+                status += " - Grand déplacement"
         elif self.present is False:
             status = "Absent"
         else:
@@ -67,6 +71,24 @@ class CongeReservation(models.Model):
 
     def __str__(self):
         return f"{self.staff_member.name} - Congé du {self.start_date} au {self.end_date}"
+
+    @property
+    def is_active(self):
+        """Check if the congé is currently active (today is within the date range)"""
+        today = timezone.now().date()
+        return self.start_date <= today <= self.end_date
+
+    @property
+    def is_past(self):
+        """Check if the congé is completely in the past"""
+        today = timezone.now().date()
+        return self.end_date < today
+
+    @property
+    def is_future(self):
+        """Check if the congé is completely in the future"""
+        today = timezone.now().date()
+        return self.start_date > today
 
     def save(self, *args, **kwargs):
         super().save(*args, **kwargs)
@@ -105,3 +127,16 @@ class CongeReservation(models.Model):
             absence_reason='CONGE_STATUS'
         ).delete()
         super().delete(*args, **kwargs)
+
+    @classmethod
+    def cleanup_past_records(cls):
+        """
+        Utility method to clean up past congé records if needed.
+        This can be called manually or via a management command.
+        """
+        today = timezone.now().date()
+        past_conges = cls.objects.filter(end_date__lt=today)
+        count = past_conges.count()
+        # Uncomment the line below if you want to automatically delete past congé records
+        # past_conges.delete()
+        return count

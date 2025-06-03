@@ -31,6 +31,7 @@
     --timestamp-color: #7f8c8d;
     --status-present: #2ecc71;
     --status-absent: #e74c3c;
+    --status-conge: #9b59b6;
     --status-undefined: #f39c12;
     --select-bg: white;
     --select-border: #ddd;
@@ -69,6 +70,7 @@ body.dark-mode {
     --timestamp-color: #a0a0a0;
     --status-present: #27ae60;
     --status-absent: #c0392b;
+    --status-conge: #8e44ad;
     --status-undefined: #d35400;
     --select-bg: #2d2d2d;
     --select-border: #444;
@@ -194,9 +196,25 @@ body {
 .controls {
     display: flex;
     flex-wrap: wrap;
-    gap: 10px;
+    gap: 15px;
     align-items: center;
     margin-bottom: 20px;
+    justify-content: center;
+}
+
+.month-selector {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    background: var(--city-group-bg);
+    padding: 15px;
+    border-radius: 8px;
+    border: 1px solid var(--border-color);
+}
+
+.month-selector label {
+    font-weight: 500;
+    color: var(--text-color);
 }
 
 .select {
@@ -204,8 +222,35 @@ body {
     border-radius: 4px;
     border: 1px solid var(--select-border);
     background-color: var(--select-bg);
-    min-width: 150px;
+    min-width: 120px;
     color: var(--text-color);
+    font-size: 14px;
+}
+
+.nav-controls {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.nav-button-small {
+    background-color: var(--button-primary);
+    color: white;
+    border: none;
+    padding: 8px 12px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 14px;
+    transition: background-color 0.3s;
+}
+
+.nav-button-small:hover {
+    background-color: var(--button-primary-hover);
+}
+
+.nav-button-small:disabled {
+    background-color: var(--button-disabled);
+    cursor: not-allowed;
 }
 
 .message {
@@ -248,10 +293,11 @@ body {
     display: flex;
     justify-content: center;
     margin-bottom: 20px;
+    gap: 10px;
 }
 
 .nav-button {
-    margin: 0 10px;
+    margin: 0 5px;
 }
 
 .history-table {
@@ -262,9 +308,10 @@ body {
 
 .history-table th,
 .history-table td {
-    padding: 10px;
+    padding: 8px;
     text-align: center;
     border: 1px solid var(--table-border);
+    font-size: 12px;
 }
 
 .history-table th {
@@ -272,6 +319,7 @@ body {
     position: sticky;
     top: 0;
     z-index: 10;
+    font-weight: bold;
 }
 
 .history-table tr:hover {
@@ -284,10 +332,11 @@ body {
 
 .status-cell {
     display: inline-block;
-    width: 24px;
-    height: 24px;
+    width: 20px;
+    height: 20px;
     border-radius: 50%;
     position: relative;
+    margin: 1px;
 }
 
 .status-present {
@@ -298,31 +347,37 @@ body {
     background-color: var(--status-absent);
 }
 
+.status-conge {
+    background-color: var(--status-conge);
+}
+
 .status-undefined {
     background-color: var(--status-undefined);
 }
 
 .status-none {
     border: 1px solid var(--border-color);
+    background-color: transparent;
 }
 
 .status-tooltip {
     visibility: hidden;
-    width: 150px;
+    width: 200px;
     background-color: var(--modal-bg);
     color: var(--text-color);
     text-align: center;
     border-radius: 6px;
-    padding: 5px;
+    padding: 8px;
     position: absolute;
     z-index: 100;
     bottom: 125%;
     left: 50%;
-    margin-left: -75px;
+    margin-left: -100px;
     opacity: 0;
     transition: opacity 0.3s;
-    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
     font-size: 12px;
+    border: 1px solid var(--border-color);
 }
 
 .status-cell:hover .status-tooltip {
@@ -333,37 +388,39 @@ body {
 .legend {
     display: flex;
     justify-content: center;
-    margin-top: 20px;
+    margin: 20px 0;
     flex-wrap: wrap;
+    gap: 15px;
 }
 
 .legend-item {
     display: flex;
     align-items: center;
-    margin: 0 10px;
+    gap: 5px;
 }
 
 .legend-color {
-    width: 20px;
-    height: 20px;
+    width: 16px;
+    height: 16px;
     border-radius: 50%;
-    margin-right: 5px;
 }
 
 .city-title {
     margin-top: 30px;
-    margin-bottom: 10px;
-    padding-bottom: 5px;
-    border-bottom: 1px solid var(--border-color);
+    margin-bottom: 15px;
+    padding-bottom: 8px;
+    border-bottom: 2px solid var(--border-color);
     font-size: 20px;
     font-weight: bold;
+    color: var(--header-color);
 }
 
 .filter-controls {
     display: flex;
     flex-wrap: wrap;
-    gap: 10px;
+    gap: 15px;
     margin-bottom: 20px;
+    align-items: center;
 }
 
 .fixed-name-column {
@@ -371,20 +428,22 @@ body {
     left: 0;
     background-color: var(--card-bg);
     z-index: 5;
+    font-weight: 500;
 }
 
 .date-header {
     white-space: nowrap;
+    min-width: 35px;
 }
 
 /* Loading indicator */
 .loader {
-    border: 5px solid #f3f3f3;
-    border-top: 5px solid var(--button-primary);
+    border: 4px solid #f3f3f3;
+    border-top: 4px solid var(--button-primary);
     border-radius: 50%;
-    width: 50px;
-    height: 50px;
-    animation: spin 2s linear infinite;
+    width: 40px;
+    height: 40px;
+    animation: spin 1s linear infinite;
     margin: 20px auto;
 }
 
@@ -395,20 +454,104 @@ body {
 
 .loading-container {
     text-align: center;
-    padding: 30px;
+    padding: 40px;
 }
 
 .absence-reason {
     font-style: italic;
     font-weight: normal;
+    font-size: 11px;
+    color: var(--status-absent);
+}
+
+.hours-info {
+    font-size: 10px;
+    color: var(--status-present);
+    font-weight: bold;
+}
+
+.grand-deplacement-info {
+    font-size: 9px;
+    color: var(--status-conge);
+    font-weight: bold;
+    text-transform: uppercase;
+}
+
+.stats-summary {
+    background: var(--city-group-bg);
+    padding: 15px;
+    border-radius: 8px;
+    margin-bottom: 20px;
+    border: 1px solid var(--border-color);
+}
+
+.stats-row {
+    display: flex;
+    justify-content: space-around;
+    flex-wrap: wrap;
+    gap: 10px;
+    margin-top: 10px;
+}
+
+.stat-item {
+    text-align: center;
+    padding: 8px;
+    background: var(--card-bg);
+    border-radius: 4px;
+    min-width: 120px;
+}
+
+.stat-value {
+    font-size: 18px;
+    font-weight: bold;
+    color: var(--button-primary);
+}
+
+.stat-label {
     font-size: 12px;
+    color: var(--timestamp-color);
+}
+
+@media (max-width: 768px) {
+    .controls {
+        flex-direction: column;
+        gap: 10px;
+    }
+
+    .month-selector {
+        flex-direction: column;
+        text-align: center;
+    }
+
+    .nav-controls {
+        justify-content: center;
+    }
+
+    .history-table th,
+    .history-table td {
+        padding: 4px;
+        font-size: 10px;
+    }
+
+    .status-cell {
+        width: 16px;
+        height: 16px;
+    }
+
+    .legend {
+        gap: 10px;
+    }
+
+    .stats-row {
+        flex-direction: column;
+    }
 }
     </style>
 </head>
 <body>
     <div class="header">
         <h1>Historique des Présences du Personnel</h1>
-        <p>Les 30 derniers jours</p>
+        <p id="current-period">Sélectionnez un mois à afficher</p>
     </div>
 
     <div class="theme-toggle">
@@ -428,11 +571,56 @@ body {
     <div class="card">
         <div id="message" class="message" style="display: none;"></div>
 
-        <div class="filter-controls">
-            <select id="city-filter" class="select">
-                <option value="all">Toutes les Villes</option>
-                <!-- City options will be populated here -->
-            </select>
+        <div class="controls">
+            <div class="month-selector">
+                <label>Période à afficher :</label>
+                <div class="nav-controls">
+                    <button id="prev-month" class="nav-button-small">‹ Précédent</button>
+                    <select id="month-select" class="select">
+                        <option value="1">Janvier</option>
+                        <option value="2">Février</option>
+                        <option value="3">Mars</option>
+                        <option value="4">Avril</option>
+                        <option value="5">Mai</option>
+                        <option value="6">Juin</option>
+                        <option value="7">Juillet</option>
+                        <option value="8">Août</option>
+                        <option value="9">Septembre</option>
+                        <option value="10">Octobre</option>
+                        <option value="11">Novembre</option>
+                        <option value="12">Décembre</option>
+                    </select>
+                    <select id="year-select" class="select">
+                        <!-- Years will be populated dynamically -->
+                    </select>
+                    <button id="next-month" class="nav-button-small">Suivant ›</button>
+                </div>
+            </div>
+
+            <div class="filter-controls">
+                <select id="city-filter" class="select">
+                    <option value="all">Toutes les Villes</option>
+                    <!-- City options will be populated here -->
+                </select>
+            </div>
+        </div>
+
+        <div id="stats-summary" class="stats-summary" style="display: none;">
+            <strong>Résumé du mois :</strong>
+            <div class="stats-row">
+                <div class="stat-item">
+                    <div class="stat-value" id="total-days">-</div>
+                    <div class="stat-label">Jours total</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-value" id="working-days">-</div>
+                    <div class="stat-label">Jours ouvrables</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-value" id="weekend-days">-</div>
+                    <div class="stat-label">Week-ends</div>
+                </div>
+            </div>
         </div>
 
         <div id="history-container">
@@ -450,6 +638,10 @@ body {
             <div class="legend-item">
                 <div class="legend-color status-absent"></div>
                 <span>Absent</span>
+            </div>
+            <div class="legend-item">
+                <div class="legend-color status-conge"></div>
+                <span>En congé</span>
             </div>
             <div class="legend-item">
                 <div class="legend-color status-undefined"></div>
@@ -470,22 +662,28 @@ body {
         // DOM elements
         const historyContainer = document.getElementById('history-container');
         const cityFilterSelect = document.getElementById('city-filter');
+        const monthSelect = document.getElementById('month-select');
+        const yearSelect = document.getElementById('year-select');
+        const prevMonthButton = document.getElementById('prev-month');
+        const nextMonthButton = document.getElementById('next-month');
         const generatePdfButton = document.getElementById('generate-pdf');
         const messageElement = document.getElementById('message');
+        const currentPeriodElement = document.getElementById('current-period');
+        const statsSummary = document.getElementById('stats-summary');
 
         // Variables
         let historyData = [];
         let staffData = [];
         let cities = [];
+        let currentMonth = new Date().getMonth() + 1;
+        let currentYear = new Date().getFullYear();
+        let currentMonthData = {};
 
         // Dark mode toggle functionality
         const darkModeToggle = document.getElementById('dark-mode-toggle');
-
-        // Check for saved theme preference or use preference from OS
         const prefersDarkScheme = window.matchMedia('(prefers-color-scheme: dark)');
         const currentTheme = localStorage.getItem('theme');
 
-        // Set initial theme based on saved preference or OS preference
         if (currentTheme === 'dark' || (!currentTheme && prefersDarkScheme.matches)) {
             document.body.classList.add('dark-mode');
             darkModeToggle.checked = true;
@@ -494,7 +692,6 @@ body {
             darkModeToggle.checked = false;
         }
 
-        // Toggle theme when switch is clicked
         darkModeToggle.addEventListener('change', function() {
             if (this.checked) {
                 document.body.classList.add('dark-mode');
@@ -505,27 +702,131 @@ body {
             }
         });
 
-        // Fetch attendance history data
+        // Initialize
+        function init() {
+            setupYearOptions();
+            setupEventListeners();
+            setCurrentMonth();
+            fetchAttendanceHistory();
+        }
+
+        // Setup year options (current year ± 2 years)
+        function setupYearOptions() {
+            const currentYear = new Date().getFullYear();
+            yearSelect.innerHTML = '';
+
+            for (let year = currentYear - 2; year <= currentYear + 1; year++) {
+                const option = document.createElement('option');
+                option.value = year;
+                option.textContent = year;
+                if (year === currentYear) {
+                    option.selected = true;
+                }
+                yearSelect.appendChild(option);
+            }
+        }
+
+        // Set current month as selected
+        function setCurrentMonth() {
+            monthSelect.value = currentMonth;
+            yearSelect.value = currentYear;
+        }
+
+        // Setup event listeners
+        function setupEventListeners() {
+            monthSelect.addEventListener('change', function() {
+                currentMonth = parseInt(this.value);
+                fetchAttendanceHistory();
+            });
+
+            yearSelect.addEventListener('change', function() {
+                currentYear = parseInt(this.value);
+                fetchAttendanceHistory();
+            });
+
+            prevMonthButton.addEventListener('click', function() {
+                if (currentMonth === 1) {
+                    currentMonth = 12;
+                    currentYear--;
+                } else {
+                    currentMonth--;
+                }
+                setCurrentMonth();
+                fetchAttendanceHistory();
+            });
+
+            nextMonthButton.addEventListener('click', function() {
+                if (currentMonth === 12) {
+                    currentMonth = 1;
+                    currentYear++;
+                } else {
+                    currentMonth++;
+                }
+                setCurrentMonth();
+                fetchAttendanceHistory();
+            });
+
+            cityFilterSelect.addEventListener('change', renderHistoryTable);
+
+            generatePdfButton.addEventListener('click', generatePDF);
+        }
+
+        // Fetch attendance history data for selected month
         async function fetchAttendanceHistory() {
             try {
-                const response = await fetch('/api/attendance-history/');
+                showLoading();
+
+                const response = await fetch(`/api/attendance-history/?month=${currentMonth}&year=${currentYear}`);
                 const data = await response.json();
+
+                if (data.success === false) {
+                    showMessage(data.message, 'error');
+                    return;
+                }
 
                 historyData = data.history;
                 staffData = data.staff;
+                currentMonthData = data;
 
                 // Extract unique cities
                 cities = [...new Set(staffData.map(staff => staff.city))];
 
-                // Populate city filter
+                // Update UI
+                updatePeriodDisplay();
+                updateStatsDisplay();
                 populateCityFilter();
-
-                // Render history table
                 renderHistoryTable();
+
             } catch (error) {
                 showMessage('Erreur lors du chargement des données d\'historique', 'error');
                 console.error('Error fetching attendance history:', error);
             }
+        }
+
+        // Update period display
+        function updatePeriodDisplay() {
+            const monthName = currentMonthData.month_name || 'Mois';
+            currentPeriodElement.textContent = `${monthName} ${currentYear}`;
+        }
+
+        // Update statistics display
+        function updateStatsDisplay() {
+            if (currentMonthData.total_days) {
+                document.getElementById('total-days').textContent = currentMonthData.total_days;
+                document.getElementById('working-days').textContent = currentMonthData.working_days;
+                document.getElementById('weekend-days').textContent = currentMonthData.total_days - currentMonthData.working_days;
+                statsSummary.style.display = 'block';
+            }
+        }
+
+        // Show loading indicator
+        function showLoading() {
+            historyContainer.innerHTML = `
+                <div class="loading-container">
+                    <div class="loader"></div>
+                    <p>Chargement de l'historique...</p>
+                </div>
+            `;
         }
 
         // Populate city filter dropdown
@@ -590,15 +891,17 @@ body {
                     const dateHeader = document.createElement('th');
                     dateHeader.className = 'date-header';
 
-                    const dateSpan = document.createElement('span');
-                    dateSpan.textContent = day.display_date;
+                    const dayNum = document.createElement('div');
+                    dayNum.textContent = day.display_date.split('/')[0];
+                    dayNum.style.fontSize = '11px';
+                    dayNum.style.fontWeight = 'bold';
 
-                    const weekdaySpan = document.createElement('span');
-                    weekdaySpan.textContent = ` (${day.weekday.slice(0, 3)})`;
-                    weekdaySpan.style.fontSize = '0.8em';
+                    const weekdaySpan = document.createElement('div');
+                    weekdaySpan.textContent = day.weekday.slice(0, 3);
+                    weekdaySpan.style.fontSize = '9px';
                     weekdaySpan.style.color = 'var(--timestamp-color)';
 
-                    dateHeader.appendChild(dateSpan);
+                    dateHeader.appendChild(dayNum);
                     dateHeader.appendChild(weekdaySpan);
 
                     // Add weekend class if Saturday or Sunday
@@ -651,26 +954,36 @@ body {
                                 statusText = 'Présent';
                             } else if (staffAttendance.status === 'absent') {
                                 statusText = 'Absent';
+                            } else if (staffAttendance.status === 'conge') {
+                                statusText = 'En congé';
                             } else {
                                 statusText = 'Non défini';
                             }
 
-                            tooltip.textContent = `${statusText}`;
+                            let tooltipContent = `<strong>${statusText}</strong>`;
 
                             // Add timestamp if available
                             if (staffAttendance.timestamp) {
                                 const timestamp = new Date(staffAttendance.timestamp);
-                                tooltip.textContent += ` à ${timestamp.toLocaleTimeString()}`;
+                                tooltipContent += `<br>à ${timestamp.toLocaleTimeString()}`;
+                            }
+
+                            // Add hours worked if available
+                            if (staffAttendance.hours_worked && staffAttendance.status === 'present') {
+                                tooltipContent += `<br><span class="hours-info">${staffAttendance.hours_worked}h travaillées</span>`;
+                            }
+
+                            // Add grand déplacement if applicable
+                            if (staffAttendance.grand_deplacement && staffAttendance.status === 'present') {
+                                tooltipContent += `<br><span class="grand-deplacement-info">Grand déplacement (nuit)</span>`;
                             }
 
                             // Add absence reason if available
                             if (staffAttendance.absence_reason) {
-                                const reasonDiv = document.createElement('div');
-                                reasonDiv.className = 'absence-reason';
-                                reasonDiv.textContent = `Motif: ${staffAttendance.absence_reason}`;
-                                tooltip.appendChild(reasonDiv);
+                                tooltipContent += `<br><span class="absence-reason">Motif: ${staffAttendance.absence_reason}</span>`;
                             }
 
+                            tooltip.innerHTML = tooltipContent;
                             statusCell.appendChild(tooltip);
                         } else {
                             statusCell.classList.add('status-none');
@@ -678,7 +991,7 @@ body {
                             // Create tooltip for no data
                             const tooltip = document.createElement('div');
                             tooltip.className = 'status-tooltip';
-                            tooltip.textContent = 'Pas de données';
+                            tooltip.innerHTML = '<strong>Pas de données</strong>';
                             statusCell.appendChild(tooltip);
                         }
 
@@ -703,14 +1016,19 @@ body {
         }
 
         // Generate PDF function
-        generatePdfButton.addEventListener('click', async () => {
+        async function generatePDF() {
             try {
                 showMessage('Génération du PDF en cours...', 'info');
                 const response = await fetch('/api/generate-history-pdf/', {
                     method: 'POST',
                     headers: {
+                        'Content-Type': 'application/json',
                         'X-CSRFToken': csrftoken
-                    }
+                    },
+                    body: JSON.stringify({
+                        month: currentMonth,
+                        year: currentYear
+                    })
                 });
 
                 if (response.ok) {
@@ -720,7 +1038,7 @@ body {
                     const downloadUrl = window.URL.createObjectURL(blob);
                     const a = document.createElement('a');
                     a.href = downloadUrl;
-                    a.download = 'historique-presences.pdf';
+                    a.download = `historique-presences-${currentYear}-${currentMonth.toString().padStart(2, '0')}.pdf`;
                     document.body.appendChild(a);
                     a.click();
                     // Clean up
@@ -736,24 +1054,21 @@ body {
                 showMessage('Erreur lors de la génération du PDF', 'error');
                 console.error('Error generating PDF:', error);
             }
-        });
+        }
 
         // Show message
         function showMessage(text, type) {
-            messageElement.textContent = text;
+            messageElement.innerHTML = text;
             messageElement.className = `message ${type}`;
             messageElement.style.display = 'block';
 
             setTimeout(() => {
                 messageElement.style.display = 'none';
-            }, 3000);
+            }, 4000);
         }
 
-        // City filter change handler
-        cityFilterSelect.addEventListener('change', renderHistoryTable);
-
-        // Initialize
-        fetchAttendanceHistory();
+        // Initialize the application
+        init();
     </script>
 </body>
 </html>
