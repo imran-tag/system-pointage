@@ -71,7 +71,179 @@ body.dark-mode {
     height: 34px;
     margin-left: 10px;
 }
+/* Zone-specific styles for attendance.html */
 
+/* Base zone item styling */
+.zone-item {
+    background: linear-gradient(135deg, var(--city-group-bg) 0%, var(--card-bg) 100%);
+    border-left: 4px solid var(--button-primary);
+    border-radius: 8px;
+    position: relative;
+    overflow: hidden;
+}
+
+.zone-item::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 2px;
+    background: linear-gradient(90deg, var(--button-primary), transparent);
+    opacity: 0.6;
+}
+
+/* Zone hover effects */
+.zone-item:hover {
+    background: linear-gradient(135deg, var(--drag-hover) 0%, var(--city-group-bg) 100%);
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    border-left-color: var(--button-primary-hover);
+}
+
+/* Active zone styling */
+.zone-item.active {
+    background: linear-gradient(135deg, var(--button-primary) 0%, var(--button-primary-hover) 100%);
+    color: white;
+    border-left-color: white;
+    box-shadow: 0 6px 20px rgba(52, 152, 219, 0.3);
+}
+
+.zone-item.active::before {
+    background: linear-gradient(90deg, rgba(255, 255, 255, 0.8), transparent);
+}
+
+/* Zone icon indicator */
+.zone-item .city-content::before {
+    content: '🗺️';
+    display: inline-block;
+    margin-right: 8px;
+    font-size: 16px;
+    opacity: 0.8;
+}
+
+.zone-item.active .city-content::before {
+    opacity: 1;
+}
+
+/* Zone name styling */
+.zone-item .city-name {
+    font-weight: 600;
+    font-size: 17px;
+    letter-spacing: 0.3px;
+}
+
+/* Zone staff count styling */
+.zone-item .staff-count {
+    font-size: 13px;
+    opacity: 0.9;
+    font-weight: 500;
+}
+
+/* Dark mode adjustments for zones */
+body.dark-mode .zone-item {
+    background: linear-gradient(135deg, var(--city-group-bg) 0%, #333 100%);
+    border-left-color: var(--button-primary);
+}
+
+body.dark-mode .zone-item:hover {
+    background: linear-gradient(135deg, var(--drag-hover) 0%, var(--city-group-bg) 100%);
+}
+
+body.dark-mode .zone-item.active {
+    background: linear-gradient(135deg, var(--button-primary) 0%, var(--button-primary-hover) 100%);
+    box-shadow: 0 6px 20px rgba(41, 128, 185, 0.4);
+}
+
+/* Zone navigation breadcrumb styling */
+.zone-breadcrumb {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.zone-breadcrumb .back-link {
+    color: var(--button-primary);
+    text-decoration: none;
+    font-weight: 500;
+    transition: color 0.3s ease;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.zone-breadcrumb .back-link:hover {
+    color: var(--button-primary-hover);
+}
+
+.zone-breadcrumb .separator {
+    color: var(--text-color);
+    opacity: 0.6;
+    font-weight: 300;
+}
+
+.zone-breadcrumb .current-zone {
+    font-weight: 600;
+    color: var(--text-color);
+}
+
+/* Zone toggle button styling */
+.zone-toggle-btn {
+    background: var(--button-primary);
+    color: white;
+    border: none;
+    padding: 8px 12px;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 14px;
+    font-weight: 500;
+    transition: all 0.3s ease;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.zone-toggle-btn:hover {
+    background: var(--button-primary-hover);
+    transform: translateY(-1px);
+}
+
+/* Subtle animation for zone transitions */
+.zone-item {
+    transition: all 0.3s ease;
+}
+
+/* Zone count badge */
+.zone-count {
+    background: var(--button-primary);
+    color: white;
+    padding: 2px 8px;
+    border-radius: 12px;
+    font-size: 11px;
+    font-weight: 600;
+    margin-left: 8px;
+    display: inline-block;
+}
+
+.zone-item.active .zone-count {
+    background: rgba(255, 255, 255, 0.2);
+}
+
+/* Responsive zone styling */
+@media (max-width: 768px) {
+    .zone-item .city-name {
+        font-size: 16px;
+    }
+
+    .zone-item .staff-count {
+        font-size: 12px;
+    }
+
+    .zone-breadcrumb {
+        flex-wrap: wrap;
+        gap: 4px;
+    }
+}
 .switch input {
     opacity: 0;
     width: 0;
