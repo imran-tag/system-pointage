@@ -1,4 +1,5 @@
 {% load static %}
+<!DOCTYPE html>
 <html lang="fr">
 <head>
     <meta charset="UTF-8">
@@ -28,11 +29,6 @@
     --message-info-color: #0c5460;
     --select-bg: white;
     --select-border: #ddd;
-    --drag-hover: #e3f2fd;
-    --drag-over: #bbdefb;
-    --staff-item-bg: white;
-    --staff-item-hover: #f8f9fa;
-    --staff-item-dragging: #e1f5fe;
 }
 
 /* Dark theme variables */
@@ -58,11 +54,6 @@ body.dark-mode {
     --message-info-color: #a3d9d9;
     --select-bg: #2d2d2d;
     --select-border: #444;
-    --drag-hover: #1a237e;
-    --drag-over: #283593;
-    --staff-item-bg: #2d2d2d;
-    --staff-item-hover: #383838;
-    --staff-item-dragging: #0d47a1;
 }
 
 /* Dark mode toggle switch */
@@ -72,7 +63,93 @@ body.dark-mode {
     justify-content: center;
     margin-bottom: 20px;
 }
+/* PDF Download Button Styles */
 
+.pdf-download-btn {
+    background: linear-gradient(135deg, var(--button-pdf), var(--button-pdf-hover));
+    color: white;
+    border: none;
+    padding: 12px 20px;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 14px;
+    font-weight: 600;
+    transition: all 0.3s ease;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    box-shadow: 0 2px 8px rgba(40, 167, 69, 0.2);
+    text-decoration: none;
+}
+
+.pdf-download-btn::before {
+    content: '📊';
+    font-size: 16px;
+}
+
+.pdf-download-btn:hover {
+    background: linear-gradient(135deg, var(--button-pdf-hover), var(--button-pdf));
+    transform: translateY(-2px);
+    box-shadow: 0 4px 16px rgba(40, 167, 69, 0.3);
+}
+
+.pdf-download-btn:active {
+    transform: translateY(0);
+    box-shadow: 0 2px 8px rgba(40, 167, 69, 0.2);
+}
+
+/* Loading state for PDF generation */
+.pdf-download-btn.loading {
+    background: var(--button-disabled);
+    cursor: not-allowed;
+    transform: none;
+    box-shadow: none;
+}
+
+.pdf-download-btn.loading::before {
+    content: '⏳';
+    animation: pulse 1.5s infinite;
+}
+
+@keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.5; }
+}
+
+/* Success state animation */
+.pdf-download-btn.success {
+    background: var(--button-success);
+}
+
+.pdf-download-btn.success::before {
+    content: '✅';
+}
+
+/* Mobile responsive */
+@media (max-width: 768px) {
+    .pdf-download-btn {
+        padding: 10px 16px;
+        font-size: 13px;
+        width: 100%;
+        justify-content: center;
+    }
+}
+
+/* Integration with existing attendance controls */
+.attendance-controls .pdf-download-btn {
+    margin-left: 10px;
+}
+
+/* Alternative compact version for smaller spaces */
+.pdf-download-btn.compact {
+    padding: 8px 12px;
+    font-size: 12px;
+    border-radius: 4px;
+}
+
+.pdf-download-btn.compact::before {
+    font-size: 14px;
+}
 .switch {
     position: relative;
     display: inline-block;
@@ -80,7 +157,179 @@ body.dark-mode {
     height: 34px;
     margin-left: 10px;
 }
+/* Zone-specific styles for attendance.html */
 
+/* Base zone item styling */
+.zone-item {
+    background: linear-gradient(135deg, var(--city-group-bg) 0%, var(--card-bg) 100%);
+    border-left: 4px solid var(--button-primary);
+    border-radius: 8px;
+    position: relative;
+    overflow: hidden;
+}
+
+.zone-item::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 2px;
+    background: linear-gradient(90deg, var(--button-primary), transparent);
+    opacity: 0.6;
+}
+
+/* Zone hover effects */
+.zone-item:hover {
+    background: linear-gradient(135deg, var(--drag-hover) 0%, var(--city-group-bg) 100%);
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    border-left-color: var(--button-primary-hover);
+}
+
+/* Active zone styling */
+.zone-item.active {
+    background: linear-gradient(135deg, var(--button-primary) 0%, var(--button-primary-hover) 100%);
+    color: white;
+    border-left-color: white;
+    box-shadow: 0 6px 20px rgba(52, 152, 219, 0.3);
+}
+
+.zone-item.active::before {
+    background: linear-gradient(90deg, rgba(255, 255, 255, 0.8), transparent);
+}
+
+/* Zone icon indicator */
+.zone-item .city-content::before {
+    content: '🗺️';
+    display: inline-block;
+    margin-right: 8px;
+    font-size: 16px;
+    opacity: 0.8;
+}
+
+.zone-item.active .city-content::before {
+    opacity: 1;
+}
+
+/* Zone name styling */
+.zone-item .city-name {
+    font-weight: 600;
+    font-size: 17px;
+    letter-spacing: 0.3px;
+}
+
+/* Zone staff count styling */
+.zone-item .staff-count {
+    font-size: 13px;
+    opacity: 0.9;
+    font-weight: 500;
+}
+
+/* Dark mode adjustments for zones */
+body.dark-mode .zone-item {
+    background: linear-gradient(135deg, var(--city-group-bg) 0%, #333 100%);
+    border-left-color: var(--button-primary);
+}
+
+body.dark-mode .zone-item:hover {
+    background: linear-gradient(135deg, var(--drag-hover) 0%, var(--city-group-bg) 100%);
+}
+
+body.dark-mode .zone-item.active {
+    background: linear-gradient(135deg, var(--button-primary) 0%, var(--button-primary-hover) 100%);
+    box-shadow: 0 6px 20px rgba(41, 128, 185, 0.4);
+}
+
+/* Zone navigation breadcrumb styling */
+.zone-breadcrumb {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.zone-breadcrumb .back-link {
+    color: var(--button-primary);
+    text-decoration: none;
+    font-weight: 500;
+    transition: color 0.3s ease;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.zone-breadcrumb .back-link:hover {
+    color: var(--button-primary-hover);
+}
+
+.zone-breadcrumb .separator {
+    color: var(--text-color);
+    opacity: 0.6;
+    font-weight: 300;
+}
+
+.zone-breadcrumb .current-zone {
+    font-weight: 600;
+    color: var(--text-color);
+}
+
+/* Zone toggle button styling */
+.zone-toggle-btn {
+    background: var(--button-primary);
+    color: white;
+    border: none;
+    padding: 8px 12px;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 14px;
+    font-weight: 500;
+    transition: all 0.3s ease;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.zone-toggle-btn:hover {
+    background: var(--button-primary-hover);
+    transform: translateY(-1px);
+}
+
+/* Subtle animation for zone transitions */
+.zone-item {
+    transition: all 0.3s ease;
+}
+
+/* Zone count badge */
+.zone-count {
+    background: var(--button-primary);
+    color: white;
+    padding: 2px 8px;
+    border-radius: 12px;
+    font-size: 11px;
+    font-weight: 600;
+    margin-left: 8px;
+    display: inline-block;
+}
+
+.zone-item.active .zone-count {
+    background: rgba(255, 255, 255, 0.2);
+}
+
+/* Responsive zone styling */
+@media (max-width: 768px) {
+    .zone-item .city-name {
+        font-size: 16px;
+    }
+
+    .zone-item .staff-count {
+        font-size: 12px;
+    }
+
+    .zone-breadcrumb {
+        flex-wrap: wrap;
+        gap: 4px;
+    }
+}
 .switch input {
     opacity: 0;
     width: 0;
@@ -184,22 +433,6 @@ body {
     background-color: var(--button-danger-hover);
 }
 
-.nav-button-small {
-    background-color: var(--button-primary);
-    color: white;
-    border: none;
-    padding: 6px 10px;
-    border-radius: 4px;
-    cursor: pointer;
-    font-size: 12px;
-    transition: background-color 0.3s;
-    margin-left: 10px;
-}
-
-.nav-button-small:hover {
-    background-color: var(--button-primary-hover);
-}
-
 .container {
     display: grid;
     grid-template-columns: 1fr 2fr 250px;
@@ -224,9 +457,6 @@ body {
     margin-bottom: 15px;
     padding-bottom: 10px;
     border-bottom: 2px solid var(--border-color);
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
 }
 
 .city-list {
@@ -244,13 +474,10 @@ body {
     cursor: pointer;
     transition: all 0.3s ease;
     position: relative;
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
 }
 
 .city-item:hover {
-    background: var(--drag-hover);
+    background: #e3f2fd;
 }
 
 .city-item.active {
@@ -260,28 +487,9 @@ body {
 }
 
 .city-item.drag-over {
-    background: var(--drag-over);
+    background: #bbdefb;
     border-style: dashed;
     border-width: 3px;
-}
-
-.zone-item {
-    background: linear-gradient(135deg, var(--city-group-bg), var(--card-bg));
-    border-left: 4px solid var(--button-primary);
-}
-
-.zone-item:hover {
-    background: linear-gradient(135deg, var(--drag-hover), var(--city-group-bg));
-}
-
-.zone-item.active {
-    background: linear-gradient(135deg, var(--button-primary), var(--button-primary-hover));
-    color: white;
-    border-color: white;
-}
-
-.city-content {
-    flex: 1;
 }
 
 .city-name {
@@ -295,55 +503,6 @@ body {
     margin-top: 4px;
 }
 
-.city-actions {
-    display: flex;
-    gap: 5px;
-    opacity: 0;
-    transition: opacity 0.3s;
-}
-
-.city-item:hover .city-actions {
-    opacity: 1;
-}
-
-.city-item.active .city-actions {
-    opacity: 1;
-}
-
-.city-action-btn {
-    background: none;
-    border: none;
-    padding: 4px;
-    cursor: pointer;
-    border-radius: 3px;
-    font-size: 14px;
-    transition: background-color 0.2s;
-}
-
-.city-action-btn:hover {
-    background: rgba(255, 255, 255, 0.2);
-}
-
-.add-city-btn {
-    background: var(--button-success);
-    color: white;
-    border: none;
-    padding: 8px;
-    border-radius: 50%;
-    cursor: pointer;
-    transition: background-color 0.3s;
-    font-size: 16px;
-    width: 32px;
-    height: 32px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-}
-
-.add-city-btn:hover {
-    background-color: var(--button-success-hover);
-}
-
 .staff-list {
     min-height: 200px;
     padding: 10px;
@@ -353,7 +512,7 @@ body {
 }
 
 .staff-item {
-    background: var(--staff-item-bg);
+    background: var(--card-bg);
     border: 1px solid var(--border-color);
     border-radius: 6px;
     padding: 12px 16px;
@@ -369,7 +528,7 @@ body {
 }
 
 .staff-item:hover {
-    background: var(--staff-item-hover);
+    background: #f8f9fa;
     transform: translateY(-2px);
     box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
 }
@@ -380,7 +539,7 @@ body {
 
 .staff-item.dragging {
     opacity: 0.5;
-    background: var(--staff-item-dragging);
+    background: #e1f5fe;
     transform: rotate(5deg);
 }
 
@@ -417,16 +576,6 @@ body {
 
 .staff-item.dragging .drag-handle {
     cursor: grabbing;
-}
-
-.staff-city {
-    font-size: 12px;
-    background: var(--button-primary);
-    color: white;
-    padding: 4px 8px;
-    border-radius: 12px;
-    width: fit-content;
-    font-weight: 500;
 }
 
 .status-indicator {
@@ -515,17 +664,12 @@ body {
     align-items: center;
 }
 
-.attendance-actions .button {
+.button.small {
     padding: 6px 12px;
     font-size: 12px;
     min-width: 65px;
     border-radius: 4px;
     font-weight: 500;
-}
-
-.button.small {
-    padding: 6px 12px;
-    font-size: 12px;
 }
 
 .button.present-btn {
@@ -719,36 +863,6 @@ body {
 .conge-item:hover {
     background: rgba(255, 255, 255, 0.3);
     transform: translateY(-1px);
-}
-
-.conge-item.current-conge {
-    background: rgba(255, 255, 255, 0.3);
-    border: 2px solid rgba(255, 255, 255, 0.5);
-    box-shadow: 0 0 10px rgba(255, 255, 255, 0.2);
-}
-
-.conge-item.future-conge {
-    background: rgba(255, 255, 255, 0.15);
-    border: 1px solid rgba(255, 255, 255, 0.2);
-    opacity: 0.8;
-}
-
-.conge-item.current-conge .conge-item-header {
-    font-weight: 700;
-    color: #fff;
-}
-
-.conge-item.future-conge .conge-item-header {
-    font-weight: 500;
-    color: rgba(255, 255, 255, 0.9);
-}
-
-.single-day {
-    border-left: 3px solid rgba(255, 255, 255, 0.8) !important;
-}
-
-.single-day .conge-item-header::after {
-    content: " 📅";
 }
 
 .conge-item-header {
@@ -1007,25 +1121,16 @@ body {
         justify-content: center;
         flex-wrap: wrap;
     }
-
-    .city-item {
-        flex-direction: column;
-        align-items: stretch;
-    }
-
-    .city-actions {
-        opacity: 1;
-        margin-top: 10px;
-        justify-content: center;
-    }
-
-    .nav-button-small {
-        padding: 4px 8px;
-        font-size: 11px;
-        margin-left: 5px;
-    }
 }
     </style>
+{% load static %}
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gestion du Personnel et des Présences</title>
+    <link rel="stylesheet" href="{% static 'css/attendance.css' %}">
 </head>
 <body>
     <div class="header">
@@ -1081,6 +1186,7 @@ body {
                 <h2 class="panel-title" id="staff-panel-title">Personnel</h2>
                 <div class="attendance-controls" id="attendance-controls" style="display: none;">
                     <button id="mark-city-present" class="button success">Marquer Tous Présents</button>
+
                     <button id="admin-modify" class="button admin">Mode Admin</button>
                     <div id="admin-mode-indicator" class="admin-indicator" style="display: none;">
                         <span>Mode Admin Actif</span>
@@ -1094,6 +1200,7 @@ body {
                     Sélectionnez un chantier pour voir son personnel
                 </div>
             </div>
+</div>
         </div>
 
         <div class="conge-panel" id="conge-panel">
@@ -1272,6 +1379,8 @@ body {
         const submitPasswordButton = document.getElementById('submit-password');
         const submitAbsenceButton = document.getElementById('submit-absence');
         const submitCongePeriodButton = document.getElementById('submit-conge-period');
+        const generatePdfTodayButton = document.getElementById('generate-pdf-today');
+
 
         // Input elements
         const panelTitleText = document.getElementById('panel-title-text');
@@ -1449,605 +1558,6 @@ body {
                             method: 'POST',
                             headers: {
                                 'Content-Type': 'application/json',
-                        'X-CSRFToken': csrftoken
-                    },
-                    body: JSON.stringify({
-                        city_id: currentEditCityId,
-                        new_name: newName
-                    })
-                });
-
-                const data = await response.json();
-
-                if (data.success) {
-                    showMessage(data.message, 'success');
-                    editCityModal.style.display = 'none';
-                    currentEditCityId = null;
-
-                    // Update current city name if it was the one being edited
-                    if (currentCityName === data.city.old_name) {
-                        currentCityName = data.city.name;
-                        currentCityId = data.city.name;
-                        staffPanelTitle.textContent = 'Personnel - ' + data.city.name;
-                    }
-
-                    await loadZones();
-                    renderZonesOrCities();
-                } else {
-                    showMessage(data.message, 'error');
-                }
-            } catch (error) {
-                showMessage('Erreur lors de la modification', 'error');
-                console.error('Error updating city name:', error);
-            }
-        }
-
-        // Delete city
-        async function deleteCity(cityId, cityName) {
-            if (!confirm(`Êtes-vous sûr de vouloir supprimer le chantier "${cityName}" ?`)) {
-                return;
-            }
-
-            try {
-                const response = await fetch('/api/delete-city/', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'X-CSRFToken': csrftoken
-                    },
-                    body: JSON.stringify({ city_id: cityId })
-                });
-
-                const data = await response.json();
-
-                if (data.success) {
-                    showMessage(data.message, 'success');
-
-                    // Clear selection if deleted city was selected
-                    if (currentCityName === data.deleted_city_name) {
-                        currentCityId = null;
-                        currentCityName = null;
-                        attendanceControls.style.display = 'none';
-                        currentDateElement.style.display = 'none';
-                        staffList.innerHTML = '<div class="empty-state">Sélectionnez un chantier pour voir son personnel</div>';
-                        staffPanelTitle.textContent = 'Personnel';
-                    }
-
-                    await loadZones();
-                    renderZonesOrCities();
-                } else {
-                    showMessage(data.message, 'error');
-                }
-            } catch (error) {
-                showMessage('Erreur lors de la suppression', 'error');
-                console.error('Error deleting city:', error);
-            }
-        }
-
-        // Edit city name
-        function editCityName(cityId, cityName) {
-            currentEditCityId = cityId;
-            editCityNameInput.value = cityName;
-            editCityModal.style.display = 'block';
-            editCityNameInput.focus();
-            editCityNameInput.select();
-        }
-
-        // Render staff with attendance information
-        function renderStaff(staff) {
-            staffList.innerHTML = '';
-
-            if (staff.length === 0) {
-                staffList.innerHTML = '<div class="empty-state">Aucun personnel dans ce chantier</div>';
-                return;
-            }
-
-            staff.forEach(function(member) {
-                const staffItem = document.createElement('div');
-                staffItem.className = 'staff-item';
-                staffItem.draggable = true;
-                staffItem.dataset.staffId = member.id;
-
-                // Determine status
-                const statusClass = getStatusClass(member.status);
-                const statusText = getStatusText(member.status);
-
-                // Create timestamp display
-                let timestampHtml = '';
-                if (member.timestamp) {
-                    const time = new Date(member.timestamp).toLocaleTimeString();
-                    timestampHtml = '<div class="timestamp">' + time + '</div>';
-                }
-
-                // Create absence reason display
-                let absenceReasonHtml = '';
-                if (member.absence_reason) {
-                    absenceReasonHtml = '<div class="absence-reason">Motif: ' + member.absence_reason + '</div>';
-                }
-
-                // Create hours worked display
-                let hoursWorkedHtml = '';
-                if (member.hours_worked && member.status === 'present') {
-                    hoursWorkedHtml = '<div class="hours-worked">' + member.hours_worked + 'h travaillées</div>';
-                }
-
-                // Create grand déplacement display
-                let grandDeplacementHtml = '';
-                if (member.grand_deplacement && member.status === 'present') {
-                    grandDeplacementHtml = '<div class="grand-deplacement">Grand déplacement (nuit)</div>';
-                }
-
-                // Create attendance actions
-                const isLocked = member.status !== 'undefined' && !adminMode;
-                const lockedIcon = isLocked ? '<span class="locked-icon" title="Statut verrouillé">🔒</span>' : '';
-
-                staffItem.innerHTML = `
-                    <div class="staff-info">
-                        <div class="staff-name">
-                            <span class="status-indicator ${statusClass}"></span>
-                            ${member.name}
-                            <span class="drag-handle" title="Glisser pour déplacer">⋮⋮</span>
-                        </div>
-                        <div class="staff-city">${member.city}</div>
-                        <div class="attendance-info">
-                            <div class="status-text">${statusText}</div>
-                            ${timestampHtml}
-                            ${hoursWorkedHtml}
-                            ${grandDeplacementHtml}
-                            ${absenceReasonHtml}
-                        </div>
-                    </div>
-                    <div class="attendance-actions">
-                        <button class="button small present-btn" onclick="showPresentModal(${member.id}, '${member.name}')" ${isLocked ? 'disabled' : ''}>
-                            Présent
-                        </button>
-                        <button class="button small absent-btn" onclick="showAbsenceModal(${member.id})" ${isLocked ? 'disabled' : ''}>
-                            Absent
-                        </button>
-                        <button class="button small conge-btn" onclick="showCongePeriodModal(${member.id})" title="Congé avec période">
-                            Congé Période
-                        </button>
-                        ${lockedIcon}
-                    </div>
-                `;
-
-                // Add drag events
-                staffItem.addEventListener('dragstart', handleStaffDragStart);
-                staffItem.addEventListener('dragend', handleStaffDragEnd);
-
-                // Prevent dragging when clicking on buttons
-                const buttons = staffItem.querySelectorAll('button');
-                buttons.forEach(function(button) {
-                    button.addEventListener('mousedown', function(e) {
-                        e.stopPropagation();
-                        staffItem.draggable = false;
-                    });
-                    button.addEventListener('mouseup', function() {
-                        staffItem.draggable = true;
-                    });
-                });
-
-                staffList.appendChild(staffItem);
-            });
-        }
-
-        // Get status class based on status
-        function getStatusClass(status) {
-            if (status === 'present') return 'present';
-            if (status === 'absent') return 'absent';
-            if (status === 'conge') return 'conge';
-            return 'undefined';
-        }
-
-        // Get status text based on status
-        function getStatusText(status) {
-            if (status === 'present') return 'Présent';
-            if (status === 'absent') return 'Absent';
-            if (status === 'conge') return 'En congé';
-            return 'Non défini';
-        }
-
-        // Show absence reason modal
-        function showAbsenceModal(staffId) {
-            currentAbsentStaffId = staffId;
-            absenceReasonInput.value = '';
-            absenceModal.style.display = 'block';
-        }
-
-        // Show congé period modal
-        function showCongePeriodModal(staffId) {
-            currentCongeStaffId = staffId;
-
-            // Set default dates (today and tomorrow)
-            const today = new Date();
-            const tomorrow = new Date(today);
-            tomorrow.setDate(tomorrow.getDate() + 1);
-
-            congeStartDateInput.value = today.toISOString().split('T')[0];
-            congeEndDateInput.value = tomorrow.toISOString().split('T')[0];
-            congeReasonInput.value = '';
-
-            congePeriodModal.style.display = 'block';
-        }
-
-        // Mark staff member as present via API
-        async function markStaffPresent(staffId, hoursWorked, grandDeplacement) {
-            try {
-                const response = await fetch('/api/mark-present/', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'X-CSRFToken': csrftoken
-                    },
-                    body: JSON.stringify({
-                        staff_id: staffId,
-                        hours_worked: hoursWorked,
-                        grand_deplacement: grandDeplacement
-                    })
-                });
-
-                const data = await response.json();
-
-                if (data.success) {
-                    showMessage(data.message, 'success');
-                    await refreshData();
-                } else {
-                    showMessage(data.message, 'error');
-                }
-            } catch (error) {
-                showMessage('Erreur lors de la mise à jour', 'error');
-                console.error('Error marking present:', error);
-            }
-        }
-
-        // Mark staff member as absent via API
-        async function markStaffAbsent(staffId, reason) {
-            try {
-                const response = await fetch('/api/mark-absent/', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'X-CSRFToken': csrftoken
-                    },
-                    body: JSON.stringify({
-                        staff_id: staffId,
-                        reason: reason
-                    })
-                });
-
-                const data = await response.json();
-
-                if (data.success) {
-                    showMessage(data.message, 'success');
-                    await refreshData();
-                } else {
-                    showMessage(data.message, 'error');
-                }
-            } catch (error) {
-                showMessage('Erreur lors de la mise à jour', 'error');
-                console.error('Error marking absent:', error);
-            }
-        }
-
-        // Mark staff member as on leave (congé) for today only
-        async function markStaffConge(staffId) {
-            try {
-                const response = await fetch('/api/mark-conge/', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'X-CSRFToken': csrftoken
-                    },
-                    body: JSON.stringify({ staff_id: staffId })
-                });
-
-                const data = await response.json();
-
-                if (data.success) {
-                    showMessage(data.message, 'success');
-                    await refreshData();
-                } else {
-                    showMessage(data.message, 'error');
-                }
-            } catch (error) {
-                showMessage('Erreur lors de la mise à jour', 'error');
-                console.error('Error marking congé:', error);
-            }
-        }
-
-        // Mark staff member as on leave with period
-        async function markStaffCongePeriod(staffId, startDate, endDate, reason) {
-            try {
-                const response = await fetch('/api/mark-conge-period/', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'X-CSRFToken': csrftoken
-                    },
-                    body: JSON.stringify({
-                        staff_id: staffId,
-                        start_date: startDate,
-                        end_date: endDate,
-                        reason: reason
-                    })
-                });
-
-                const data = await response.json();
-
-                if (data.success) {
-                    showMessage(data.message, 'success');
-                    await refreshData();
-                } else {
-                    showMessage(data.message, 'error');
-                }
-            } catch (error) {
-                showMessage('Erreur lors de la mise à jour', 'error');
-                console.error('Error marking congé period:', error);
-            }
-        }
-
-        // Render congé list with both reservation and daily congés
-        function renderCongeList() {
-            if (congeReservations.length === 0) {
-                congeList.innerHTML = `
-                    <div class="conge-empty">
-                        <div>Aucun personnel en congé</div>
-                    </div>
-                `;
-            } else {
-                congeList.innerHTML = '';
-
-                // Separate current and future congés
-                const currentConges = congeReservations.filter(res => res.is_current);
-                const futureConges = congeReservations.filter(res => !res.is_current);
-
-                // Render current congés first
-                if (currentConges.length > 0) {
-                    currentConges.forEach(function(reservation) {
-                        const congeItem = document.createElement('div');
-                        congeItem.className = `conge-item current-conge ${reservation.is_single_day ? 'single-day' : ''}`;
-
-                        const dateDisplay = reservation.is_single_day
-                            ? 'Aujourd\'hui uniquement'
-                            : `Du ${reservation.start_date_display} au ${reservation.end_date_display}`;
-
-                        congeItem.innerHTML = `
-                            <div class="conge-item-header">${reservation.staff_name} (En cours)</div>
-                            <div class="conge-item-dates">${dateDisplay}</div>
-                            ${reservation.reason ? `<div class="conge-item-reason">${reservation.reason}</div>` : ''}
-                            <button class="conge-item-remove" onclick="removeCongeItem('${reservation.id}', '${reservation.type}')" title="Supprimer">&times;</button>
-                        `;
-
-                        congeList.appendChild(congeItem);
-                    });
-                }
-
-                // Add separator if both current and future exist
-                if (currentConges.length > 0 && futureConges.length > 0) {
-                    const separator = document.createElement('div');
-                    separator.className = 'conge-separator';
-                    separator.innerHTML = '<div style="text-align: center; font-size: 11px; opacity: 0.7; margin: 10px 0; border-top: 1px solid rgba(255,255,255,0.3); padding-top: 8px;">Congés à venir</div>';
-                    congeList.appendChild(separator);
-                }
-
-                // Render future congés
-                if (futureConges.length > 0) {
-                    futureConges.forEach(function(reservation) {
-                        const congeItem = document.createElement('div');
-                        congeItem.className = 'conge-item future-conge';
-
-                        congeItem.innerHTML = `
-                            <div class="conge-item-header">${reservation.staff_name} (À venir)</div>
-                            <div class="conge-item-dates">Du ${reservation.start_date_display} au ${reservation.end_date_display}</div>
-                            ${reservation.reason ? `<div class="conge-item-reason">${reservation.reason}</div>` : ''}
-                            <button class="conge-item-remove" onclick="removeCongeItem('${reservation.id}', '${reservation.type}')" title="Supprimer">&times;</button>
-                        `;
-
-                        congeList.appendChild(congeItem);
-                    });
-                }
-            }
-        }
-
-        // Remove congé item (handles both types)
-        async function removeCongeItem(id, type) {
-            if (!confirm('Êtes-vous sûr de vouloir supprimer ce congé ?')) {
-                return;
-            }
-
-            try {
-                let endpoint, payload;
-
-                if (type === 'reservation') {
-                    endpoint = '/api/remove-conge-reservation/';
-                    payload = { reservation_id: id.replace('reservation_', '') };
-                } else if (type === 'daily') {
-                    endpoint = '/api/remove-daily-conge/';
-                    payload = { staff_id: id.replace('daily_', '') };
-                }
-
-                const response = await fetch(endpoint, {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'X-CSRFToken': csrftoken
-                    },
-                    body: JSON.stringify(payload)
-                });
-
-                const data = await response.json();
-
-                if (data.success) {
-                    showMessage(data.message, 'success');
-                    await refreshData();
-                } else {
-                    showMessage(data.message, 'error');
-                }
-            } catch (error) {
-                showMessage('Erreur lors de la suppression', 'error');
-                console.error('Error removing congé:', error);
-            }
-        }
-
-        // Remove congé reservation (backward compatibility)
-        async function removeCongeReservation(reservationId) {
-            await removeCongeItem(`reservation_${reservationId}`, 'reservation');
-        }
-
-        // Refresh all data
-        async function refreshData() {
-            await loadAllStaff();
-            await loadZones();
-            await loadCongeReservations();
-            renderZonesOrCities();
-            renderCongeList();
-            if (currentCityId) {
-                selectCity(currentCityId, currentCityName);
-            }
-        }
-
-        // Mark all staff in current city as present
-        async function markCityPresent(cityName) {
-            try {
-                const response = await fetch('/api/mark-city-present/', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'X-CSRFToken': csrftoken
-                    },
-                    body: JSON.stringify({ city: cityName })
-                });
-
-                const data = await response.json();
-
-                if (data.success) {
-                    showMessage(data.message, 'success');
-                    await refreshData();
-                } else {
-                    showMessage(data.message, 'error');
-                }
-            } catch (error) {
-                showMessage('Erreur lors de la mise à jour', 'error');
-                console.error('Error marking city present:', error);
-            }
-        }
-
-        // Staff drag handlers
-        function handleStaffDragStart(e) {
-            draggedStaffId = e.target.dataset.staffId;
-            e.target.classList.add('dragging');
-
-            // Set drag effect
-            e.dataTransfer.effectAllowed = 'move';
-            e.dataTransfer.setData('text/html', e.target.outerHTML);
-        }
-
-        function handleStaffDragEnd(e) {
-            e.target.classList.remove('dragging');
-            draggedStaffId = null;
-        }
-
-        // City drag handlers
-        function handleCityDragOver(e) {
-            e.preventDefault();
-            e.dataTransfer.dropEffect = 'move';
-
-            if (draggedStaffId && e.currentTarget.dataset.cityName != currentCityId) {
-                e.currentTarget.classList.add('drag-over');
-            }
-        }
-
-        function handleCityDragLeave(e) {
-            e.currentTarget.classList.remove('drag-over');
-        }
-
-        async function handleCityDrop(e) {
-            e.preventDefault();
-            e.currentTarget.classList.remove('drag-over');
-
-            if (!draggedStaffId) return;
-
-            const targetCityName = e.currentTarget.dataset.cityName;
-
-            if (targetCityName == currentCityId) return; // Same city
-
-            // Update staff city
-            await updateStaffCityByName(draggedStaffId, targetCityName);
-        }
-
-        // Congé drag handlers
-        function handleCongeDragOver(e) {
-            e.preventDefault();
-            e.dataTransfer.dropEffect = 'move';
-
-            if (draggedStaffId) {
-                e.currentTarget.classList.add('drag-over');
-            }
-        }
-
-        function handleCongeDragLeave(e) {
-            e.currentTarget.classList.remove('drag-over');
-        }
-
-        async function handleCongeDrop(e) {
-            e.preventDefault();
-            e.currentTarget.classList.remove('drag-over');
-
-            if (!draggedStaffId) return;
-
-            // Mark staff as on leave for today only
-            await markStaffConge(draggedStaffId);
-        }
-
-        // Update staff city via API
-        async function updateStaffCityByName(staffId, newCityName) {
-            try {
-                const updateResponse = await fetch('/api/update-staff-city/', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'X-CSRFToken': csrftoken
-                    },
-                    body: JSON.stringify({
-                        staff_id: staffId,
-                        city_name: newCityName
-                    })
-                });
-
-                const updateData = await updateResponse.json();
-
-                if (updateData.success) {
-                    showMessage(updateData.message, 'success');
-                    await refreshData();
-                } else {
-                    showMessage(updateData.message, 'error');
-                }
-            } catch (error) {
-                showMessage('Erreur lors de la mise à jour', 'error');
-                console.error('Error updating staff city:', error);
-            }
-        }
-
-        // Show message
-        function showMessage(text, type) {
-            messageElement.textContent = text;
-            messageElement.className = 'message ' + type;
-            messageElement.style.display = 'block';
-            messageElement.classList.add('show');
-
-            setTimeout(function() {
-                messageElement.classList.remove('show');
-                setTimeout(function() {
-                    messageElement.style.display = 'none';
-                }, 300);
-            }, 3000);
-        }
-
-        // Initialize the application
-        init();
-    </script>
-</body>
-</html>Type': 'application/json',
                                 'X-CSRFToken': csrftoken
                             },
                             body: JSON.stringify({ password: adminPasswordInput.value })
@@ -2195,12 +1705,12 @@ body {
         function renderZonesOrCities() {
             if (showZoneView) {
                 panelTitleText.textContent = 'Zones';
-                toggleViewButton.textContent = '🏢'; // Building icon for cities
+                toggleViewButton.textContent = '🏢';
                 toggleViewButton.title = 'Voir tous les chantiers';
                 renderZones();
             } else {
                 panelTitleText.textContent = 'Tous les Chantiers';
-                toggleViewButton.textContent = '🗺️'; // Map icon for zones
+                toggleViewButton.textContent = '🗺️';
                 toggleViewButton.title = 'Voir par zones';
                 renderAllCities();
             }
@@ -2224,7 +1734,6 @@ body {
                     </div>
                 `;
 
-                // Add click event to show cities in this zone
                 zoneItem.addEventListener('click', function() {
                     selectZone(zone.id, zone.name);
                 });
@@ -2254,14 +1763,12 @@ body {
                     </div>
                 `;
 
-                // Add click event
                 cityItem.addEventListener('click', function(e) {
                     if (!e.target.classList.contains('city-action-btn')) {
                         selectCity(city.name, city.name);
                     }
                 });
 
-                // Add drag and drop events for cities
                 cityItem.addEventListener('dragover', handleCityDragOver);
                 cityItem.addEventListener('drop', handleCityDrop);
                 cityItem.addEventListener('dragleave', handleCityDragLeave);
@@ -2275,14 +1782,12 @@ body {
             currentZoneId = zoneId;
             showZoneView = false;
 
-            // Update panel title to show zone cities
             panelTitleText.innerHTML = `
                 <span onclick="backToZones()" style="cursor: pointer; color: var(--button-primary);">← Zones</span>
                  / ${zoneName}
             `;
             toggleViewButton.style.display = 'none';
 
-            // Show cities in this zone
             renderZoneCities(zoneId);
         }
 
@@ -2310,14 +1815,12 @@ body {
                     </div>
                 `;
 
-                // Add click event
                 cityItem.addEventListener('click', function(e) {
                     if (!e.target.classList.contains('city-action-btn')) {
                         selectCity(city.name, city.name);
                     }
                 });
 
-                // Add drag and drop events
                 cityItem.addEventListener('dragover', handleCityDragOver);
                 cityItem.addEventListener('drop', handleCityDrop);
                 cityItem.addEventListener('dragleave', handleCityDragLeave);
@@ -2339,7 +1842,6 @@ body {
             currentCityId = cityName;
             currentCityName = displayName;
 
-            // Update active city
             document.querySelectorAll('.city-item').forEach(function(item) {
                 item.classList.remove('active');
             });
@@ -2348,14 +1850,10 @@ body {
                 activeCity.classList.add('active');
             }
 
-            // Update staff panel title
             staffPanelTitle.textContent = 'Personnel - ' + displayName;
-
-            // Show attendance controls and current date
             attendanceControls.style.display = 'flex';
             currentDateElement.style.display = 'block';
 
-            // Filter and render staff for this city
             const cityStaff = allStaff.filter(function(staff) {
                 return staff.city === cityName;
             });
@@ -2367,7 +1865,6 @@ body {
             currentPresentStaffId = staffId;
             presentStaffNameElement.textContent = staffName;
 
-            // Reset to defaults
             hoursWorkedSlider.value = 8;
             hoursValueDisplay.textContent = '8h';
             grandDeplacementCheckbox.checked = false;
@@ -2431,4 +1928,607 @@ body {
                 const response = await fetch('/api/update-city-name/', {
                     method: 'POST',
                     headers: {
-                        'Content-
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': csrftoken
+                    },
+                    body: JSON.stringify({
+                        city_id: currentEditCityId,
+                        new_name: newName
+                    })
+                });
+
+                const data = await response.json();
+
+                if (data.success) {
+                    showMessage(data.message, 'success');
+                    editCityModal.style.display = 'none';
+                    currentEditCityId = null;
+
+                    if (currentCityName === data.city.old_name) {
+                        currentCityName = data.city.name;
+                        currentCityId = data.city.name;
+                        staffPanelTitle.textContent = 'Personnel - ' + data.city.name;
+                    }
+
+                    await loadZones();
+                    renderZonesOrCities();
+                } else {
+                    showMessage(data.message, 'error');
+                }
+            } catch (error) {
+                showMessage('Erreur lors de la modification', 'error');
+                console.error('Error updating city name:', error);
+            }
+        }
+
+        // Delete city
+        async function deleteCity(cityId, cityName) {
+            if (!confirm(`Êtes-vous sûr de vouloir supprimer le chantier "${cityName}" ?`)) {
+                return;
+            }
+
+            try {
+                const response = await fetch('/api/delete-city/', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': csrftoken
+                    },
+                    body: JSON.stringify({ city_id: cityId })
+                });
+
+                const data = await response.json();
+
+                if (data.success) {
+                    showMessage(data.message, 'success');
+
+                    if (currentCityName === data.deleted_city_name) {
+                        currentCityId = null;
+                        currentCityName = null;
+                        attendanceControls.style.display = 'none';
+                        currentDateElement.style.display = 'none';
+                        staffList.innerHTML = '<div class="empty-state">Sélectionnez un chantier pour voir son personnel</div>';
+                        staffPanelTitle.textContent = 'Personnel';
+                    }
+
+                    await loadZones();
+                    renderZonesOrCities();
+                } else {
+                    showMessage(data.message, 'error');
+                }
+            } catch (error) {
+                showMessage('Erreur lors de la suppression', 'error');
+                console.error('Error deleting city:', error);
+            }
+        }
+
+        // Edit city name
+        function editCityName(cityId, cityName) {
+            currentEditCityId = cityId;
+            editCityNameInput.value = cityName;
+            editCityModal.style.display = 'block';
+            editCityNameInput.focus();
+            editCityNameInput.select();
+        }
+
+        // Render staff with attendance information
+        function renderStaff(staff) {
+            staffList.innerHTML = '';
+
+            if (staff.length === 0) {
+                staffList.innerHTML = '<div class="empty-state">Aucun personnel dans ce chantier</div>';
+                return;
+            }
+
+            staff.forEach(function(member) {
+                const staffItem = document.createElement('div');
+                staffItem.className = 'staff-item';
+                staffItem.draggable = true;
+                staffItem.dataset.staffId = member.id;
+
+                const statusClass = getStatusClass(member.status);
+                const statusText = getStatusText(member.status);
+
+                let timestampHtml = '';
+                if (member.timestamp) {
+                    const time = new Date(member.timestamp).toLocaleTimeString();
+                    timestampHtml = '<div class="timestamp">' + time + '</div>';
+                }
+
+                let absenceReasonHtml = '';
+                if (member.absence_reason) {
+                    absenceReasonHtml = '<div class="absence-reason">Motif: ' + member.absence_reason + '</div>';
+                }
+
+                let hoursWorkedHtml = '';
+                if (member.hours_worked && member.status === 'present') {
+                    hoursWorkedHtml = '<div class="hours-worked">' + member.hours_worked + 'h travaillées</div>';
+                }
+
+                let grandDeplacementHtml = '';
+                if (member.grand_deplacement && member.status === 'present') {
+                    grandDeplacementHtml = '<div class="grand-deplacement">Grand déplacement (nuit)</div>';
+                }
+
+                const isLocked = member.status !== 'undefined' && !adminMode;
+                const lockedIcon = isLocked ? '<span class="locked-icon" title="Statut verrouillé">🔒</span>' : '';
+
+                staffItem.innerHTML = `
+                    <div class="staff-info">
+                        <div class="staff-name">
+                            <span class="status-indicator ${statusClass}"></span>
+                            ${member.name}
+                            <span class="drag-handle" title="Glisser pour déplacer">⋮⋮</span>
+                        </div>
+                        <div class="staff-city">${member.city}</div>
+                        <div class="attendance-info">
+                            <div class="status-text">${statusText}</div>
+                            ${timestampHtml}
+                            ${hoursWorkedHtml}
+                            ${grandDeplacementHtml}
+                            ${absenceReasonHtml}
+                        </div>
+                    </div>
+                    <div class="attendance-actions">
+                        <button class="button small present-btn" onclick="showPresentModal(${member.id}, '${member.name}')" ${isLocked ? 'disabled' : ''}>
+                            Présent
+                        </button>
+                        <button class="button small absent-btn" onclick="showAbsenceModal(${member.id})" ${isLocked ? 'disabled' : ''}>
+                            Absent
+                        </button>
+                        <button class="button small conge-btn" onclick="showCongePeriodModal(${member.id})" title="Congé avec période">
+                            Congé Période
+                        </button>
+                        ${lockedIcon}
+                    </div>
+                `;
+
+                staffItem.addEventListener('dragstart', handleStaffDragStart);
+                staffItem.addEventListener('dragend', handleStaffDragEnd);
+
+                const buttons = staffItem.querySelectorAll('button');
+                buttons.forEach(function(button) {
+                    button.addEventListener('mousedown', function(e) {
+                        e.stopPropagation();
+                        staffItem.draggable = false;
+                    });
+                    button.addEventListener('mouseup', function() {
+                        staffItem.draggable = true;
+                    });
+                });
+
+                staffList.appendChild(staffItem);
+            });
+        }
+
+        // Get status class and text
+        function getStatusClass(status) {
+            if (status === 'present') return 'present';
+            if (status === 'absent') return 'absent';
+            if (status === 'conge') return 'conge';
+            return 'undefined';
+        }
+
+        function getStatusText(status) {
+            if (status === 'present') return 'Présent';
+            if (status === 'absent') return 'Absent';
+            if (status === 'conge') return 'En congé';
+            return 'Non défini';
+        }
+
+        // Show modals
+        function showAbsenceModal(staffId) {
+            currentAbsentStaffId = staffId;
+            absenceReasonInput.value = '';
+            absenceModal.style.display = 'block';
+        }
+
+        function showCongePeriodModal(staffId) {
+            currentCongeStaffId = staffId;
+
+            const today = new Date();
+            const tomorrow = new Date(today);
+            tomorrow.setDate(tomorrow.getDate() + 1);
+
+            congeStartDateInput.value = today.toISOString().split('T')[0];
+            congeEndDateInput.value = tomorrow.toISOString().split('T')[0];
+            congeReasonInput.value = '';
+
+            congePeriodModal.style.display = 'block';
+        }
+
+        // API calls for marking attendance
+        async function markStaffPresent(staffId, hoursWorked, grandDeplacement) {
+            try {
+                const response = await fetch('/api/mark-present/', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': csrftoken
+                    },
+                    body: JSON.stringify({
+                        staff_id: staffId,
+                        hours_worked: hoursWorked,
+                        grand_deplacement: grandDeplacement
+                    })
+                });
+
+                const data = await response.json();
+                if (data.success) {
+                    showMessage(data.message, 'success');
+                    await refreshData();
+                } else {
+                    showMessage(data.message, 'error');
+                }
+            } catch (error) {
+                showMessage('Erreur lors de la mise à jour', 'error');
+            }
+        }
+
+        async function markStaffAbsent(staffId, reason) {
+            try {
+                const response = await fetch('/api/mark-absent/', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': csrftoken
+                    },
+                    body: JSON.stringify({
+                        staff_id: staffId,
+                        reason: reason
+                    })
+                });
+
+                const data = await response.json();
+                if (data.success) {
+                    showMessage(data.message, 'success');
+                    await refreshData();
+                } else {
+                    showMessage(data.message, 'error');
+                }
+            } catch (error) {
+                showMessage('Erreur lors de la mise à jour', 'error');
+            }
+        }
+
+        async function markStaffConge(staffId) {
+            try {
+                const response = await fetch('/api/mark-conge/', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': csrftoken
+                    },
+                    body: JSON.stringify({ staff_id: staffId })
+                });
+
+                const data = await response.json();
+                if (data.success) {
+                    showMessage(data.message, 'success');
+                    await refreshData();
+                } else {
+                    showMessage(data.message, 'error');
+                }
+            } catch (error) {
+                showMessage('Erreur lors de la mise à jour', 'error');
+            }
+        }
+
+        async function markStaffCongePeriod(staffId, startDate, endDate, reason) {
+            try {
+                const response = await fetch('/api/mark-conge-period/', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': csrftoken
+                    },
+                    body: JSON.stringify({
+                        staff_id: staffId,
+                        start_date: startDate,
+                        end_date: endDate,
+                        reason: reason
+                    })
+                });
+
+                const data = await response.json();
+                if (data.success) {
+                    showMessage(data.message, 'success');
+                    await refreshData();
+                } else {
+                    showMessage(data.message, 'error');
+                }
+            } catch (error) {
+                showMessage('Erreur lors de la mise à jour', 'error');
+            }
+        }
+
+        // Render congé list
+        function renderCongeList() {
+            if (congeReservations.length === 0) {
+                congeList.innerHTML = '<div class="conge-empty"><div>Aucun personnel en congé</div></div>';
+            } else {
+                congeList.innerHTML = '';
+
+                const currentConges = congeReservations.filter(res => res.is_current);
+                const futureConges = congeReservations.filter(res => !res.is_current);
+
+                if (currentConges.length > 0) {
+                    currentConges.forEach(function(reservation) {
+                        const congeItem = document.createElement('div');
+                        congeItem.className = `conge-item current-conge ${reservation.is_single_day ? 'single-day' : ''}`;
+
+                        const dateDisplay = reservation.is_single_day
+                            ? 'Aujourd\'hui uniquement'
+                            : `Du ${reservation.start_date_display} au ${reservation.end_date_display}`;
+
+                        congeItem.innerHTML = `
+                            <div class="conge-item-header">${reservation.staff_name} (En cours)</div>
+                            <div class="conge-item-dates">${dateDisplay}</div>
+                            ${reservation.reason ? `<div class="conge-item-reason">${reservation.reason}</div>` : ''}
+                            <button class="conge-item-remove" onclick="removeCongeItem('${reservation.id}', '${reservation.type}')" title="Supprimer">&times;</button>
+                        `;
+
+                        congeList.appendChild(congeItem);
+                    });
+                }
+
+                if (currentConges.length > 0 && futureConges.length > 0) {
+                    const separator = document.createElement('div');
+                    separator.innerHTML = '<div style="text-align: center; font-size: 11px; opacity: 0.7; margin: 10px 0; border-top: 1px solid rgba(255,255,255,0.3); padding-top: 8px;">Congés à venir</div>';
+                    congeList.appendChild(separator);
+                }
+
+                if (futureConges.length > 0) {
+                    futureConges.forEach(function(reservation) {
+                        const congeItem = document.createElement('div');
+                        congeItem.className = 'conge-item future-conge';
+
+                        congeItem.innerHTML = `
+                            <div class="conge-item-header">${reservation.staff_name} (À venir)</div>
+                            <div class="conge-item-dates">Du ${reservation.start_date_display} au ${reservation.end_date_display}</div>
+                            ${reservation.reason ? `<div class="conge-item-reason">${reservation.reason}</div>` : ''}
+                            <button class="conge-item-remove" onclick="removeCongeItem('${reservation.id}', '${reservation.type}')" title="Supprimer">&times;</button>
+                        `;
+
+                        congeList.appendChild(congeItem);
+                    });
+                }
+            }
+        }
+
+        // Remove congé
+        async function removeCongeItem(id, type) {
+            if (!confirm('Êtes-vous sûr de vouloir supprimer ce congé ?')) {
+                return;
+            }
+
+            try {
+                let endpoint, payload;
+
+                if (type === 'reservation') {
+                    endpoint = '/api/remove-conge-reservation/';
+                    payload = { reservation_id: id.replace('reservation_', '') };
+                } else if (type === 'daily') {
+                    endpoint = '/api/remove-daily-conge/';
+                    payload = { staff_id: id.replace('daily_', '') };
+                }
+
+                const response = await fetch(endpoint, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': csrftoken
+                    },
+                    body: JSON.stringify(payload)
+                });
+
+                const data = await response.json();
+                if (data.success) {
+                    showMessage(data.message, 'success');
+                    await refreshData();
+                } else {
+                    showMessage(data.message, 'error');
+                }
+            } catch (error) {
+                showMessage('Erreur lors de la suppression', 'error');
+            }
+        }
+
+        // Refresh data
+        async function refreshData() {
+            await loadAllStaff();
+            await loadZones();
+            await loadCongeReservations();
+            renderZonesOrCities();
+            renderCongeList();
+            if (currentCityId) {
+                selectCity(currentCityId, currentCityName);
+            }
+        }
+
+        // Mark city present
+        async function markCityPresent(cityName) {
+            try {
+                const response = await fetch('/api/mark-city-present/', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': csrftoken
+                    },
+                    body: JSON.stringify({ city: cityName })
+                });
+
+                const data = await response.json();
+                if (data.success) {
+                    showMessage(data.message, 'success');
+                    await refreshData();
+                } else {
+                    showMessage(data.message, 'error');
+                }
+            } catch (error) {
+                showMessage('Erreur lors de la mise à jour', 'error');
+            }
+        }
+
+        // Drag and drop handlers
+        function handleStaffDragStart(e) {
+            draggedStaffId = e.target.dataset.staffId;
+            e.target.classList.add('dragging');
+            e.dataTransfer.effectAllowed = 'move';
+        }
+
+        function handleStaffDragEnd(e) {
+            e.target.classList.remove('dragging');
+            draggedStaffId = null;
+        }
+
+        function handleCityDragOver(e) {
+            e.preventDefault();
+            e.dataTransfer.dropEffect = 'move';
+            if (draggedStaffId && e.currentTarget.dataset.cityName != currentCityId) {
+                e.currentTarget.classList.add('drag-over');
+            }
+        }
+
+        function handleCityDragLeave(e) {
+            e.currentTarget.classList.remove('drag-over');
+        }
+
+        async function handleCityDrop(e) {
+            e.preventDefault();
+            e.currentTarget.classList.remove('drag-over');
+
+            if (!draggedStaffId) return;
+
+            const targetCityName = e.currentTarget.dataset.cityName;
+            if (targetCityName == currentCityId) return;
+
+            await updateStaffCityByName(draggedStaffId, targetCityName);
+        }
+
+        function handleCongeDragOver(e) {
+            e.preventDefault();
+            e.dataTransfer.dropEffect = 'move';
+            if (draggedStaffId) {
+                e.currentTarget.classList.add('drag-over');
+            }
+        }
+
+        function handleCongeDragLeave(e) {
+            e.currentTarget.classList.remove('drag-over');
+        }
+
+        async function handleCongeDrop(e) {
+            e.preventDefault();
+            e.currentTarget.classList.remove('drag-over');
+
+            if (!draggedStaffId) return;
+            await markStaffConge(draggedStaffId);
+        }
+
+        // Update staff city
+        async function updateStaffCityByName(staffId, newCityName) {
+            try {
+                const response = await fetch('/api/update-staff-city/', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': csrftoken
+                    },
+                    body: JSON.stringify({
+                        staff_id: staffId,
+                        city_name: newCityName
+                    })
+                });
+
+                const data = await response.json();
+                if (data.success) {
+                    showMessage(data.message, 'success');
+                    await refreshData();
+                } else {
+                    showMessage(data.message, 'error');
+                }
+            } catch (error) {
+                showMessage('Erreur lors de la mise à jour', 'error');
+            }
+        }
+
+        // Show message
+        function showMessage(text, type) {
+            messageElement.textContent = text;
+            messageElement.className = 'message ' + type;
+            messageElement.style.display = 'block';
+            messageElement.classList.add('show');
+
+            setTimeout(function() {
+                messageElement.classList.remove('show');
+                setTimeout(function() {
+                    messageElement.style.display = 'none';
+                }, 300);
+            }, 3000);
+        }
+
+        // Initialize
+        init();
+        if (generatePdfTodayButton) {
+    generatePdfTodayButton.addEventListener('click', async function() {
+        // Add loading state
+        this.classList.add('loading');
+        this.textContent = 'Génération...';
+
+        try {
+            const response = await fetch('/api/generate-pdf/', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': csrftoken
+                }
+            });
+
+            if (response.ok) {
+                // Create a blob from the PDF stream
+                const blob = await response.blob();
+
+                // Create a link to download it
+                const downloadUrl = window.URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = downloadUrl;
+
+                // Generate filename with today's date
+                const today = new Date();
+                const dateStr = today.toISOString().split('T')[0]; // YYYY-MM-DD format
+                a.download = `rapport-presences-${dateStr}.pdf`;
+
+                document.body.appendChild(a);
+                a.click();
+
+                // Clean up
+                window.URL.revokeObjectURL(downloadUrl);
+                document.body.removeChild(a);
+
+                // Show success state
+                this.classList.remove('loading');
+                this.classList.add('success');
+                this.innerHTML = '<span>Téléchargé !</span>';
+
+                // Reset button after 2 seconds
+                setTimeout(() => {
+                    this.classList.remove('success');
+                    this.innerHTML = 'Rapport PDF';
+                }, 2000);
+
+                showMessage('Rapport PDF généré avec succès !', 'success');
+            } else {
+                throw new Error('Erreur lors de la génération du PDF');
+            }
+        } catch (error) {
+            this.classList.remove('loading');
+            this.innerHTML = 'Rapport PDF';
+            showMessage('Erreur lors de la génération du PDF', 'error');
+            console.error('Error generating PDF:', error);
+        }
+    });
+}
+    </script>
+</body>
+</html>
