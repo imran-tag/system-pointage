@@ -1,9 +1,8 @@
+# staff_attendance/urls.py
 from django.urls import path
 from . import views
 
 app_name = 'staff_attendance'
-
-path('api/cities/', views.get_cities_list, name='get_cities_list'),
 
 urlpatterns = [
     path('', views.attendance_page, name='attendance_page'),
@@ -22,6 +21,9 @@ urlpatterns = [
     path('api/mark-city-present/', views.mark_city_present, name='mark_city_present'),
     path('api/mark-all-present/', views.mark_all_present, name='mark_all_present'),
 
+    # Zone management API endpoints
+    path('api/zones/', views.get_zones_list, name='get_zones_list'),
+
     # City management API endpoints
     path('api/cities/', views.get_cities_list, name='get_cities_list'),
     path('api/add-city/', views.add_city, name='add_city'),
@@ -32,6 +34,7 @@ urlpatterns = [
     path('api/mark-conge-period/', views.mark_conge_with_period, name='mark_conge_with_period'),
     path('api/conge-reservations/', views.get_conge_reservations, name='get_conge_reservations'),
     path('api/remove-conge-reservation/', views.remove_conge_reservation, name='remove_conge_reservation'),
+    path('api/remove-daily-conge/', views.remove_daily_conge, name='remove_daily_conge'),
 
     # Admin and reports
     path('api/verify-admin/', views.verify_admin, name='verify_admin'),
@@ -39,5 +42,4 @@ urlpatterns = [
     path('api/attendance-history/', views.get_attendance_history, name='get_attendance_history'),
     path('api/generate-history-pdf/', views.generate_history_pdf, name='generate_history_pdf'),
     path('api/cleanup-past-conges/', views.cleanup_past_conges, name='cleanup_past_conges'),
-
 ]

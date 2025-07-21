@@ -1,15 +1,30 @@
+# staff_attendance/models.py
 from django.db import models
 from django.utils import timezone
 
 
+class Zone(models.Model):
+    """Model for zones that contain cities/chantiers"""
+    name = models.CharField(max_length=100, unique=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return self.name
+
+    class Meta:
+        ordering = ['name']
+
+
 class City(models.Model):
     name = models.CharField(max_length=100, unique=True)
+    zone = models.ForeignKey(Zone, on_delete=models.CASCADE, related_name='cities', null=True, blank=True)
 
     def __str__(self):
         return self.name
 
     class Meta:
         verbose_name_plural = "Cities"
+        ordering = ['name']
 
 
 class StaffMember(models.Model):
@@ -18,6 +33,9 @@ class StaffMember(models.Model):
 
     def __str__(self):
         return self.name
+
+    class Meta:
+        ordering = ['name']
 
 
 class Attendance(models.Model):
@@ -31,6 +49,7 @@ class Attendance(models.Model):
 
     class Meta:
         unique_together = ['staff_member', 'date']
+        ordering = ['-date', 'staff_member__name']
 
     def __str__(self):
         if self.absence_reason == 'CONGE_STATUS':

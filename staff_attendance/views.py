@@ -8,7 +8,7 @@ import datetime
 from django.db.models import Count, Q
 import os
 
-from .models import City, StaffMember, Attendance, CongeReservation
+from .models import City, StaffMember, Attendance, CongeReservation, Zone
 
 # Generate PDF
 from reportlab.pdfgen import canvas
@@ -49,28 +49,44 @@ def staff_management(request):
 
 @csrf_exempt
 def add_city(request):
-    """API endpoint to add a new city"""
+    """API endpoint to add a new city to a zone"""
     if request.method == 'POST':
         data = json.loads(request.body)
         city_name = data.get('name', '').strip()
+        zone_id = data.get('zone_id')
 
         if not city_name:
-            return JsonResponse({'success': False, 'message': 'Le nom de la ville est requis'}, status=400)
+            return JsonResponse({'success': False, 'message': 'Le nom du chantier est requis'}, status=400)
+
+        if not zone_id:
+            return JsonResponse({'success': False, 'message': 'La zone est requise'}, status=400)
+
+        # Check if city already exists
+        if City.objects.filter(name__iexact=city_name).exists():
+            return JsonResponse({'success': False, 'message': 'Ce chantier existe déjà'}, status=400)
 
         try:
-            city = City.objects.create(name=city_name)
+            zone = Zone.objects.get(id=zone_id)
+            city = City.objects.create(name=city_name, zone=zone)
             return JsonResponse({
                 'success': True,
-                'message': f'Ville "{city_name}" ajoutée avec succès',
+                'message': f'Chantier "{city_name}" ajouté à la zone "{zone.name}" avec succès',
                 'city': {
                     'id': city.id,
-                    'name': city.name
+                    'name': city.name,
+                    'zone_id': zone.id,
+                    'zone_name': zone.name,
+                    'staff_count': 0
                 }
             })
+        except Zone.DoesNotExist:
+            return JsonResponse({'success': False, 'message': 'Zone non trouvée'}, status=404)
         except Exception as e:
             return JsonResponse({'success': False, 'message': f'Erreur: {str(e)}'}, status=500)
 
     return JsonResponse({'success': False, 'message': 'Méthode non autorisée'}, status=405)
+
+
 
 
 @csrf_exempt
@@ -198,19 +214,33 @@ def mark_conge_with_period(request):
 
 @csrf_exempt
 def get_conge_reservations(request):
-    """API endpoint to get current and future congé reservations only"""
+    """API endpoint to get current and future congé reservations + today's congés"""
     try:
         today = timezone.now().date()
 
-        # Get only current and future congé reservations (not past ones)
+        # Get congé reservations (périodes)
         reservations = CongeReservation.objects.filter(
             end_date__gte=today  # Only show if end date is today or in the future
         ).select_related('staff_member__city').order_by('start_date')
 
+        # Get today's single-day congés (from drag & drop)
+        todays_conges = Attendance.objects.filter(
+            date=today,
+            absence_reason='CONGE_STATUS'
+        ).exclude(
+            # Exclude those who already have a reservation for today
+            staff_member__conge_reservations__start_date__lte=today,
+            staff_member__conge_reservations__end_date__gte=today
+        ).select_related('staff_member__city')
+
         conge_data = []
+
+        # Add reservation-based congés
         for reservation in reservations:
             conge_data.append({
-                'id': reservation.id,
+                'id': f"reservation_{reservation.id}",
+                'type': 'reservation',
+                'reservation_id': reservation.id,
                 'staff_id': reservation.staff_member.id,
                 'staff_name': reservation.staff_member.name,
                 'city': reservation.staff_member.city.name,
@@ -219,8 +249,29 @@ def get_conge_reservations(request):
                 'start_date_display': reservation.start_date.strftime('%d/%m/%Y'),
                 'end_date_display': reservation.end_date.strftime('%d/%m/%Y'),
                 'reason': reservation.reason,
-                'is_current': reservation.start_date <= today <= reservation.end_date
+                'is_current': reservation.start_date <= today <= reservation.end_date,
+                'is_single_day': False
             })
+
+        # Add single-day congés
+        for attendance in todays_conges:
+            conge_data.append({
+                'id': f"daily_{attendance.staff_member.id}",
+                'type': 'daily',
+                'staff_id': attendance.staff_member.id,
+                'staff_name': attendance.staff_member.name,
+                'city': attendance.staff_member.city.name,
+                'start_date': today.isoformat(),
+                'end_date': today.isoformat(),
+                'start_date_display': today.strftime('%d/%m/%Y'),
+                'end_date_display': today.strftime('%d/%m/%Y'),
+                'reason': None,
+                'is_current': True,
+                'is_single_day': True
+            })
+
+        # Sort by current status first, then by date
+        conge_data.sort(key=lambda x: (not x['is_current'], x['start_date']))
 
         return JsonResponse({'success': True, 'reservations': conge_data})
     except Exception as e:
@@ -245,6 +296,36 @@ def remove_conge_reservation(request):
             })
         except CongeReservation.DoesNotExist:
             return JsonResponse({'success': False, 'message': 'Réservation de congé non trouvée'}, status=404)
+        except Exception as e:
+            return JsonResponse({'success': False, 'message': str(e)}, status=500)
+
+    return JsonResponse({'success': False, 'message': 'Méthode non autorisée'}, status=405)
+
+
+@csrf_exempt
+def remove_daily_conge(request):
+    """API endpoint to remove a single-day congé"""
+    if request.method == 'POST':
+        data = json.loads(request.body)
+        staff_id = data.get('staff_id')
+
+        try:
+            today = timezone.now().date()
+            attendance = Attendance.objects.get(
+                staff_member_id=staff_id,
+                date=today,
+                absence_reason='CONGE_STATUS'
+            )
+
+            staff_name = attendance.staff_member.name
+            attendance.delete()
+
+            return JsonResponse({
+                'success': True,
+                'message': f'Congé du jour de {staff_name} supprimé avec succès'
+            })
+        except Attendance.DoesNotExist:
+            return JsonResponse({'success': False, 'message': 'Congé du jour non trouvé'}, status=404)
         except Exception as e:
             return JsonResponse({'success': False, 'message': str(e)}, status=500)
 
@@ -1379,33 +1460,44 @@ def get_cities_list(request):
 
 @csrf_exempt
 def add_city(request):
-    """API endpoint to add a new city"""
+    """API endpoint to add a new city to a zone"""
     if request.method == 'POST':
         data = json.loads(request.body)
         city_name = data.get('name', '').strip()
+        zone_id = data.get('zone_id')
 
         if not city_name:
-            return JsonResponse({'success': False, 'message': 'Le nom de la ville est requis'}, status=400)
+            return JsonResponse({'success': False, 'message': 'Le nom du chantier est requis'}, status=400)
+
+        if not zone_id:
+            return JsonResponse({'success': False, 'message': 'La zone est requise'}, status=400)
 
         # Check if city already exists
         if City.objects.filter(name__iexact=city_name).exists():
-            return JsonResponse({'success': False, 'message': 'Cette ville existe déjà'}, status=400)
+            return JsonResponse({'success': False, 'message': 'Ce chantier existe déjà'}, status=400)
 
         try:
-            city = City.objects.create(name=city_name)
+            zone = Zone.objects.get(id=zone_id)
+            city = City.objects.create(name=city_name, zone=zone)
             return JsonResponse({
                 'success': True,
-                'message': f'Ville "{city_name}" ajoutée avec succès',
+                'message': f'Chantier "{city_name}" ajouté à la zone "{zone.name}" avec succès',
                 'city': {
                     'id': city.id,
                     'name': city.name,
+                    'zone_id': zone.id,
+                    'zone_name': zone.name,
                     'staff_count': 0
                 }
             })
+        except Zone.DoesNotExist:
+            return JsonResponse({'success': False, 'message': 'Zone non trouvée'}, status=404)
         except Exception as e:
             return JsonResponse({'success': False, 'message': f'Erreur: {str(e)}'}, status=500)
 
     return JsonResponse({'success': False, 'message': 'Méthode non autorisée'}, status=405)
+
+
 
 
 @csrf_exempt
@@ -1485,3 +1577,34 @@ def delete_city(request):
             return JsonResponse({'success': False, 'message': f'Erreur: {str(e)}'}, status=500)
 
     return JsonResponse({'success': False, 'message': 'Méthode non autorisée'}, status=405)
+
+
+@csrf_exempt
+def get_zones_list(request):
+    """API endpoint to get the list of all zones with their cities"""
+    try:
+        zones = Zone.objects.prefetch_related('cities').all().order_by('name')
+        zones_data = []
+
+        for zone in zones:
+            cities_in_zone = []
+            for city in zone.cities.all():
+                staff_count = StaffMember.objects.filter(city=city).count()
+                cities_in_zone.append({
+                    'id': city.id,
+                    'name': city.name,
+                    'staff_count': staff_count
+                })
+
+            zones_data.append({
+                'id': zone.id,
+                'name': zone.name,
+                'cities': cities_in_zone,
+                'cities_count': len(cities_in_zone)
+            })
+
+        return JsonResponse({'success': True, 'zones': zones_data})
+    except Exception as e:
+        return JsonResponse({'success': False, 'message': str(e)}, status=500)
+
+
