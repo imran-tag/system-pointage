@@ -486,7 +486,7 @@ def get_attendance_history(request):
 
         # Convert to a list and sort by date (newest first)
         history_data = list(attendance_by_date.values())
-        history_data.sort(key=lambda x: x['date'], reverse=True)
+        history_data.sort(key=lambda x: x['date'])
 
         # Prepare staff info
         staff_info = []
