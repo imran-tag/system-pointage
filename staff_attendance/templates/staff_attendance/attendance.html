@@ -1,5 +1,158 @@
-{% load static %}
-<!DOCTYPE html>
+<script>
+    if (data.success) {
+        showMessage(data.message, 'success');
+        // Refresh staff data
+        await loadAllStaff();
+        await loadCities();
+        renderCities();
+        renderCongeList();
+        if (currentCityId) {
+            selectCity(currentCityId, currentCityName);
+        } else {
+            showMessage(data.message, 'error');
+        }
+
+    }
+
+
+        // Mark all staff in current city as present
+        async function markCityPresent(cityName) {
+            try {
+                const response = await fetch('/api/mark-city-present/', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': csrftoken
+                    },
+                    body: JSON.stringify({ city: cityName })
+                });
+
+                const data = await response.json();
+
+                if (data.success) {
+                    showMessage(data.message, 'success');
+                    // Refresh staff data
+                    await loadAllStaff();
+                    await loadCities();
+                    renderCities();
+                    renderCongeList();
+                    if (currentCityId) {
+                        selectCity(currentCityId, currentCityName);
+                    }
+                } else {
+                    showMessage(data.message, 'error');
+                }
+            } catch (error) {
+                showMessage('Erreur lors de la mise à jour', 'error');
+                console.error('Error marking city present:', error);
+            }
+        }
+
+        // Staff drag handlers
+        function handleStaffDragStart(e) {
+            draggedStaffId = e.target.dataset.staffId;
+            e.target.classList.add('dragging');
+
+            // Set drag effect
+            e.dataTransfer.effectAllowed = 'move';
+            e.dataTransfer.setData('text/html', e.target.outerHTML);
+        }
+
+        function handleStaffDragEnd(e) {
+            e.target.classList.remove('dragging');
+            draggedStaffId = null;
+        }
+
+        // City drag handlers
+        function handleCityDragOver(e) {
+            e.preventDefault();
+            e.dataTransfer.dropEffect = 'move';
+
+            if (draggedStaffId && e.currentTarget.dataset.cityName != currentCityId) {
+                e.currentTarget.classList.add('drag-over');
+            }
+        }
+
+        function handleCityDragLeave(e) {
+            e.currentTarget.classList.remove('drag-over');
+        }
+
+        async function handleCityDrop(e) {
+            e.preventDefault();
+            e.currentTarget.classList.remove('drag-over');
+
+            if (!draggedStaffId) return;
+
+            const targetCityName = e.currentTarget.dataset.cityName;
+
+            if (targetCityName == currentCityId) return; // Same city
+
+            // Update staff city
+            await updateStaffCityByName(draggedStaffId, targetCityName);
+        }
+
+        // Update staff city via API (modified to work with city names)
+        async function updateStaffCityByName(staffId, newCityName) {
+            try {
+                const updateResponse = await fetch('/api/update-staff-city/', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': csrftoken
+                    },
+                    body: JSON.stringify({
+                        staff_id: staffId,
+                        city_name: newCityName
+                    })
+                });
+
+                const updateData = await updateResponse.json();
+
+                if (updateData.success) {
+                    showMessage(updateData.message, 'success');
+
+                    // Refresh data
+                    await loadAllStaff();
+                    await loadCities();
+                    renderCities();
+                    renderCongeList();
+
+                    // Refresh current staff view if a city is selected
+                    if (currentCityId) {
+                        const cityStaff = allStaff.filter(function(staff) {
+                            return staff.city === currentCityId;
+                        });
+                        renderStaff(cityStaff);
+                    }
+                } else {
+                    showMessage(updateData.message, 'error');
+                }
+            } catch (error) {
+                showMessage('Erreur lors de la mise à jour', 'error');
+                console.error('Error updating staff city:', error);
+            }
+        }
+
+        // Show message
+        function showMessage(text, type) {
+            messageElement.textContent = text;
+            messageElement.className = 'message ' + type;
+            messageElement.style.display = 'block';
+            messageElement.classList.add('show');
+
+            setTimeout(function() {
+                messageElement.classList.remove('show');
+                setTimeout(function() {
+                    messageElement.style.display = 'none';
+                }, 300);
+            }, 3000);
+        }
+
+        // Initialize the application
+        init();
+    </script>
+</body>
+</html>{% load static %}
 <html lang="fr">
 <head>
     <meta charset="UTF-8">
@@ -19,8 +172,6 @@
     --button-primary-hover: #2980b9;
     --button-success: #28a745;
     --button-success-hover: #218838;
-    --button-danger: #dc3545;
-    --button-danger-hover: #c82333;
     --message-success-bg: #d4edda;
     --message-success-color: #155724;
     --message-error-bg: #f8d7da;
@@ -29,6 +180,11 @@
     --message-info-color: #0c5460;
     --select-bg: white;
     --select-border: #ddd;
+    --drag-hover: #e3f2fd;
+    --drag-over: #bbdefb;
+    --staff-item-bg: white;
+    --staff-item-hover: #f8f9fa;
+    --staff-item-dragging: #e1f5fe;
 }
 
 /* Dark theme variables */
@@ -44,8 +200,6 @@ body.dark-mode {
     --button-primary-hover: #3498db;
     --button-success: #218838;
     --button-success-hover: #28a745;
-    --button-danger: #c82333;
-    --button-danger-hover: #dc3545;
     --message-success-bg: #0f401a;
     --message-success-color: #a3d9b3;
     --message-error-bg: #401a1a;
@@ -54,6 +208,11 @@ body.dark-mode {
     --message-info-color: #a3d9d9;
     --select-bg: #2d2d2d;
     --select-border: #444;
+    --drag-hover: #1a237e;
+    --drag-over: #283593;
+    --staff-item-bg: #2d2d2d;
+    --staff-item-hover: #383838;
+    --staff-item-dragging: #0d47a1;
 }
 
 /* Dark mode toggle switch */
@@ -63,93 +222,7 @@ body.dark-mode {
     justify-content: center;
     margin-bottom: 20px;
 }
-/* PDF Download Button Styles */
 
-.pdf-download-btn {
-    background: linear-gradient(135deg, var(--button-pdf), var(--button-pdf-hover));
-    color: white;
-    border: none;
-    padding: 12px 20px;
-    border-radius: 6px;
-    cursor: pointer;
-    font-size: 14px;
-    font-weight: 600;
-    transition: all 0.3s ease;
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    box-shadow: 0 2px 8px rgba(40, 167, 69, 0.2);
-    text-decoration: none;
-}
-
-.pdf-download-btn::before {
-    content: '📊';
-    font-size: 16px;
-}
-
-.pdf-download-btn:hover {
-    background: linear-gradient(135deg, var(--button-pdf-hover), var(--button-pdf));
-    transform: translateY(-2px);
-    box-shadow: 0 4px 16px rgba(40, 167, 69, 0.3);
-}
-
-.pdf-download-btn:active {
-    transform: translateY(0);
-    box-shadow: 0 2px 8px rgba(40, 167, 69, 0.2);
-}
-
-/* Loading state for PDF generation */
-.pdf-download-btn.loading {
-    background: var(--button-disabled);
-    cursor: not-allowed;
-    transform: none;
-    box-shadow: none;
-}
-
-.pdf-download-btn.loading::before {
-    content: '⏳';
-    animation: pulse 1.5s infinite;
-}
-
-@keyframes pulse {
-    0%, 100% { opacity: 1; }
-    50% { opacity: 0.5; }
-}
-
-/* Success state animation */
-.pdf-download-btn.success {
-    background: var(--button-success);
-}
-
-.pdf-download-btn.success::before {
-    content: '✅';
-}
-
-/* Mobile responsive */
-@media (max-width: 768px) {
-    .pdf-download-btn {
-        padding: 10px 16px;
-        font-size: 13px;
-        width: 100%;
-        justify-content: center;
-    }
-}
-
-/* Integration with existing attendance controls */
-.attendance-controls .pdf-download-btn {
-    margin-left: 10px;
-}
-
-/* Alternative compact version for smaller spaces */
-.pdf-download-btn.compact {
-    padding: 8px 12px;
-    font-size: 12px;
-    border-radius: 4px;
-}
-
-.pdf-download-btn.compact::before {
-    font-size: 14px;
-}
 .switch {
     position: relative;
     display: inline-block;
@@ -157,179 +230,7 @@ body.dark-mode {
     height: 34px;
     margin-left: 10px;
 }
-/* Zone-specific styles for attendance.html */
 
-/* Base zone item styling */
-.zone-item {
-    background: linear-gradient(135deg, var(--city-group-bg) 0%, var(--card-bg) 100%);
-    border-left: 4px solid var(--button-primary);
-    border-radius: 8px;
-    position: relative;
-    overflow: hidden;
-}
-
-.zone-item::before {
-    content: '';
-    position: absolute;
-    top: 0;
-    left: 0;
-    right: 0;
-    height: 2px;
-    background: linear-gradient(90deg, var(--button-primary), transparent);
-    opacity: 0.6;
-}
-
-/* Zone hover effects */
-.zone-item:hover {
-    background: linear-gradient(135deg, var(--drag-hover) 0%, var(--city-group-bg) 100%);
-    transform: translateY(-2px);
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
-    border-left-color: var(--button-primary-hover);
-}
-
-/* Active zone styling */
-.zone-item.active {
-    background: linear-gradient(135deg, var(--button-primary) 0%, var(--button-primary-hover) 100%);
-    color: white;
-    border-left-color: white;
-    box-shadow: 0 6px 20px rgba(52, 152, 219, 0.3);
-}
-
-.zone-item.active::before {
-    background: linear-gradient(90deg, rgba(255, 255, 255, 0.8), transparent);
-}
-
-/* Zone icon indicator */
-.zone-item .city-content::before {
-    content: '🗺️';
-    display: inline-block;
-    margin-right: 8px;
-    font-size: 16px;
-    opacity: 0.8;
-}
-
-.zone-item.active .city-content::before {
-    opacity: 1;
-}
-
-/* Zone name styling */
-.zone-item .city-name {
-    font-weight: 600;
-    font-size: 17px;
-    letter-spacing: 0.3px;
-}
-
-/* Zone staff count styling */
-.zone-item .staff-count {
-    font-size: 13px;
-    opacity: 0.9;
-    font-weight: 500;
-}
-
-/* Dark mode adjustments for zones */
-body.dark-mode .zone-item {
-    background: linear-gradient(135deg, var(--city-group-bg) 0%, #333 100%);
-    border-left-color: var(--button-primary);
-}
-
-body.dark-mode .zone-item:hover {
-    background: linear-gradient(135deg, var(--drag-hover) 0%, var(--city-group-bg) 100%);
-}
-
-body.dark-mode .zone-item.active {
-    background: linear-gradient(135deg, var(--button-primary) 0%, var(--button-primary-hover) 100%);
-    box-shadow: 0 6px 20px rgba(41, 128, 185, 0.4);
-}
-
-/* Zone navigation breadcrumb styling */
-.zone-breadcrumb {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-}
-
-.zone-breadcrumb .back-link {
-    color: var(--button-primary);
-    text-decoration: none;
-    font-weight: 500;
-    transition: color 0.3s ease;
-    display: flex;
-    align-items: center;
-    gap: 4px;
-}
-
-.zone-breadcrumb .back-link:hover {
-    color: var(--button-primary-hover);
-}
-
-.zone-breadcrumb .separator {
-    color: var(--text-color);
-    opacity: 0.6;
-    font-weight: 300;
-}
-
-.zone-breadcrumb .current-zone {
-    font-weight: 600;
-    color: var(--text-color);
-}
-
-/* Zone toggle button styling */
-.zone-toggle-btn {
-    background: var(--button-primary);
-    color: white;
-    border: none;
-    padding: 8px 12px;
-    border-radius: 6px;
-    cursor: pointer;
-    font-size: 14px;
-    font-weight: 500;
-    transition: all 0.3s ease;
-    display: flex;
-    align-items: center;
-    gap: 6px;
-}
-
-.zone-toggle-btn:hover {
-    background: var(--button-primary-hover);
-    transform: translateY(-1px);
-}
-
-/* Subtle animation for zone transitions */
-.zone-item {
-    transition: all 0.3s ease;
-}
-
-/* Zone count badge */
-.zone-count {
-    background: var(--button-primary);
-    color: white;
-    padding: 2px 8px;
-    border-radius: 12px;
-    font-size: 11px;
-    font-weight: 600;
-    margin-left: 8px;
-    display: inline-block;
-}
-
-.zone-item.active .zone-count {
-    background: rgba(255, 255, 255, 0.2);
-}
-
-/* Responsive zone styling */
-@media (max-width: 768px) {
-    .zone-item .city-name {
-        font-size: 16px;
-    }
-
-    .zone-item .staff-count {
-        font-size: 12px;
-    }
-
-    .zone-breadcrumb {
-        flex-wrap: wrap;
-        gap: 4px;
-    }
-}
 .switch input {
     opacity: 0;
     width: 0;
@@ -425,17 +326,9 @@ body {
     background-color: var(--button-success-hover);
 }
 
-.button.danger {
-    background-color: var(--button-danger);
-}
-
-.button.danger:hover {
-    background-color: var(--button-danger-hover);
-}
-
 .container {
     display: grid;
-    grid-template-columns: 1fr 2fr 250px;
+    grid-template-columns: 1fr 2fr 200px;
     gap: 20px;
     max-width: 1400px;
     margin: 0 auto;
@@ -477,7 +370,7 @@ body {
 }
 
 .city-item:hover {
-    background: #e3f2fd;
+    background: var(--drag-hover);
 }
 
 .city-item.active {
@@ -487,7 +380,7 @@ body {
 }
 
 .city-item.drag-over {
-    background: #bbdefb;
+    background: var(--drag-over);
     border-style: dashed;
     border-width: 3px;
 }
@@ -512,7 +405,7 @@ body {
 }
 
 .staff-item {
-    background: var(--card-bg);
+    background: var(--staff-item-bg);
     border: 1px solid var(--border-color);
     border-radius: 6px;
     padding: 12px 16px;
@@ -528,7 +421,7 @@ body {
 }
 
 .staff-item:hover {
-    background: #f8f9fa;
+    background: var(--staff-item-hover);
     transform: translateY(-2px);
     box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
 }
@@ -539,7 +432,7 @@ body {
 
 .staff-item.dragging {
     opacity: 0.5;
-    background: #e1f5fe;
+    background: var(--staff-item-dragging);
     transform: rotate(5deg);
 }
 
@@ -576,6 +469,16 @@ body {
 
 .staff-item.dragging .drag-handle {
     cursor: grabbing;
+}
+
+.staff-city {
+    font-size: 12px;
+    background: var(--button-primary);
+    color: white;
+    padding: 4px 8px;
+    border-radius: 12px;
+    width: fit-content;
+    font-weight: 500;
 }
 
 .status-indicator {
@@ -636,27 +539,6 @@ body {
     width: fit-content;
 }
 
-.hours-worked {
-    font-size: 11px;
-    color: #2ecc71;
-    background: rgba(46, 204, 113, 0.1);
-    padding: 2px 6px;
-    border-radius: 3px;
-    width: fit-content;
-    font-weight: 500;
-}
-
-.grand-deplacement {
-    font-size: 10px;
-    color: #8e44ad;
-    background: rgba(142, 68, 173, 0.1);
-    padding: 2px 6px;
-    border-radius: 3px;
-    width: fit-content;
-    font-weight: 500;
-    text-transform: uppercase;
-}
-
 .attendance-actions {
     display: flex;
     gap: 6px;
@@ -664,12 +546,17 @@ body {
     align-items: center;
 }
 
-.button.small {
+.attendance-actions .button {
     padding: 6px 12px;
     font-size: 12px;
     min-width: 65px;
     border-radius: 4px;
     font-weight: 500;
+}
+
+.button.small {
+    padding: 6px 12px;
+    font-size: 12px;
 }
 
 .button.present-btn {
@@ -818,7 +705,7 @@ body {
     color: white;
     text-align: center;
     position: relative;
-    min-height: 400px;
+    min-height: 300px;
     display: flex;
     flex-direction: column;
 }
@@ -845,19 +732,18 @@ body {
 
 .conge-list {
     flex: 1;
-    min-height: 150px;
+    min-height: 100px;
 }
 
 .conge-item {
     background: rgba(255, 255, 255, 0.2);
     border: 1px solid rgba(255, 255, 255, 0.3);
     border-radius: 6px;
-    padding: 10px 12px;
+    padding: 8px 12px;
     margin-bottom: 8px;
-    font-size: 13px;
+    font-size: 14px;
+    font-weight: 500;
     transition: all 0.3s ease;
-    text-align: left;
-    position: relative;
 }
 
 .conge-item:hover {
@@ -865,52 +751,12 @@ body {
     transform: translateY(-1px);
 }
 
-.conge-item-header {
-    font-weight: 600;
-    margin-bottom: 4px;
-}
-
-.conge-item-dates {
-    font-size: 11px;
-    opacity: 0.9;
-    margin-bottom: 4px;
-}
-
-.conge-item-reason {
-    font-size: 10px;
-    font-style: italic;
-    opacity: 0.8;
-}
-
-.conge-item-remove {
-    position: absolute;
-    top: 5px;
-    right: 8px;
-    background: rgba(255, 255, 255, 0.2);
-    border: none;
-    color: white;
-    border-radius: 50%;
-    width: 20px;
-    height: 20px;
-    cursor: pointer;
-    font-size: 12px;
-    display: none;
-}
-
-.conge-item:hover .conge-item-remove {
-    display: block;
-}
-
-.conge-item-remove:hover {
-    background: rgba(231, 76, 60, 0.8);
-}
-
 .conge-empty {
     display: flex;
     flex-direction: column;
     align-items: center;
     justify-content: center;
-    height: 150px;
+    height: 200px;
     opacity: 0.7;
     font-style: italic;
 }
@@ -959,10 +805,6 @@ body {
     color: var(--text-color);
 }
 
-.modal-content.wide {
-    width: 400px;
-}
-
 .close {
     color: #aaa;
     float: right;
@@ -982,10 +824,9 @@ body {
 .form-group label {
     display: block;
     margin-bottom: 5px;
-    font-weight: 500;
 }
 
-.form-group input, .form-group textarea, .form-group select {
+.form-group input, .form-group textarea {
     width: 100%;
     padding: 8px;
     border: 1px solid var(--border-color);
@@ -998,80 +839,6 @@ body {
 .form-group textarea {
     min-height: 100px;
     resize: vertical;
-}
-
-.form-row {
-    display: flex;
-    gap: 10px;
-}
-
-.form-row .form-group {
-    flex: 1;
-}
-
-/* Slider styles */
-.slider-container {
-    margin: 15px 0;
-}
-
-.slider-input {
-    width: 100%;
-    -webkit-appearance: none;
-    height: 8px;
-    border-radius: 5px;
-    background: #ddd;
-    outline: none;
-    margin: 10px 0;
-}
-
-.slider-input::-webkit-slider-thumb {
-    -webkit-appearance: none;
-    appearance: none;
-    width: 20px;
-    height: 20px;
-    border-radius: 50%;
-    background: var(--button-primary);
-    cursor: pointer;
-}
-
-.slider-input::-moz-range-thumb {
-    width: 20px;
-    height: 20px;
-    border-radius: 50%;
-    background: var(--button-primary);
-    cursor: pointer;
-    border: none;
-}
-
-.slider-value {
-    display: flex;
-    justify-content: space-between;
-    font-size: 14px;
-    color: var(--text-color);
-    margin-top: 5px;
-}
-
-.current-value {
-    font-weight: bold;
-    color: var(--button-primary);
-}
-
-/* Checkbox styles */
-.checkbox-container {
-    display: flex;
-    align-items: center;
-    margin: 15px 0;
-}
-
-.checkbox-container input[type="checkbox"] {
-    width: auto;
-    margin-right: 10px;
-    transform: scale(1.2);
-}
-
-.checkbox-container label {
-    margin: 0;
-    cursor: pointer;
 }
 
 @media (max-width: 768px) {
@@ -1123,19 +890,11 @@ body {
     }
 }
     </style>
-{% load static %}
-<!DOCTYPE html>
-<html lang="fr">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Gestion du Personnel et des Présences</title>
-    <link rel="stylesheet" href="{% static 'css/attendance.css' %}">
 </head>
 <body>
     <div class="header">
         <h1>Gestion du Personnel et des Présences</h1>
-        <p>Glissez-déposez le personnel entre les chantiers et gérez les présences</p>
+        <p>Glissez-déposez le personnel entre les villes et gérez les présences</p>
     </div>
 
     <div class="theme-toggle">
@@ -1154,30 +913,21 @@ body {
 
     <div class="instructions">
         <strong>Instructions:</strong>
-        1. Cliquez sur une zone pour voir ses chantiers, puis sur un chantier pour voir son personnel
-        2. Utilisez le bouton 🔄 pour basculer entre vue zones et vue tous les chantiers
-        3. Lors du marquage présent, définissez les heures travaillées (0-9h) et si c'est un grand déplacement (nuit)
-        4. Pour les congés avec période, utilisez le bouton "Congé Période" pour définir les dates
-        5. Glissez-déposez un membre du personnel (utilisez l'icône ⋮⋮) vers un autre chantier pour le déplacer
-        6. Glissez vers la zone "Congé" pour mettre un membre en congé aujourd'hui uniquement
-        7. Les changements sont sauvegardés automatiquement
-        8. Utilisez le mode admin pour modifier les présences verrouillées
-        9. Ajoutez de nouveaux chantiers avec le bouton "+" et modifiez les noms en cliquant sur l'icône d'édition
+        1. Cliquez sur une ville pour voir son personnel et gérer les présences du jour
+        2. Utilisez les boutons "Présent/Absent/Congé" pour marquer la présence de chaque membre
+        3. Glissez-déposez un membre du personnel (utilisez l'icône ⋮⋮) vers une autre ville pour le déplacer
+        4. Glissez vers la zone "Congé" pour mettre un membre en congé
+        5. Les changements sont sauvegardés automatiquement
+        6. Utilisez le mode admin pour modifier les présences verrouillées
     </div>
 
     <div id="message" class="message" style="display: none;"></div>
 
     <div class="container">
         <div class="cities-panel">
-            <div class="panel-title">
-                <span id="panel-title-text">Zones</span>
-                <div>
-                    <button id="toggle-view-btn" class="nav-button-small" title="Basculer entre zones et chantiers">🔄</button>
-                    <button id="add-city-btn" class="add-city-btn" title="Ajouter un chantier">+</button>
-                </div>
-            </div>
+            <h2 class="panel-title">Villes</h2>
             <ul class="city-list" id="city-list">
-                <!-- Zones or Cities will be populated here -->
+                <!-- Cities will be populated here -->
             </ul>
         </div>
 
@@ -1186,7 +936,6 @@ body {
                 <h2 class="panel-title" id="staff-panel-title">Personnel</h2>
                 <div class="attendance-controls" id="attendance-controls" style="display: none;">
                     <button id="mark-city-present" class="button success">Marquer Tous Présents</button>
-
                     <button id="admin-modify" class="button admin">Mode Admin</button>
                     <div id="admin-mode-indicator" class="admin-indicator" style="display: none;">
                         <span>Mode Admin Actif</span>
@@ -1197,10 +946,9 @@ body {
             <div class="current-date" id="current-date" style="display: none;"></div>
             <div class="staff-list" id="staff-list">
                 <div class="empty-state">
-                    Sélectionnez un chantier pour voir son personnel
+                    Sélectionnez une ville pour voir son personnel
                 </div>
             </div>
-</div>
         </div>
 
         <div class="conge-panel" id="conge-panel">
@@ -1212,68 +960,8 @@ body {
                 </div>
             </div>
             <div class="conge-instructions">
-                Glissez le personnel ici pour le mettre en congé aujourd'hui uniquement
+                Glissez le personnel ici pour le mettre en congé
             </div>
-        </div>
-    </div>
-
-    <!-- Present Modal with Hours and Grand Déplacement -->
-    <div id="present-modal" class="modal">
-        <div class="modal-content wide">
-            <span class="close">&times;</span>
-            <h3>Marquer comme présent</h3>
-            <div id="present-staff-name" style="margin-bottom: 15px; font-weight: bold; color: var(--button-primary);"></div>
-
-            <div class="form-group">
-                <label for="hours-worked">Heures travaillées :</label>
-                <div class="slider-container">
-                    <input type="range" id="hours-worked" class="slider-input" min="0" max="9" step="0.5" value="8">
-                    <div class="slider-value">
-                        <span>0h</span>
-                        <span class="current-value" id="hours-value">8h</span>
-                        <span>9h</span>
-                    </div>
-                </div>
-            </div>
-
-            <div class="checkbox-container">
-                <input type="checkbox" id="grand-deplacement">
-                <label for="grand-deplacement">Grand déplacement (nuit)</label>
-            </div>
-
-            <button id="submit-present" class="button success">Valider</button>
-        </div>
-    </div>
-
-    <!-- Add City Modal -->
-    <div id="add-city-modal" class="modal">
-        <div class="modal-content">
-            <span class="close">&times;</span>
-            <h3>Ajouter un nouveau chantier</h3>
-            <div class="form-group">
-                <label for="city-zone-select">Choisir la zone :</label>
-                <select id="city-zone-select" class="select">
-                    <!-- Zone options will be populated here -->
-                </select>
-            </div>
-            <div class="form-group">
-                <label for="new-city-name">Nom du chantier :</label>
-                <input type="text" id="new-city-name" placeholder="Nom du chantier">
-            </div>
-            <button id="submit-new-city" class="button">Ajouter</button>
-        </div>
-    </div>
-
-    <!-- Edit City Modal -->
-    <div id="edit-city-modal" class="modal">
-        <div class="modal-content">
-            <span class="close">&times;</span>
-            <h3>Modifier le nom du chantier</h3>
-            <div class="form-group">
-                <label for="edit-city-name">Nouveau nom :</label>
-                <input type="text" id="edit-city-name" placeholder="Nouveau nom du chantier">
-            </div>
-            <button id="submit-edit-city" class="button">Modifier</button>
         </div>
     </div>
 
@@ -1303,49 +991,19 @@ body {
         </div>
     </div>
 
-    <!-- Congé Period Modal -->
-    <div id="conge-period-modal" class="modal">
-        <div class="modal-content wide">
-            <span class="close">&times;</span>
-            <h3>Définir une période de congé</h3>
-            <div class="form-row">
-                <div class="form-group">
-                    <label for="conge-start-date">Date de début :</label>
-                    <input type="date" id="conge-start-date">
-                </div>
-                <div class="form-group">
-                    <label for="conge-end-date">Date de fin :</label>
-                    <input type="date" id="conge-end-date">
-                </div>
-            </div>
-            <div class="form-group">
-                <label for="conge-reason">Motif du congé (optionnel) :</label>
-                <textarea id="conge-reason" placeholder="Motif du congé..."></textarea>
-            </div>
-            <button id="submit-conge-period" class="button">Valider</button>
-        </div>
-    </div>
-
     {% csrf_token %}
     <script>
         // Get CSRF token
         const csrftoken = document.querySelector('[name=csrfmiddlewaretoken]').value;
 
         // Variables
-        let zones = [];
         let cities = [];
         let allStaff = [];
-        let congeReservations = [];
         let currentCityId = null;
         let currentCityName = null;
-        let currentZoneId = null;
         let draggedStaffId = null;
         let adminMode = false;
         let currentAbsentStaffId = null;
-        let currentCongeStaffId = null;
-        let currentEditCityId = null;
-        let currentPresentStaffId = null;
-        let showZoneView = true;
 
         // DOM elements
         const cityList = document.getElementById('city-list');
@@ -1358,49 +1016,15 @@ body {
         const adminModifyButton = document.getElementById('admin-modify');
         const adminModeIndicator = document.getElementById('admin-mode-indicator');
         const exitAdminModeButton = document.getElementById('exit-admin-mode');
-        const congePanel = document.getElementById('conge-panel');
-        const congeList = document.getElementById('conge-list');
-
-        // Modal elements
-        const presentModal = document.getElementById('present-modal');
-        const addCityModal = document.getElementById('add-city-modal');
-        const editCityModal = document.getElementById('edit-city-modal');
         const adminModal = document.getElementById('admin-modal');
         const absenceModal = document.getElementById('absence-modal');
-        const congePeriodModal = document.getElementById('conge-period-modal');
         const closeModalButtons = document.querySelectorAll('.close');
-
-        // Button elements
-        const addCityButton = document.getElementById('add-city-btn');
-        const toggleViewButton = document.getElementById('toggle-view-btn');
-        const submitPresentButton = document.getElementById('submit-present');
-        const submitNewCityButton = document.getElementById('submit-new-city');
-        const submitEditCityButton = document.getElementById('submit-edit-city');
         const submitPasswordButton = document.getElementById('submit-password');
         const submitAbsenceButton = document.getElementById('submit-absence');
-        const submitCongePeriodButton = document.getElementById('submit-conge-period');
-        const generatePdfTodayButton = document.getElementById('generate-pdf-today');
-
-
-        // Input elements
-        const panelTitleText = document.getElementById('panel-title-text');
-        const presentStaffNameElement = document.getElementById('present-staff-name');
-        const hoursWorkedSlider = document.getElementById('hours-worked');
-        const hoursValueDisplay = document.getElementById('hours-value');
-        const grandDeplacementCheckbox = document.getElementById('grand-deplacement');
-        const cityZoneSelect = document.getElementById('city-zone-select');
-        const newCityNameInput = document.getElementById('new-city-name');
-        const editCityNameInput = document.getElementById('edit-city-name');
         const adminPasswordInput = document.getElementById('admin-password');
         const absenceReasonInput = document.getElementById('absence-reason');
-        const congeStartDateInput = document.getElementById('conge-start-date');
-        const congeEndDateInput = document.getElementById('conge-end-date');
-        const congeReasonInput = document.getElementById('conge-reason');
-
-        // Hours slider functionality
-        hoursWorkedSlider.addEventListener('input', function() {
-            hoursValueDisplay.textContent = this.value + 'h';
-        });
+        const congePanel = document.getElementById('conge-panel');
+        const congeList = document.getElementById('conge-list');
 
         // Dark mode toggle functionality
         const darkModeToggle = document.getElementById('dark-mode-toggle');
@@ -1427,10 +1051,9 @@ body {
 
         // Initialize
         async function init() {
-            await loadZones();
+            await loadCities();
             await loadAllStaff();
-            await loadCongeReservations();
-            renderZonesOrCities();
+            renderCities();
             renderCongeList();
             setupCurrentDate();
             setupEventListeners();
@@ -1450,47 +1073,6 @@ body {
 
         // Setup event listeners
         function setupEventListeners() {
-            // Toggle view button
-            if (toggleViewButton) {
-                toggleViewButton.addEventListener('click', function() {
-                    showZoneView = !showZoneView;
-                    renderZonesOrCities();
-                });
-            }
-
-            // Add city button
-            if (addCityButton) {
-                addCityButton.addEventListener('click', function() {
-                    populateZoneSelect();
-                    addCityModal.style.display = 'block';
-                    newCityNameInput.value = '';
-                    newCityNameInput.focus();
-                });
-            }
-
-            // Submit present
-            if (submitPresentButton) {
-                submitPresentButton.addEventListener('click', function() {
-                    if (currentPresentStaffId) {
-                        const hoursWorked = parseFloat(hoursWorkedSlider.value);
-                        const grandDeplacement = grandDeplacementCheckbox.checked;
-                        markStaffPresent(currentPresentStaffId, hoursWorked, grandDeplacement);
-                        presentModal.style.display = 'none';
-                        currentPresentStaffId = null;
-                    }
-                });
-            }
-
-            // Submit new city
-            if (submitNewCityButton) {
-                submitNewCityButton.addEventListener('click', addNewCity);
-            }
-
-            // Submit edit city
-            if (submitEditCityButton) {
-                submitEditCityButton.addEventListener('click', updateCityName);
-            }
-
             // Mark city present button
             if (markCityPresentButton) {
                 markCityPresentButton.addEventListener('click', function() {
@@ -1531,23 +1113,19 @@ body {
             // Close modals
             closeModalButtons.forEach(function(button) {
                 button.addEventListener('click', function() {
-                    presentModal.style.display = 'none';
-                    addCityModal.style.display = 'none';
-                    editCityModal.style.display = 'none';
                     adminModal.style.display = 'none';
                     absenceModal.style.display = 'none';
-                    congePeriodModal.style.display = 'none';
                 });
             });
 
             // Click outside modal to close
             window.addEventListener('click', function(e) {
-                if (e.target === presentModal) presentModal.style.display = 'none';
-                if (e.target === addCityModal) addCityModal.style.display = 'none';
-                if (e.target === editCityModal) editCityModal.style.display = 'none';
-                if (e.target === adminModal) adminModal.style.display = 'none';
-                if (e.target === absenceModal) absenceModal.style.display = 'none';
-                if (e.target === congePeriodModal) congePeriodModal.style.display = 'none';
+                if (e.target === adminModal) {
+                    adminModal.style.display = 'none';
+                }
+                if (e.target === absenceModal) {
+                    absenceModal.style.display = 'none';
+                }
             });
 
             // Submit password
@@ -1595,68 +1173,33 @@ body {
                     }
                 });
             }
-
-            // Submit congé period
-            if (submitCongePeriodButton) {
-                submitCongePeriodButton.addEventListener('click', function() {
-                    if (currentCongeStaffId) {
-                        const startDate = congeStartDateInput.value;
-                        const endDate = congeEndDateInput.value;
-                        const reason = congeReasonInput.value.trim();
-
-                        if (!startDate || !endDate) {
-                            showMessage('Veuillez sélectionner les dates de début et de fin.', 'error');
-                            return;
-                        }
-
-                        markStaffCongePeriod(currentCongeStaffId, startDate, endDate, reason);
-                        congePeriodModal.style.display = 'none';
-                        currentCongeStaffId = null;
-                    }
-                });
-            }
-
-            // Enter key handlers
-            newCityNameInput.addEventListener('keypress', function(e) {
-                if (e.key === 'Enter') {
-                    addNewCity();
-                }
-            });
-
-            editCityNameInput.addEventListener('keypress', function(e) {
-                if (e.key === 'Enter') {
-                    updateCityName();
-                }
-            });
-
-            adminPasswordInput.addEventListener('keypress', function(e) {
-                if (e.key === 'Enter') {
-                    submitPasswordButton.click();
-                }
-            });
         }
 
-        // Load zones
-        async function loadZones() {
+        // Load cities
+        async function loadCities() {
             try {
-                const response = await fetch('/api/zones/');
+                const response = await fetch('/api/staff/');
                 const data = await response.json();
 
-                if (data.success) {
-                    zones = data.zones;
-                    // Flatten cities for backward compatibility
-                    cities = [];
-                    zones.forEach(zone => {
-                        zone.cities.forEach(city => {
-                            city.zone_name = zone.name;
-                            city.zone_id = zone.id;
-                            cities.push(city);
-                        });
+                if (data.staffMembers) {
+                    allStaff = data.staffMembers;
+                    // Extract unique cities
+                    const cityMap = new Map();
+                    allStaff.forEach(function(staff) {
+                        const cityKey = staff.city;
+                        if (!cityMap.has(cityKey)) {
+                            cityMap.set(cityKey, {
+                                name: cityKey,
+                                staff_count: 0
+                            });
+                        }
+                        cityMap.get(cityKey).staff_count++;
                     });
+                    cities = Array.from(cityMap.values());
                 }
             } catch (error) {
-                showMessage('Erreur lors du chargement des zones', 'error');
-                console.error('Error loading zones:', error);
+                showMessage('Erreur lors du chargement des villes', 'error');
+                console.error('Error loading cities:', error);
             }
         }
 
@@ -1675,166 +1218,31 @@ body {
             }
         }
 
-        // Load congé reservations
-        async function loadCongeReservations() {
-            try {
-                const response = await fetch('/api/conge-reservations/');
-                const data = await response.json();
-
-                if (data.success) {
-                    congeReservations = data.reservations;
-                }
-            } catch (error) {
-                showMessage('Erreur lors du chargement des congés', 'error');
-                console.error('Error loading congé reservations:', error);
-            }
-        }
-
-        // Populate zone select for adding cities
-        function populateZoneSelect() {
-            cityZoneSelect.innerHTML = '<option value="">Sélectionner une zone</option>';
-            zones.forEach(zone => {
-                const option = document.createElement('option');
-                option.value = zone.id;
-                option.textContent = zone.name;
-                cityZoneSelect.appendChild(option);
-            });
-        }
-
-        // Render zones or cities based on current view
-        function renderZonesOrCities() {
-            if (showZoneView) {
-                panelTitleText.textContent = 'Zones';
-                toggleViewButton.textContent = '🏢';
-                toggleViewButton.title = 'Voir tous les chantiers';
-                renderZones();
-            } else {
-                panelTitleText.textContent = 'Tous les Chantiers';
-                toggleViewButton.textContent = '🗺️';
-                toggleViewButton.title = 'Voir par zones';
-                renderAllCities();
-            }
-        }
-
-        // Render zones
-        function renderZones() {
-            cityList.innerHTML = '';
-
-            zones.forEach(function(zone) {
-                const zoneItem = document.createElement('li');
-                zoneItem.className = 'city-item zone-item';
-                zoneItem.dataset.zoneId = zone.id;
-
-                const totalStaff = zone.cities.reduce((sum, city) => sum + city.staff_count, 0);
-
-                zoneItem.innerHTML = `
-                    <div class="city-content">
-                        <div class="city-name">${zone.name}</div>
-                        <div class="staff-count">${zone.cities.length} chantier(s), ${totalStaff} membre(s)</div>
-                    </div>
-                `;
-
-                zoneItem.addEventListener('click', function() {
-                    selectZone(zone.id, zone.name);
-                });
-
-                cityList.appendChild(zoneItem);
-            });
-        }
-
-        // Render all cities (flat view)
-        function renderAllCities() {
+        // Render cities
+        function renderCities() {
             cityList.innerHTML = '';
 
             cities.forEach(function(city) {
                 const cityItem = document.createElement('li');
                 cityItem.className = 'city-item';
                 cityItem.dataset.cityName = city.name;
-                cityItem.dataset.cityId = city.id;
 
-                cityItem.innerHTML = `
-                    <div class="city-content">
-                        <div class="city-name">${city.name}</div>
-                        <div class="staff-count">${city.zone_name || 'Sans zone'} - ${city.staff_count} membre(s)</div>
-                    </div>
-                    <div class="city-actions">
-                        <button class="city-action-btn" onclick="editCityName(${city.id}, '${city.name}')" title="Modifier le nom">✏️</button>
-                        <button class="city-action-btn" onclick="deleteCity(${city.id}, '${city.name}')" title="Supprimer le chantier">🗑️</button>
-                    </div>
-                `;
+                cityItem.innerHTML =
+                    '<div class="city-name">' + city.name + '</div>' +
+                    '<div class="staff-count">' + city.staff_count + ' membre(s)</div>';
 
-                cityItem.addEventListener('click', function(e) {
-                    if (!e.target.classList.contains('city-action-btn')) {
-                        selectCity(city.name, city.name);
-                    }
+                // Add click event
+                cityItem.addEventListener('click', function() {
+                    selectCity(city.name, city.name);
                 });
 
+                // Add drag and drop events for cities
                 cityItem.addEventListener('dragover', handleCityDragOver);
                 cityItem.addEventListener('drop', handleCityDrop);
                 cityItem.addEventListener('dragleave', handleCityDragLeave);
 
                 cityList.appendChild(cityItem);
             });
-        }
-
-        // Select zone and show its cities
-        function selectZone(zoneId, zoneName) {
-            currentZoneId = zoneId;
-            showZoneView = false;
-
-            panelTitleText.innerHTML = `
-                <span onclick="backToZones()" style="cursor: pointer; color: var(--button-primary);">← Zones</span>
-                 / ${zoneName}
-            `;
-            toggleViewButton.style.display = 'none';
-
-            renderZoneCities(zoneId);
-        }
-
-        // Render cities in a specific zone
-        function renderZoneCities(zoneId) {
-            cityList.innerHTML = '';
-
-            const zone = zones.find(z => z.id === zoneId);
-            if (!zone) return;
-
-            zone.cities.forEach(function(city) {
-                const cityItem = document.createElement('li');
-                cityItem.className = 'city-item';
-                cityItem.dataset.cityName = city.name;
-                cityItem.dataset.cityId = city.id;
-
-                cityItem.innerHTML = `
-                    <div class="city-content">
-                        <div class="city-name">${city.name}</div>
-                        <div class="staff-count">${city.staff_count} membre(s)</div>
-                    </div>
-                    <div class="city-actions">
-                        <button class="city-action-btn" onclick="editCityName(${city.id}, '${city.name}')" title="Modifier le nom">✏️</button>
-                        <button class="city-action-btn" onclick="deleteCity(${city.id}, '${city.name}')" title="Supprimer le chantier">🗑️</button>
-                    </div>
-                `;
-
-                cityItem.addEventListener('click', function(e) {
-                    if (!e.target.classList.contains('city-action-btn')) {
-                        selectCity(city.name, city.name);
-                    }
-                });
-
-                cityItem.addEventListener('dragover', handleCityDragOver);
-                cityItem.addEventListener('drop', handleCityDrop);
-                cityItem.addEventListener('dragleave', handleCityDragLeave);
-
-                cityList.appendChild(cityItem);
-            });
-        }
-
-        // Go back to zones view
-        function backToZones() {
-            currentZoneId = null;
-            showZoneView = true;
-            toggleViewButton.style.display = 'inline-block';
-            renderZonesOrCities();
         }
 
         // Select city and show its staff
@@ -1842,6 +1250,7 @@ body {
             currentCityId = cityName;
             currentCityName = displayName;
 
+            // Update active city
             document.querySelectorAll('.city-item').forEach(function(item) {
                 item.classList.remove('active');
             });
@@ -1850,165 +1259,18 @@ body {
                 activeCity.classList.add('active');
             }
 
+            // Update staff panel title
             staffPanelTitle.textContent = 'Personnel - ' + displayName;
+
+            // Show attendance controls and current date
             attendanceControls.style.display = 'flex';
             currentDateElement.style.display = 'block';
 
+            // Filter and render staff for this city
             const cityStaff = allStaff.filter(function(staff) {
                 return staff.city === cityName;
             });
             renderStaff(cityStaff);
-        }
-
-        // Show present modal
-        function showPresentModal(staffId, staffName) {
-            currentPresentStaffId = staffId;
-            presentStaffNameElement.textContent = staffName;
-
-            hoursWorkedSlider.value = 8;
-            hoursValueDisplay.textContent = '8h';
-            grandDeplacementCheckbox.checked = false;
-
-            presentModal.style.display = 'block';
-        }
-
-        // Add new city
-        async function addNewCity() {
-            const cityName = newCityNameInput.value.trim();
-            const zoneId = cityZoneSelect.value;
-
-            if (!cityName) {
-                showMessage('Veuillez entrer un nom de chantier.', 'error');
-                return;
-            }
-
-            if (!zoneId) {
-                showMessage('Veuillez sélectionner une zone.', 'error');
-                return;
-            }
-
-            try {
-                const response = await fetch('/api/add-city/', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'X-CSRFToken': csrftoken
-                    },
-                    body: JSON.stringify({
-                        name: cityName,
-                        zone_id: zoneId
-                    })
-                });
-
-                const data = await response.json();
-
-                if (data.success) {
-                    showMessage(data.message, 'success');
-                    addCityModal.style.display = 'none';
-                    await loadZones();
-                    renderZonesOrCities();
-                } else {
-                    showMessage(data.message, 'error');
-                }
-            } catch (error) {
-                showMessage('Erreur lors de l\'ajout du chantier', 'error');
-                console.error('Error adding city:', error);
-            }
-        }
-
-        // Update city name
-        async function updateCityName() {
-            const newName = editCityNameInput.value.trim();
-            if (!newName || !currentEditCityId) {
-                showMessage('Veuillez entrer un nouveau nom.', 'error');
-                return;
-            }
-
-            try {
-                const response = await fetch('/api/update-city-name/', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'X-CSRFToken': csrftoken
-                    },
-                    body: JSON.stringify({
-                        city_id: currentEditCityId,
-                        new_name: newName
-                    })
-                });
-
-                const data = await response.json();
-
-                if (data.success) {
-                    showMessage(data.message, 'success');
-                    editCityModal.style.display = 'none';
-                    currentEditCityId = null;
-
-                    if (currentCityName === data.city.old_name) {
-                        currentCityName = data.city.name;
-                        currentCityId = data.city.name;
-                        staffPanelTitle.textContent = 'Personnel - ' + data.city.name;
-                    }
-
-                    await loadZones();
-                    renderZonesOrCities();
-                } else {
-                    showMessage(data.message, 'error');
-                }
-            } catch (error) {
-                showMessage('Erreur lors de la modification', 'error');
-                console.error('Error updating city name:', error);
-            }
-        }
-
-        // Delete city
-        async function deleteCity(cityId, cityName) {
-            if (!confirm(`Êtes-vous sûr de vouloir supprimer le chantier "${cityName}" ?`)) {
-                return;
-            }
-
-            try {
-                const response = await fetch('/api/delete-city/', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'X-CSRFToken': csrftoken
-                    },
-                    body: JSON.stringify({ city_id: cityId })
-                });
-
-                const data = await response.json();
-
-                if (data.success) {
-                    showMessage(data.message, 'success');
-
-                    if (currentCityName === data.deleted_city_name) {
-                        currentCityId = null;
-                        currentCityName = null;
-                        attendanceControls.style.display = 'none';
-                        currentDateElement.style.display = 'none';
-                        staffList.innerHTML = '<div class="empty-state">Sélectionnez un chantier pour voir son personnel</div>';
-                        staffPanelTitle.textContent = 'Personnel';
-                    }
-
-                    await loadZones();
-                    renderZonesOrCities();
-                } else {
-                    showMessage(data.message, 'error');
-                }
-            } catch (error) {
-                showMessage('Erreur lors de la suppression', 'error');
-                console.error('Error deleting city:', error);
-            }
-        }
-
-        // Edit city name
-        function editCityName(cityId, cityName) {
-            currentEditCityId = cityId;
-            editCityNameInput.value = cityName;
-            editCityModal.style.display = 'block';
-            editCityNameInput.focus();
-            editCityNameInput.select();
         }
 
         // Render staff with attendance information
@@ -2016,7 +1278,7 @@ body {
             staffList.innerHTML = '';
 
             if (staff.length === 0) {
-                staffList.innerHTML = '<div class="empty-state">Aucun personnel dans ce chantier</div>';
+                staffList.innerHTML = '<div class="empty-state">Aucun personnel dans cette ville</div>';
                 return;
             }
 
@@ -2026,66 +1288,59 @@ body {
                 staffItem.draggable = true;
                 staffItem.dataset.staffId = member.id;
 
+                // Determine status
                 const statusClass = getStatusClass(member.status);
                 const statusText = getStatusText(member.status);
 
+                // Create timestamp display
                 let timestampHtml = '';
                 if (member.timestamp) {
                     const time = new Date(member.timestamp).toLocaleTimeString();
                     timestampHtml = '<div class="timestamp">' + time + '</div>';
                 }
 
+                // Create absence reason display
                 let absenceReasonHtml = '';
                 if (member.absence_reason) {
                     absenceReasonHtml = '<div class="absence-reason">Motif: ' + member.absence_reason + '</div>';
                 }
 
-                let hoursWorkedHtml = '';
-                if (member.hours_worked && member.status === 'present') {
-                    hoursWorkedHtml = '<div class="hours-worked">' + member.hours_worked + 'h travaillées</div>';
-                }
-
-                let grandDeplacementHtml = '';
-                if (member.grand_deplacement && member.status === 'present') {
-                    grandDeplacementHtml = '<div class="grand-deplacement">Grand déplacement (nuit)</div>';
-                }
-
+                // Create attendance actions
                 const isLocked = member.status !== 'undefined' && !adminMode;
                 const lockedIcon = isLocked ? '<span class="locked-icon" title="Statut verrouillé">🔒</span>' : '';
 
-                staffItem.innerHTML = `
-                    <div class="staff-info">
-                        <div class="staff-name">
-                            <span class="status-indicator ${statusClass}"></span>
-                            ${member.name}
-                            <span class="drag-handle" title="Glisser pour déplacer">⋮⋮</span>
-                        </div>
-                        <div class="staff-city">${member.city}</div>
-                        <div class="attendance-info">
-                            <div class="status-text">${statusText}</div>
-                            ${timestampHtml}
-                            ${hoursWorkedHtml}
-                            ${grandDeplacementHtml}
-                            ${absenceReasonHtml}
-                        </div>
-                    </div>
-                    <div class="attendance-actions">
-                        <button class="button small present-btn" onclick="showPresentModal(${member.id}, '${member.name}')" ${isLocked ? 'disabled' : ''}>
-                            Présent
-                        </button>
-                        <button class="button small absent-btn" onclick="showAbsenceModal(${member.id})" ${isLocked ? 'disabled' : ''}>
-                            Absent
-                        </button>
-                        <button class="button small conge-btn" onclick="showCongePeriodModal(${member.id})" title="Congé avec période">
-                            Congé Période
-                        </button>
-                        ${lockedIcon}
-                    </div>
-                `;
+                staffItem.innerHTML =
+                    '<div class="staff-info">' +
+                        '<div class="staff-name">' +
+                            '<span class="status-indicator ' + statusClass + '"></span>' +
+                            member.name +
+                            '<span class="drag-handle" title="Glisser pour déplacer">⋮⋮</span>' +
+                        '</div>' +
+                        '<div class="staff-city">' + member.city + '</div>' +
+                        '<div class="attendance-info">' +
+                            '<div class="status-text">' + statusText + '</div>' +
+                            timestampHtml +
+                            absenceReasonHtml +
+                        '</div>' +
+                    '</div>' +
+                    '<div class="attendance-actions">' +
+                        '<button class="button small present-btn" onclick="markStaffPresent(' + member.id + ')" ' + (isLocked ? 'disabled' : '') + '>' +
+                            'Présent' +
+                        '</button>' +
+                        '<button class="button small absent-btn" onclick="showAbsenceModal(' + member.id + ')" ' + (isLocked ? 'disabled' : '') + '>' +
+                            'Absent' +
+                        '</button>' +
+                        '<button class="button small conge-btn" onclick="markStaffConge(' + member.id + ')" ' + (isLocked ? 'disabled' : '') + '>' +
+                            'Congé' +
+                        '</button>' +
+                        lockedIcon +
+                    '</div>';
 
+                // Add drag events
                 staffItem.addEventListener('dragstart', handleStaffDragStart);
                 staffItem.addEventListener('dragend', handleStaffDragEnd);
 
+                // Prevent dragging when clicking on buttons
                 const buttons = staffItem.querySelectorAll('button');
                 buttons.forEach(function(button) {
                     button.addEventListener('mousedown', function(e) {
@@ -2101,7 +1356,7 @@ body {
             });
         }
 
-        // Get status class and text
+        // Get status class based on status
         function getStatusClass(status) {
             if (status === 'present') return 'present';
             if (status === 'absent') return 'absent';
@@ -2109,6 +1364,7 @@ body {
             return 'undefined';
         }
 
+        // Get status text based on status
         function getStatusText(status) {
             if (status === 'present') return 'Présent';
             if (status === 'absent') return 'Absent';
@@ -2116,29 +1372,15 @@ body {
             return 'Non défini';
         }
 
-        // Show modals
+        // Show absence reason modal
         function showAbsenceModal(staffId) {
             currentAbsentStaffId = staffId;
             absenceReasonInput.value = '';
             absenceModal.style.display = 'block';
         }
 
-        function showCongePeriodModal(staffId) {
-            currentCongeStaffId = staffId;
-
-            const today = new Date();
-            const tomorrow = new Date(today);
-            tomorrow.setDate(tomorrow.getDate() + 1);
-
-            congeStartDateInput.value = today.toISOString().split('T')[0];
-            congeEndDateInput.value = tomorrow.toISOString().split('T')[0];
-            congeReasonInput.value = '';
-
-            congePeriodModal.style.display = 'block';
-        }
-
-        // API calls for marking attendance
-        async function markStaffPresent(staffId, hoursWorked, grandDeplacement) {
+        // Mark staff member as present via API
+        async function markStaffPresent(staffId) {
             try {
                 const response = await fetch('/api/mark-present/', {
                     method: 'POST',
@@ -2146,25 +1388,31 @@ body {
                         'Content-Type': 'application/json',
                         'X-CSRFToken': csrftoken
                     },
-                    body: JSON.stringify({
-                        staff_id: staffId,
-                        hours_worked: hoursWorked,
-                        grand_deplacement: grandDeplacement
-                    })
+                    body: JSON.stringify({ staff_id: staffId })
                 });
 
                 const data = await response.json();
+
                 if (data.success) {
                     showMessage(data.message, 'success');
-                    await refreshData();
+                    // Refresh staff data
+                    await loadAllStaff();
+                    await loadCities();
+                    renderCities();
+                    renderCongeList();
+                    if (currentCityId) {
+                        selectCity(currentCityId, currentCityName);
+                    }
                 } else {
                     showMessage(data.message, 'error');
                 }
             } catch (error) {
                 showMessage('Erreur lors de la mise à jour', 'error');
+                console.error('Error marking present:', error);
             }
         }
 
+        // Mark staff member as absent via API
         async function markStaffAbsent(staffId, reason) {
             try {
                 const response = await fetch('/api/mark-absent/', {
@@ -2180,17 +1428,26 @@ body {
                 });
 
                 const data = await response.json();
+
                 if (data.success) {
                     showMessage(data.message, 'success');
-                    await refreshData();
+                    // Refresh staff data
+                    await loadAllStaff();
+                    await loadCities();
+                    renderCities();
+                    if (currentCityId) {
+                        selectCity(currentCityId, currentCityName);
+                    }
                 } else {
                     showMessage(data.message, 'error');
                 }
             } catch (error) {
                 showMessage('Erreur lors de la mise à jour', 'error');
+                console.error('Error marking absent:', error);
             }
         }
 
+        // Mark staff member as on leave (congé)
         async function markStaffConge(staffId) {
             try {
                 const response = await fetch('/api/mark-conge/', {
@@ -2203,150 +1460,72 @@ body {
                 });
 
                 const data = await response.json();
+
                 if (data.success) {
                     showMessage(data.message, 'success');
-                    await refreshData();
+                    // Refresh staff data
+                    await loadAllStaff();
+                    await loadCities();
+                    renderCities();
+                    renderCongeList();
+                    if (currentCityId) {
+                        selectCity(currentCityId, currentCityName);
+                    }
                 } else {
                     showMessage(data.message, 'error');
                 }
             } catch (error) {
                 showMessage('Erreur lors de la mise à jour', 'error');
-            }
-        }
-
-        async function markStaffCongePeriod(staffId, startDate, endDate, reason) {
-            try {
-                const response = await fetch('/api/mark-conge-period/', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'X-CSRFToken': csrftoken
-                    },
-                    body: JSON.stringify({
-                        staff_id: staffId,
-                        start_date: startDate,
-                        end_date: endDate,
-                        reason: reason
-                    })
-                });
-
-                const data = await response.json();
-                if (data.success) {
-                    showMessage(data.message, 'success');
-                    await refreshData();
-                } else {
-                    showMessage(data.message, 'error');
-                }
-            } catch (error) {
-                showMessage('Erreur lors de la mise à jour', 'error');
+                console.error('Error marking congé:', error);
             }
         }
 
         // Render congé list
         function renderCongeList() {
-            if (congeReservations.length === 0) {
-                congeList.innerHTML = '<div class="conge-empty"><div>Aucun personnel en congé</div></div>';
+            const congeStaff = allStaff.filter(function(staff) {
+                return staff.status === 'conge';
+            });
+
+            if (congeStaff.length === 0) {
+                congeList.innerHTML =
+                    '<div class="conge-empty">' +
+                        '<div>Aucun personnel en congé</div>' +
+                    '</div>';
             } else {
                 congeList.innerHTML = '';
-
-                const currentConges = congeReservations.filter(res => res.is_current);
-                const futureConges = congeReservations.filter(res => !res.is_current);
-
-                if (currentConges.length > 0) {
-                    currentConges.forEach(function(reservation) {
-                        const congeItem = document.createElement('div');
-                        congeItem.className = `conge-item current-conge ${reservation.is_single_day ? 'single-day' : ''}`;
-
-                        const dateDisplay = reservation.is_single_day
-                            ? 'Aujourd\'hui uniquement'
-                            : `Du ${reservation.start_date_display} au ${reservation.end_date_display}`;
-
-                        congeItem.innerHTML = `
-                            <div class="conge-item-header">${reservation.staff_name} (En cours)</div>
-                            <div class="conge-item-dates">${dateDisplay}</div>
-                            ${reservation.reason ? `<div class="conge-item-reason">${reservation.reason}</div>` : ''}
-                            <button class="conge-item-remove" onclick="removeCongeItem('${reservation.id}', '${reservation.type}')" title="Supprimer">&times;</button>
-                        `;
-
-                        congeList.appendChild(congeItem);
-                    });
-                }
-
-                if (currentConges.length > 0 && futureConges.length > 0) {
-                    const separator = document.createElement('div');
-                    separator.innerHTML = '<div style="text-align: center; font-size: 11px; opacity: 0.7; margin: 10px 0; border-top: 1px solid rgba(255,255,255,0.3); padding-top: 8px;">Congés à venir</div>';
-                    congeList.appendChild(separator);
-                }
-
-                if (futureConges.length > 0) {
-                    futureConges.forEach(function(reservation) {
-                        const congeItem = document.createElement('div');
-                        congeItem.className = 'conge-item future-conge';
-
-                        congeItem.innerHTML = `
-                            <div class="conge-item-header">${reservation.staff_name} (À venir)</div>
-                            <div class="conge-item-dates">Du ${reservation.start_date_display} au ${reservation.end_date_display}</div>
-                            ${reservation.reason ? `<div class="conge-item-reason">${reservation.reason}</div>` : ''}
-                            <button class="conge-item-remove" onclick="removeCongeItem('${reservation.id}', '${reservation.type}')" title="Supprimer">&times;</button>
-                        `;
-
-                        congeList.appendChild(congeItem);
-                    });
-                }
-            }
-        }
-
-        // Remove congé
-        async function removeCongeItem(id, type) {
-            if (!confirm('Êtes-vous sûr de vouloir supprimer ce congé ?')) {
-                return;
-            }
-
-            try {
-                let endpoint, payload;
-
-                if (type === 'reservation') {
-                    endpoint = '/api/remove-conge-reservation/';
-                    payload = { reservation_id: id.replace('reservation_', '') };
-                } else if (type === 'daily') {
-                    endpoint = '/api/remove-daily-conge/';
-                    payload = { staff_id: id.replace('daily_', '') };
-                }
-
-                const response = await fetch(endpoint, {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'X-CSRFToken': csrftoken
-                    },
-                    body: JSON.stringify(payload)
+                congeStaff.forEach(function(staff) {
+                    const congeItem = document.createElement('div');
+                    congeItem.className = 'conge-item';
+                    congeItem.textContent = staff.name;
+                    congeList.appendChild(congeItem);
                 });
-
-                const data = await response.json();
-                if (data.success) {
-                    showMessage(data.message, 'success');
-                    await refreshData();
-                } else {
-                    showMessage(data.message, 'error');
-                }
-            } catch (error) {
-                showMessage('Erreur lors de la suppression', 'error');
             }
         }
 
-        // Refresh data
-        async function refreshData() {
-            await loadAllStaff();
-            await loadZones();
-            await loadCongeReservations();
-            renderZonesOrCities();
-            renderCongeList();
-            if (currentCityId) {
-                selectCity(currentCityId, currentCityName);
+        // Congé drag handlers
+        function handleCongeDragOver(e) {
+            e.preventDefault();
+            e.dataTransfer.dropEffect = 'move';
+
+            if (draggedStaffId) {
+                e.currentTarget.classList.add('drag-over');
             }
         }
 
-        // Mark city present
+        function handleCongeDragLeave(e) {
+            e.currentTarget.classList.remove('drag-over');
+        }
+
+        async function handleCongeDrop(e) {
+            e.preventDefault();
+            e.currentTarget.classList.remove('drag-over');
+
+            if (!draggedStaffId) return;
+
+            // Mark staff as on leave
+            await markStaffConge(draggedStaffId);
+        }
+        // Mark all staff in current city as present
         async function markCityPresent(cityName) {
             try {
                 const response = await fetch('/api/mark-city-present/', {
@@ -2359,22 +1538,34 @@ body {
                 });
 
                 const data = await response.json();
+
                 if (data.success) {
                     showMessage(data.message, 'success');
-                    await refreshData();
+                    // Refresh staff data
+                    await loadAllStaff();
+                    await loadCities();
+                    renderCities();
+                    renderCongeList();
+                    if (currentCityId) {
+                        selectCity(currentCityId, currentCityName);
+                    }
                 } else {
                     showMessage(data.message, 'error');
                 }
             } catch (error) {
                 showMessage('Erreur lors de la mise à jour', 'error');
+                console.error('Error marking city present:', error);
             }
         }
 
-        // Drag and drop handlers
+        // Staff drag handlers
         function handleStaffDragStart(e) {
             draggedStaffId = e.target.dataset.staffId;
             e.target.classList.add('dragging');
+
+            // Set drag effect
             e.dataTransfer.effectAllowed = 'move';
+            e.dataTransfer.setData('text/html', e.target.outerHTML);
         }
 
         function handleStaffDragEnd(e) {
@@ -2382,9 +1573,11 @@ body {
             draggedStaffId = null;
         }
 
+        // City drag handlers
         function handleCityDragOver(e) {
             e.preventDefault();
             e.dataTransfer.dropEffect = 'move';
+
             if (draggedStaffId && e.currentTarget.dataset.cityName != currentCityId) {
                 e.currentTarget.classList.add('drag-over');
             }
@@ -2401,35 +1594,17 @@ body {
             if (!draggedStaffId) return;
 
             const targetCityName = e.currentTarget.dataset.cityName;
-            if (targetCityName == currentCityId) return;
 
+            if (targetCityName == currentCityId) return; // Same city
+
+            // Update staff city
             await updateStaffCityByName(draggedStaffId, targetCityName);
         }
 
-        function handleCongeDragOver(e) {
-            e.preventDefault();
-            e.dataTransfer.dropEffect = 'move';
-            if (draggedStaffId) {
-                e.currentTarget.classList.add('drag-over');
-            }
-        }
-
-        function handleCongeDragLeave(e) {
-            e.currentTarget.classList.remove('drag-over');
-        }
-
-        async function handleCongeDrop(e) {
-            e.preventDefault();
-            e.currentTarget.classList.remove('drag-over');
-
-            if (!draggedStaffId) return;
-            await markStaffConge(draggedStaffId);
-        }
-
-        // Update staff city
+        // Update staff city via API (modified to work with city names)
         async function updateStaffCityByName(staffId, newCityName) {
             try {
-                const response = await fetch('/api/update-staff-city/', {
+                const updateResponse = await fetch('/api/update-staff-city/', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
@@ -2441,15 +1616,29 @@ body {
                     })
                 });
 
-                const data = await response.json();
-                if (data.success) {
-                    showMessage(data.message, 'success');
-                    await refreshData();
+                const updateData = await updateResponse.json();
+
+                if (updateData.success) {
+                    showMessage(updateData.message, 'success');
+
+                    // Refresh data
+                    await loadAllStaff();
+                    await loadCities();
+                    renderCities();
+
+                    // Refresh current staff view if a city is selected
+                    if (currentCityId) {
+                        const cityStaff = allStaff.filter(function(staff) {
+                            return staff.city === currentCityId;
+                        });
+                        renderStaff(cityStaff);
+                    }
                 } else {
-                    showMessage(data.message, 'error');
+                    showMessage(updateData.message, 'error');
                 }
             } catch (error) {
                 showMessage('Erreur lors de la mise à jour', 'error');
+                console.error('Error updating staff city:', error);
             }
         }
 
@@ -2468,67 +1657,8 @@ body {
             }, 3000);
         }
 
-        // Initialize
+        // Initialize the application
         init();
-        if (generatePdfTodayButton) {
-    generatePdfTodayButton.addEventListener('click', async function() {
-        // Add loading state
-        this.classList.add('loading');
-        this.textContent = 'Génération...';
-
-        try {
-            const response = await fetch('/api/generate-pdf/', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'X-CSRFToken': csrftoken
-                }
-            });
-
-            if (response.ok) {
-                // Create a blob from the PDF stream
-                const blob = await response.blob();
-
-                // Create a link to download it
-                const downloadUrl = window.URL.createObjectURL(blob);
-                const a = document.createElement('a');
-                a.href = downloadUrl;
-
-                // Generate filename with today's date
-                const today = new Date();
-                const dateStr = today.toISOString().split('T')[0]; // YYYY-MM-DD format
-                a.download = `rapport-presences-${dateStr}.pdf`;
-
-                document.body.appendChild(a);
-                a.click();
-
-                // Clean up
-                window.URL.revokeObjectURL(downloadUrl);
-                document.body.removeChild(a);
-
-                // Show success state
-                this.classList.remove('loading');
-                this.classList.add('success');
-                this.innerHTML = '<span>Téléchargé !</span>';
-
-                // Reset button after 2 seconds
-                setTimeout(() => {
-                    this.classList.remove('success');
-                    this.innerHTML = 'Rapport PDF';
-                }, 2000);
-
-                showMessage('Rapport PDF généré avec succès !', 'success');
-            } else {
-                throw new Error('Erreur lors de la génération du PDF');
-            }
-        } catch (error) {
-            this.classList.remove('loading');
-            this.innerHTML = 'Rapport PDF';
-            showMessage('Erreur lors de la génération du PDF', 'error');
-            console.error('Error generating PDF:', error);
-        }
-    });
-}
     </script>
 </body>
 </html>
