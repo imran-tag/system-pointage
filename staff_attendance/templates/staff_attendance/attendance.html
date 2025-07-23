@@ -1,5 +1,4 @@
 {% load static %}
-<!DOCTYPE html>
 <html lang="fr">
 <head>
     <meta charset="UTF-8">
@@ -19,6 +18,8 @@
     --button-primary-hover: #2980b9;
     --button-success: #28a745;
     --button-success-hover: #218838;
+    --button-danger: #dc3545;
+    --button-danger-hover: #c82333;
     --message-success-bg: #d4edda;
     --message-success-color: #155724;
     --message-error-bg: #f8d7da;
@@ -47,6 +48,8 @@ body.dark-mode {
     --button-primary-hover: #3498db;
     --button-success: #218838;
     --button-success-hover: #28a745;
+    --button-danger: #c82333;
+    --button-danger-hover: #dc3545;
     --message-success-bg: #0f401a;
     --message-success-color: #a3d9b3;
     --message-error-bg: #401a1a;
@@ -173,103 +176,41 @@ body {
     background-color: var(--button-success-hover);
 }
 
-.instructions {
-    background: var(--message-info-bg);
-    color: var(--message-info-color);
-    padding: 15px;
-    border-radius: 6px;
-    margin-bottom: 20px;
-    font-size: 14px;
+.button.danger {
+    background-color: var(--button-danger);
 }
 
-/* Fixed container layout - Three columns side by side */
+.button.danger:hover {
+    background-color: var(--button-danger-hover);
+}
+
 .container {
-    display: flex;
+    display: grid;
+    grid-template-columns: 1fr 2fr 250px;
     gap: 20px;
     max-width: 1400px;
     margin: 0 auto;
-    height: calc(100vh - 300px);
 }
 
-/* Left panel - Zones/Cities */
-.cities-panel {
-    flex: 0 0 350px;
+.cities-panel, .staff-panel, .conge-panel {
     background: var(--card-bg);
     border-radius: 8px;
     box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
     padding: 20px;
-    overflow-y: auto;
-}
-
-/* Middle panel - Staff */
-.staff-panel {
-    flex: 1;
-    background: var(--card-bg);
-    border-radius: 8px;
-    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
-    padding: 20px;
-    overflow-y: auto;
-}
-
-/* Right panel - Congé */
-.conge-panel {
-    flex: 0 0 280px;
-    background: linear-gradient(135deg, #9b59b6, #8e44ad);
-    color: white;
-    border-radius: 8px;
-    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
-    padding: 20px;
-    display: flex;
-    flex-direction: column;
+    height: fit-content;
+    max-height: 80vh;
     overflow-y: auto;
 }
 
 .panel-title {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
     font-size: 18px;
     font-weight: 600;
     margin-bottom: 15px;
     padding-bottom: 10px;
     border-bottom: 2px solid var(--border-color);
-}
-
-.panel-actions {
     display: flex;
-    gap: 8px;
+    justify-content: space-between;
     align-items: center;
-}
-
-.nav-button-small {
-    background-color: var(--button-primary);
-    color: white;
-    border: none;
-    padding: 6px 10px;
-    border-radius: 4px;
-    cursor: pointer;
-    font-size: 14px;
-    transition: background-color 0.3s;
-}
-
-.nav-button-small:hover {
-    background-color: var(--button-primary-hover);
-}
-
-.add-city-btn {
-    background-color: var(--button-success);
-    color: white;
-    border: none;
-    padding: 6px 12px;
-    border-radius: 4px;
-    cursor: pointer;
-    font-size: 14px;
-    font-weight: bold;
-    transition: background-color 0.3s;
-}
-
-.add-city-btn:hover {
-    background-color: var(--button-success-hover);
 }
 
 .city-list {
@@ -308,18 +249,6 @@ body {
     border-width: 3px;
 }
 
-.zone-item {
-    background: linear-gradient(135deg, var(--city-group-bg) 0%, var(--card-bg) 100%);
-    border-left: 4px solid var(--button-primary);
-}
-
-.zone-item .city-content::before {
-    content: '🗺️';
-    margin-right: 8px;
-    font-size: 16px;
-    opacity: 0.8;
-}
-
 .city-content {
     flex: 1;
 }
@@ -335,57 +264,53 @@ body {
     margin-top: 4px;
 }
 
-.city-actions, .zone-actions {
+.city-actions {
     display: flex;
     gap: 5px;
-    align-items: center;
     opacity: 0;
     transition: opacity 0.3s;
 }
 
-.city-item:hover .city-actions,
-.city-item:hover .zone-actions {
+.city-item:hover .city-actions {
+    opacity: 1;
+}
+
+.city-item.active .city-actions {
     opacity: 1;
 }
 
 .city-action-btn {
-    background: rgba(255, 255, 255, 0.9);
+    background: none;
     border: none;
-    border-radius: 3px;
-    padding: 4px 6px;
+    padding: 4px;
     cursor: pointer;
-    font-size: 12px;
-    transition: background-color 0.3s;
+    border-radius: 3px;
+    font-size: 14px;
+    transition: background-color 0.2s;
 }
 
 .city-action-btn:hover {
-    background: white;
+    background: rgba(255, 255, 255, 0.2);
 }
 
-.staff-panel-header {
+.add-city-btn {
+    background: var(--button-success);
+    color: white;
+    border: none;
+    padding: 8px;
+    border-radius: 50%;
+    cursor: pointer;
+    transition: background-color 0.3s;
+    font-size: 16px;
+    width: 32px;
+    height: 32px;
     display: flex;
-    justify-content: space-between;
-    align-items: flex-start;
-    margin-bottom: 15px;
-    flex-wrap: wrap;
-    gap: 10px;
-}
-
-.attendance-controls {
-    display: flex;
-    gap: 10px;
     align-items: center;
-    flex-wrap: wrap;
+    justify-content: center;
 }
 
-.current-date {
-    text-align: center;
-    padding: 10px;
-    background: var(--message-info-bg);
-    color: var(--message-info-color);
-    border-radius: 4px;
-    margin-bottom: 15px;
-    font-weight: 500;
+.add-city-btn:hover {
+    background-color: var(--button-success-hover);
 }
 
 .staff-list {
@@ -531,6 +456,27 @@ body {
     width: fit-content;
 }
 
+.hours-worked {
+    font-size: 11px;
+    color: #2ecc71;
+    background: rgba(46, 204, 113, 0.1);
+    padding: 2px 6px;
+    border-radius: 3px;
+    width: fit-content;
+    font-weight: 500;
+}
+
+.grand-deplacement {
+    font-size: 10px;
+    color: #8e44ad;
+    background: rgba(142, 68, 173, 0.1);
+    padding: 2px 6px;
+    border-radius: 3px;
+    width: fit-content;
+    font-weight: 500;
+    text-transform: uppercase;
+}
+
 .attendance-actions {
     display: flex;
     gap: 6px;
@@ -599,12 +545,60 @@ body {
     background-color: #c0392b;
 }
 
-.pdf-button {
-    background-color: #28a745;
+.staff-panel-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 15px;
+    flex-wrap: wrap;
+    gap: 10px;
+}
+/* Add these CSS rules to distinguish current vs future congés */
+
+.conge-item.current-conge {
+    background: rgba(255, 255, 255, 0.3);
+    border: 2px solid rgba(255, 255, 255, 0.5);
+    box-shadow: 0 0 10px rgba(255, 255, 255, 0.2);
 }
 
-.pdf-button:hover {
-    background-color: #218838;
+.conge-item.future-conge {
+    background: rgba(255, 255, 255, 0.15);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    opacity: 0.8;
+}
+
+.conge-item.current-conge .conge-item-header {
+    font-weight: 700;
+    color: #fff;
+}
+
+.conge-item.future-conge .conge-item-header {
+    font-weight: 500;
+    color: rgba(255, 255, 255, 0.9);
+}
+
+.conge-separator {
+    margin: 8px 0;
+}
+
+/* Optional: Add a subtle animation for current congés */
+.conge-item.current-conge {
+    animation: subtlePulse 3s ease-in-out infinite;
+}
+
+@keyframes subtlePulse {
+    0%, 100% {
+        box-shadow: 0 0 10px rgba(255, 255, 255, 0.2);
+    }
+    50% {
+        box-shadow: 0 0 15px rgba(255, 255, 255, 0.4);
+    }
+}
+.attendance-controls {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+    flex-wrap: wrap;
 }
 
 .admin-indicator {
@@ -632,77 +626,21 @@ body {
     background-color: #c0392b;
 }
 
+.current-date {
+    text-align: center;
+    padding: 10px;
+    background: var(--message-info-bg);
+    color: var(--message-info-color);
+    border-radius: 4px;
+    margin-bottom: 15px;
+    font-weight: 500;
+}
+
 .locked-icon {
     display: inline-block;
     margin-left: 5px;
     font-size: 12px;
     cursor: help;
-}
-
-.empty-state {
-    text-align: center;
-    padding: 40px 20px;
-    color: #999;
-    font-style: italic;
-}
-
-.conge-panel.drag-over {
-    background: linear-gradient(135deg, #c39bd3, #bb8fce);
-    border: 3px dashed white;
-    transform: scale(1.02);
-}
-
-.conge-title {
-    font-size: 18px;
-    font-weight: 600;
-    margin-bottom: 15px;
-    padding-bottom: 10px;
-    border-bottom: 2px solid rgba(255, 255, 255, 0.3);
-}
-
-.conge-icon {
-    font-size: 48px;
-    margin: 20px 0;
-    opacity: 0.7;
-}
-
-.conge-list {
-    flex: 1;
-    min-height: 100px;
-}
-
-.conge-item {
-    background: rgba(255, 255, 255, 0.2);
-    border: 1px solid rgba(255, 255, 255, 0.3);
-    border-radius: 6px;
-    padding: 8px 12px;
-    margin-bottom: 8px;
-    font-size: 14px;
-    font-weight: 500;
-    transition: all 0.3s ease;
-}
-
-.conge-item:hover {
-    background: rgba(255, 255, 255, 0.3);
-    transform: translateY(-1px);
-}
-
-.conge-empty {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    height: 200px;
-    opacity: 0.7;
-    font-style: italic;
-}
-
-.conge-instructions {
-    font-size: 12px;
-    opacity: 0.8;
-    margin-top: auto;
-    padding-top: 15px;
-    border-top: 1px solid rgba(255, 255, 255, 0.2);
 }
 
 .message {
@@ -740,6 +678,132 @@ body {
     color: var(--message-info-color);
 }
 
+.conge-panel {
+    background: linear-gradient(135deg, #9b59b6, #8e44ad);
+    color: white;
+    text-align: center;
+    position: relative;
+    min-height: 400px;
+    display: flex;
+    flex-direction: column;
+}
+
+.conge-panel.drag-over {
+    background: linear-gradient(135deg, #c39bd3, #bb8fce);
+    border: 3px dashed white;
+    transform: scale(1.02);
+}
+
+.conge-title {
+    font-size: 18px;
+    font-weight: 600;
+    margin-bottom: 15px;
+    padding-bottom: 10px;
+    border-bottom: 2px solid rgba(255, 255, 255, 0.3);
+}
+
+.conge-icon {
+    font-size: 48px;
+    margin: 20px 0;
+    opacity: 0.7;
+}
+
+.conge-list {
+    flex: 1;
+    min-height: 150px;
+}
+
+.conge-item {
+    background: rgba(255, 255, 255, 0.2);
+    border: 1px solid rgba(255, 255, 255, 0.3);
+    border-radius: 6px;
+    padding: 10px 12px;
+    margin-bottom: 8px;
+    font-size: 13px;
+    transition: all 0.3s ease;
+    text-align: left;
+    position: relative;
+}
+
+.conge-item:hover {
+    background: rgba(255, 255, 255, 0.3);
+    transform: translateY(-1px);
+}
+
+.conge-item-header {
+    font-weight: 600;
+    margin-bottom: 4px;
+}
+
+.conge-item-dates {
+    font-size: 11px;
+    opacity: 0.9;
+    margin-bottom: 4px;
+}
+
+.conge-item-reason {
+    font-size: 10px;
+    font-style: italic;
+    opacity: 0.8;
+}
+
+.conge-item-remove {
+    position: absolute;
+    top: 5px;
+    right: 8px;
+    background: rgba(255, 255, 255, 0.2);
+    border: none;
+    color: white;
+    border-radius: 50%;
+    width: 20px;
+    height: 20px;
+    cursor: pointer;
+    font-size: 12px;
+    display: none;
+}
+
+.conge-item:hover .conge-item-remove {
+    display: block;
+}
+
+.conge-item-remove:hover {
+    background: rgba(231, 76, 60, 0.8);
+}
+
+.conge-empty {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    height: 150px;
+    opacity: 0.7;
+    font-style: italic;
+}
+
+.conge-instructions {
+    font-size: 12px;
+    opacity: 0.8;
+    margin-top: auto;
+    padding-top: 15px;
+    border-top: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.empty-state {
+    text-align: center;
+    padding: 40px 20px;
+    color: #999;
+    font-style: italic;
+}
+
+.instructions {
+    background: var(--message-info-bg);
+    color: var(--message-info-color);
+    padding: 15px;
+    border-radius: 6px;
+    margin-bottom: 20px;
+    font-size: 14px;
+}
+
 .modal {
     display: none;
     position: fixed;
@@ -758,6 +822,10 @@ body {
     border-radius: 8px;
     width: 300px;
     color: var(--text-color);
+}
+
+.modal-content.wide {
+    width: 400px;
 }
 
 .close {
@@ -782,7 +850,7 @@ body {
     font-weight: 500;
 }
 
-.form-group input, .form-group textarea, .form-group select {
+.form-group input, .form-group textarea {
     width: 100%;
     padding: 8px;
     border: 1px solid var(--border-color);
@@ -797,26 +865,88 @@ body {
     resize: vertical;
 }
 
-/* Responsive design */
-@media (max-width: 1200px) {
-    .cities-panel {
-        flex: 0 0 300px;
-    }
+.form-row {
+    display: flex;
+    gap: 10px;
+}
 
-    .conge-panel {
-        flex: 0 0 250px;
-    }
+.form-row .form-group {
+    flex: 1;
+}
+
+/* Slider styles */
+.slider-container {
+    margin: 15px 0;
+}
+
+.slider-input {
+    width: 100%;
+    -webkit-appearance: none;
+    height: 8px;
+    border-radius: 5px;
+    background: #ddd;
+    outline: none;
+    margin: 10px 0;
+}
+
+.slider-input::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    background: var(--button-primary);
+    cursor: pointer;
+}
+
+.slider-input::-moz-range-thumb {
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    background: var(--button-primary);
+    cursor: pointer;
+    border: none;
+}
+
+.slider-value {
+    display: flex;
+    justify-content: space-between;
+    font-size: 14px;
+    color: var(--text-color);
+    margin-top: 5px;
+}
+
+.current-value {
+    font-weight: bold;
+    color: var(--button-primary);
+}
+
+/* Checkbox styles */
+.checkbox-container {
+    display: flex;
+    align-items: center;
+    margin: 15px 0;
+}
+
+.checkbox-container input[type="checkbox"] {
+    width: auto;
+    margin-right: 10px;
+    transform: scale(1.2);
+}
+
+.checkbox-container label {
+    margin: 0;
+    cursor: pointer;
 }
 
 @media (max-width: 768px) {
     .container {
-        flex-direction: column;
-        height: auto;
+        grid-template-columns: 1fr;
+        gap: 15px;
     }
 
     .cities-panel, .staff-panel, .conge-panel {
-        flex: none;
-        max-height: 50vh;
+        max-height: 60vh;
     }
 
     .staff-item {
@@ -856,6 +986,188 @@ body {
         justify-content: center;
         flex-wrap: wrap;
     }
+
+    .city-item {
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    .city-actions {
+        opacity: 1;
+        margin-top: 10px;
+        justify-content: center;
+    }
+    /* Zone-specific styles for zones view */
+.zone-item {
+    background: linear-gradient(135deg, var(--city-group-bg) 0%, var(--card-bg) 100%);
+    border-left: 4px solid var(--button-primary);
+    border-radius: 8px;
+    position: relative;
+    overflow: hidden;
+}
+
+.zone-item::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 2px;
+    background: linear-gradient(90deg, var(--button-primary), transparent);
+    opacity: 0.6;
+}
+
+.zone-item:hover {
+    background: linear-gradient(135deg, var(--drag-hover) 0%, var(--city-group-bg) 100%);
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    border-left-color: var(--button-primary-hover);
+}
+
+.zone-item.active {
+    background: linear-gradient(135deg, var(--button-primary) 0%, var(--button-primary-hover) 100%);
+    color: white;
+    border-left-color: white;
+    box-shadow: 0 6px 20px rgba(52, 152, 219, 0.3);
+}
+
+.zone-item .city-content::before {
+    content: '🗺️';
+    display: inline-block;
+    margin-right: 8px;
+    font-size: 16px;
+    opacity: 0.8;
+}
+
+.zone-item .city-name {
+    font-weight: 600;
+    font-size: 17px;
+    letter-spacing: 0.3px;
+}
+
+.zone-item .staff-count {
+    font-size: 13px;
+    opacity: 0.9;
+    font-weight: 500;
+}
+
+/* Navigation button styles */
+.nav-button-small {
+    background: var(--button-primary);
+    color: white;
+    border: none;
+    padding: 8px 12px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 14px;
+    transition: background-color 0.3s;
+    margin-left: 10px;
+}
+
+.nav-button-small:hover {
+    background: var(--button-primary-hover);
+}
+
+/* PDF Download Button */
+.pdf-download-btn {
+    background: linear-gradient(135deg, #28a745, #218838);
+    color: white;
+    border: none;
+    padding: 12px 20px;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 14px;
+    font-weight: 600;
+    transition: all 0.3s ease;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    box-shadow: 0 2px 8px rgba(40, 167, 69, 0.2);
+    text-decoration: none;
+}
+
+.pdf-download-btn::before {
+    content: '📊';
+    font-size: 16px;
+}
+
+.pdf-download-btn:hover {
+    background: linear-gradient(135deg, #218838, #28a745);
+    transform: translateY(-2px);
+    box-shadow: 0 4px 16px rgba(40, 167, 69, 0.3);
+}
+
+.pdf-download-btn.loading {
+    background: var(--button-disabled);
+    cursor: not-allowed;
+    transform: none;
+    box-shadow: none;
+}
+
+.pdf-download-btn.loading::before {
+    content: '⏳';
+    animation: pulse 1.5s infinite;
+}
+
+.pdf-download-btn.success {
+    background: var(--button-success);
+}
+
+.pdf-download-btn.success::before {
+    content: '✅';
+}
+
+@keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.5; }
+}
+
+/* Zone breadcrumb navigation */
+.zone-breadcrumb {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.zone-breadcrumb .back-link {
+    color: var(--button-primary);
+    text-decoration: none;
+    font-weight: 500;
+    transition: color 0.3s ease;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.zone-breadcrumb .back-link:hover {
+    color: var(--button-primary-hover);
+}
+
+/* Select dropdown for zone selection */
+.select {
+    width: 100%;
+    padding: 8px;
+    border: 1px solid var(--border-color);
+    border-radius: 4px;
+    box-sizing: border-box;
+    color: var(--text-color);
+    background-color: var(--select-bg);
+}
+
+/* Dark mode adjustments for zones */
+body.dark-mode .zone-item {
+    background: linear-gradient(135deg, var(--city-group-bg) 0%, #333 100%);
+    border-left-color: var(--button-primary);
+}
+
+body.dark-mode .zone-item:hover {
+    background: linear-gradient(135deg, var(--drag-hover) 0%, var(--city-group-bg) 100%);
+}
+
+body.dark-mode .zone-item.active {
+    background: linear-gradient(135deg, var(--button-primary) 0%, var(--button-primary-hover) 100%);
+    box-shadow: 0 6px 20px rgba(41, 128, 185, 0.4);
+}
 }
     </style>
 </head>
@@ -877,43 +1189,43 @@ body {
     <div class="nav-buttons">
         <a href="{% url 'staff_attendance:attendance_page' %}" class="button nav-button">Retour aux Présences</a>
         <a href="{% url 'staff_attendance:attendance_history' %}" class="button nav-button">Historique</a>
+        <button id="generate-pdf-today" class="button pdf-download-btn">Rapport PDF</button>
     </div>
 
     <div class="instructions">
         <strong>Instructions:</strong>
         1. Cliquez sur une zone pour voir ses chantiers, puis sur un chantier pour voir son personnel
         2. Utilisez le bouton 🔄 pour basculer entre vue zones et vue tous les chantiers
-        3. Glissez-déposez un membre du personnel (utilisez l'icône ⋮⋮) vers un autre chantier pour le déplacer
-        4. Glissez vers la zone "Congé" pour mettre un membre en congé
-        5. Les changements sont sauvegardés automatiquement
-        6. Utilisez le mode admin pour modifier les présences verrouillées
+        3. Lors du marquage présent, définissez les heures travaillées (0-9h) et si c'est un grand déplacement (nuit)
+        4. Pour les congés avec période, utilisez le bouton "Congé Période" pour définir les dates
+        5. Glissez-déposez un membre du personnel (utilisez l'icône ⋮⋮) vers un autre chantier pour le déplacer
+        6. Glissez vers la zone "Congé" pour mettre un membre en congé aujourd'hui uniquement
+        7. Les changements sont sauvegardés automatiquement
+        8. Utilisez le mode admin pour modifier les présences verrouillées
+        9. Ajoutez de nouveaux chantiers avec le bouton "+" et modifiez les noms en cliquant sur l'icône d'édition
     </div>
 
     <div id="message" class="message" style="display: none;"></div>
 
     <div class="container">
-        <!-- LEFT PANEL: Zones/Cities -->
         <div class="cities-panel">
             <div class="panel-title">
                 <span id="panel-title-text">Zones</span>
-                <div class="panel-actions">
+                <div>
                     <button id="toggle-view-btn" class="nav-button-small" title="Basculer entre zones et chantiers">🔄</button>
-                    <button id="add-zone-btn" class="add-city-btn" title="Ajouter une zone">🗺️+</button>
-                    <button id="add-city-btn" class="add-city-btn" title="Ajouter un chantier">🏢+</button>
+                    <button id="add-city-btn" class="add-city-btn" title="Ajouter un chantier">+</button>
                 </div>
             </div>
             <ul class="city-list" id="city-list">
-                <!-- Zones/Cities will be populated here -->
+                <!-- Zones or Cities will be populated here -->
             </ul>
         </div>
 
-        <!-- MIDDLE PANEL: Staff -->
         <div class="staff-panel">
             <div class="staff-panel-header">
                 <h2 class="panel-title" id="staff-panel-title">Personnel</h2>
                 <div class="attendance-controls" id="attendance-controls" style="display: none;">
                     <button id="mark-city-present" class="button success">Marquer Tous Présents</button>
-                    <button id="generate-pdf-today" class="button pdf-button">PDF Rapport</button>
                     <button id="admin-modify" class="button admin">Mode Admin</button>
                     <div id="admin-mode-indicator" class="admin-indicator" style="display: none;">
                         <span>Mode Admin Actif</span>
@@ -929,7 +1241,6 @@ body {
             </div>
         </div>
 
-        <!-- RIGHT PANEL: Congé -->
         <div class="conge-panel" id="conge-panel">
             <h2 class="conge-title">Congé</h2>
             <div class="conge-icon">🏖️</div>
@@ -939,60 +1250,34 @@ body {
                 </div>
             </div>
             <div class="conge-instructions">
-                Glissez le personnel ici pour le mettre en congé
+                Glissez le personnel ici pour le mettre en congé aujourd'hui uniquement
             </div>
         </div>
     </div>
 
-    <!-- Admin Password Modal -->
-    <div id="admin-modal" class="modal">
-        <div class="modal-content">
+    <!-- Keep all your existing modals here -->
+    <!-- Present Modal -->
+    <div id="present-modal" class="modal">
+        <div class="modal-content wide">
             <span class="close">&times;</span>
-            <h3>Authentification Administrateur</h3>
+            <h3>Marquer comme présent</h3>
+            <div id="present-staff-name" style="margin-bottom: 15px; font-weight: bold; color: var(--button-primary);"></div>
             <div class="form-group">
-                <label for="admin-password">Mot de passe :</label>
-                <input type="password" id="admin-password">
+                <label for="hours-worked">Heures travaillées :</label>
+                <div class="slider-container">
+                    <input type="range" id="hours-worked" class="slider-input" min="0" max="9" step="0.5" value="8">
+                    <div class="slider-value">
+                        <span>0h</span>
+                        <span class="current-value" id="hours-value">8h</span>
+                        <span>9h</span>
+                    </div>
+                </div>
             </div>
-            <button id="submit-password" class="button">Valider</button>
-        </div>
-    </div>
-
-    <!-- Absence Reason Modal -->
-    <div id="absence-modal" class="modal">
-        <div class="modal-content">
-            <span class="close">&times;</span>
-            <h3>Motif d'absence</h3>
-            <div class="form-group">
-                <label for="absence-reason">Veuillez indiquer le motif d'absence :</label>
-                <textarea id="absence-reason" placeholder="Motif d'absence..."></textarea>
+            <div class="checkbox-container">
+                <input type="checkbox" id="grand-deplacement">
+                <label for="grand-deplacement">Grand déplacement (nuit)</label>
             </div>
-            <button id="submit-absence" class="button">Valider</button>
-        </div>
-    </div>
-
-    <!-- Add Zone Modal -->
-    <div id="add-zone-modal" class="modal">
-        <div class="modal-content">
-            <span class="close">&times;</span>
-            <h3>Ajouter une nouvelle zone</h3>
-            <div class="form-group">
-                <label for="new-zone-name">Nom de la zone :</label>
-                <input type="text" id="new-zone-name" placeholder="Nom de la zone">
-            </div>
-            <button id="submit-new-zone" class="button">Ajouter</button>
-        </div>
-    </div>
-
-    <!-- Edit Zone Modal -->
-    <div id="edit-zone-modal" class="modal">
-        <div class="modal-content">
-            <span class="close">&times;</span>
-            <h3>Modifier le nom de la zone</h3>
-            <div class="form-group">
-                <label for="edit-zone-name">Nouveau nom :</label>
-                <input type="text" id="edit-zone-name" placeholder="Nouveau nom de la zone">
-            </div>
-            <button id="submit-edit-zone" class="button">Modifier</button>
+            <button id="submit-present" class="button success">Valider</button>
         </div>
     </div>
 
@@ -1003,7 +1288,7 @@ body {
             <h3>Ajouter un nouveau chantier</h3>
             <div class="form-group">
                 <label for="city-zone-select">Choisir la zone :</label>
-                <select id="city-zone-select">
+                <select id="city-zone-select" class="select">
                     <!-- Zone options will be populated here -->
                 </select>
             </div>
@@ -1015,7 +1300,7 @@ body {
         </div>
     </div>
 
-    <!-- Edit City Modal -->
+    <!-- Keep all your other existing modals: Edit City, Admin Password, Absence Reason, Congé Period -->
     <div id="edit-city-modal" class="modal">
         <div class="modal-content">
             <span class="close">&times;</span>
@@ -1028,6 +1313,52 @@ body {
         </div>
     </div>
 
+    <div id="admin-modal" class="modal">
+        <div class="modal-content">
+            <span class="close">&times;</span>
+            <h3>Authentification Administrateur</h3>
+            <div class="form-group">
+                <label for="admin-password">Mot de passe :</label>
+                <input type="password" id="admin-password">
+            </div>
+            <button id="submit-password" class="button">Valider</button>
+        </div>
+    </div>
+
+    <div id="absence-modal" class="modal">
+        <div class="modal-content">
+            <span class="close">&times;</span>
+            <h3>Motif d'absence</h3>
+            <div class="form-group">
+                <label for="absence-reason">Veuillez indiquer le motif d'absence :</label>
+                <textarea id="absence-reason" placeholder="Motif d'absence..."></textarea>
+            </div>
+            <button id="submit-absence" class="button">Valider</button>
+        </div>
+    </div>
+
+    <div id="conge-period-modal" class="modal">
+        <div class="modal-content wide">
+            <span class="close">&times;</span>
+            <h3>Définir une période de congé</h3>
+            <div class="form-row">
+                <div class="form-group">
+                    <label for="conge-start-date">Date de début :</label>
+                    <input type="date" id="conge-start-date">
+                </div>
+                <div class="form-group">
+                    <label for="conge-end-date">Date de fin :</label>
+                    <input type="date" id="conge-end-date">
+                </div>
+            </div>
+            <div class="form-group">
+                <label for="conge-reason">Motif du congé (optionnel) :</label>
+                <textarea id="conge-reason" placeholder="Motif du congé..."></textarea>
+            </div>
+            <button id="submit-conge-period" class="button">Valider</button>
+        </div>
+    </div>
+
     {% csrf_token %}
     <script>
         // Get CSRF token
@@ -1037,15 +1368,17 @@ body {
         let zones = [];
         let cities = [];
         let allStaff = [];
+        let congeReservations = [];
         let currentCityId = null;
         let currentCityName = null;
         let currentZoneId = null;
         let draggedStaffId = null;
         let adminMode = false;
         let currentAbsentStaffId = null;
-        let showZoneView = true;
-        let currentEditZoneId = null;
+        let currentCongeStaffId = null;
         let currentEditCityId = null;
+        let currentPresentStaffId = null;
+        let showZoneView = true;
 
         // DOM elements
         const cityList = document.getElementById('city-list');
@@ -1055,19 +1388,51 @@ body {
         const attendanceControls = document.getElementById('attendance-controls');
         const currentDateElement = document.getElementById('current-date');
         const markCityPresentButton = document.getElementById('mark-city-present');
-        const generatePdfTodayButton = document.getElementById('generate-pdf-today');
         const adminModifyButton = document.getElementById('admin-modify');
         const adminModeIndicator = document.getElementById('admin-mode-indicator');
         const exitAdminModeButton = document.getElementById('exit-admin-mode');
-        const adminModal = document.getElementById('admin-modal');
-        const absenceModal = document.getElementById('absence-modal');
-        const addZoneModal = document.getElementById('add-zone-modal');
-        const editZoneModal = document.getElementById('edit-zone-modal');
-        const addCityModal = document.getElementById('add-city-modal');
-        const editCityModal = document.getElementById('edit-city-modal');
-        const closeModalButtons = document.querySelectorAll('.close');
         const congePanel = document.getElementById('conge-panel');
         const congeList = document.getElementById('conge-list');
+
+        // Modal elements
+        const presentModal = document.getElementById('present-modal');
+        const addCityModal = document.getElementById('add-city-modal');
+        const editCityModal = document.getElementById('edit-city-modal');
+        const adminModal = document.getElementById('admin-modal');
+        const absenceModal = document.getElementById('absence-modal');
+        const congePeriodModal = document.getElementById('conge-period-modal');
+        const closeModalButtons = document.querySelectorAll('.close');
+
+        // Button elements
+        const addCityButton = document.getElementById('add-city-btn');
+        const toggleViewButton = document.getElementById('toggle-view-btn');
+        const submitPresentButton = document.getElementById('submit-present');
+        const submitNewCityButton = document.getElementById('submit-new-city');
+        const submitEditCityButton = document.getElementById('submit-edit-city');
+        const submitPasswordButton = document.getElementById('submit-password');
+        const submitAbsenceButton = document.getElementById('submit-absence');
+        const submitCongePeriodButton = document.getElementById('submit-conge-period');
+        const generatePdfTodayButton = document.getElementById('generate-pdf-today');
+
+        // Input elements
+        const panelTitleText = document.getElementById('panel-title-text');
+        const presentStaffNameElement = document.getElementById('present-staff-name');
+        const hoursWorkedSlider = document.getElementById('hours-worked');
+        const hoursValueDisplay = document.getElementById('hours-value');
+        const grandDeplacementCheckbox = document.getElementById('grand-deplacement');
+        const cityZoneSelect = document.getElementById('city-zone-select');
+        const newCityNameInput = document.getElementById('new-city-name');
+        const editCityNameInput = document.getElementById('edit-city-name');
+        const adminPasswordInput = document.getElementById('admin-password');
+        const absenceReasonInput = document.getElementById('absence-reason');
+        const congeStartDateInput = document.getElementById('conge-start-date');
+        const congeEndDateInput = document.getElementById('conge-end-date');
+        const congeReasonInput = document.getElementById('conge-reason');
+
+        // Hours slider functionality
+        hoursWorkedSlider.addEventListener('input', function() {
+            hoursValueDisplay.textContent = this.value + 'h';
+        });
 
         // Dark mode toggle functionality
         const darkModeToggle = document.getElementById('dark-mode-toggle');
@@ -1096,6 +1461,7 @@ body {
         async function init() {
             await loadZones();
             await loadAllStaff();
+            await loadCongeReservations();
             renderZonesOrCities();
             renderCongeList();
             setupCurrentDate();
@@ -1112,6 +1478,189 @@ body {
                 day: 'numeric'
             };
             currentDateElement.textContent = 'Présences du ' + today.toLocaleDateString('fr-FR', options);
+        }
+
+        // Setup event listeners
+        function setupEventListeners() {
+            // Toggle view button
+            if (toggleViewButton) {
+                toggleViewButton.addEventListener('click', function() {
+                    showZoneView = !showZoneView;
+                    renderZonesOrCities();
+                });
+            }
+
+            // Add city button
+            if (addCityButton) {
+                addCityButton.addEventListener('click', function() {
+                    populateZoneSelect();
+                    addCityModal.style.display = 'block';
+                    newCityNameInput.value = '';
+                    newCityNameInput.focus();
+                });
+            }
+
+            // PDF generation button
+            if (generatePdfTodayButton) {
+                generatePdfTodayButton.addEventListener('click', generateTodaysPDF);
+            }
+
+            // Keep all your existing event listeners here
+            if (submitPresentButton) {
+                submitPresentButton.addEventListener('click', function() {
+                    if (currentPresentStaffId) {
+                        const hoursWorked = parseFloat(hoursWorkedSlider.value);
+                        const grandDeplacement = grandDeplacementCheckbox.checked;
+                        markStaffPresent(currentPresentStaffId, hoursWorked, grandDeplacement);
+                        presentModal.style.display = 'none';
+                        currentPresentStaffId = null;
+                    }
+                });
+            }
+
+            if (submitNewCityButton) {
+                submitNewCityButton.addEventListener('click', addNewCity);
+            }
+
+            if (submitEditCityButton) {
+                submitEditCityButton.addEventListener('click', updateCityName);
+            }
+
+            if (markCityPresentButton) {
+                markCityPresentButton.addEventListener('click', function() {
+                    if (currentCityId) {
+                        markCityPresent(currentCityName);
+                    }
+                });
+            }
+
+            if (congePanel) {
+                congePanel.addEventListener('dragover', handleCongeDragOver);
+                congePanel.addEventListener('drop', handleCongeDrop);
+                congePanel.addEventListener('dragleave', handleCongeDragLeave);
+            }
+
+            if (adminModifyButton) {
+                adminModifyButton.addEventListener('click', function() {
+                    adminModal.style.display = 'block';
+                    adminPasswordInput.value = '';
+                });
+            }
+
+            if (exitAdminModeButton) {
+                exitAdminModeButton.addEventListener('click', function() {
+                    adminMode = false;
+                    adminModeIndicator.style.display = 'none';
+                    adminModifyButton.style.display = 'inline-block';
+                    showMessage('Mode administrateur désactivé.', 'info');
+                    if (currentCityId) {
+                        selectCity(currentCityId, currentCityName);
+                    }
+                });
+            }
+
+            // Close modals
+            closeModalButtons.forEach(function(button) {
+                button.addEventListener('click', function() {
+                    presentModal.style.display = 'none';
+                    addCityModal.style.display = 'none';
+                    editCityModal.style.display = 'none';
+                    adminModal.style.display = 'none';
+                    absenceModal.style.display = 'none';
+                    congePeriodModal.style.display = 'none';
+                });
+            });
+
+            window.addEventListener('click', function(e) {
+                if (e.target === presentModal) presentModal.style.display = 'none';
+                if (e.target === addCityModal) addCityModal.style.display = 'none';
+                if (e.target === editCityModal) editCityModal.style.display = 'none';
+                if (e.target === adminModal) adminModal.style.display = 'none';
+                if (e.target === absenceModal) absenceModal.style.display = 'none';
+                if (e.target === congePeriodModal) congePeriodModal.style.display = 'none';
+            });
+
+            if (submitPasswordButton) {
+                submitPasswordButton.addEventListener('click', async function() {
+                    try {
+                        const response = await fetch('/api/verify-admin/', {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json',
+                                'X-CSRFToken': csrftoken
+                            },
+                            body: JSON.stringify({ password: adminPasswordInput.value })
+                        });
+
+                        const data = await response.json();
+
+                        if (data.success) {
+                            adminMode = true;
+                            adminModal.style.display = 'none';
+                            adminModeIndicator.style.display = 'flex';
+                            adminModifyButton.style.display = 'none';
+                            showMessage('Mode administrateur activé.', 'success');
+                            if (currentCityId) {
+                                selectCity(currentCityId, currentCityName);
+                            }
+                        } else {
+                            showMessage('Mot de passe incorrect !', 'error');
+                        }
+                    } catch (error) {
+                        showMessage('Erreur lors de la vérification', 'error');
+                        console.error('Error verifying admin:', error);
+                    }
+                });
+            }
+
+            if (submitAbsenceButton) {
+                submitAbsenceButton.addEventListener('click', function() {
+                    if (currentAbsentStaffId) {
+                        const reason = absenceReasonInput.value.trim();
+                        markStaffAbsent(currentAbsentStaffId, reason);
+                        absenceModal.style.display = 'none';
+                        currentAbsentStaffId = null;
+                    }
+                });
+            }
+
+            if (submitCongePeriodButton) {
+                submitCongePeriodButton.addEventListener('click', function() {
+                    if (currentCongeStaffId) {
+                        const startDate = congeStartDateInput.value;
+                        const endDate = congeEndDateInput.value;
+                        const reason = congeReasonInput.value.trim();
+
+                        if (!startDate || !endDate) {
+                            showMessage('Veuillez sélectionner les dates de début et de fin.', 'error');
+                            return;
+                        }
+
+                        markStaffCongePeriod(currentCongeStaffId, startDate, endDate, reason);
+                        congePeriodModal.style.display = 'none';
+                        currentCongeStaffId = null;
+                    }
+                });
+            }
+
+            // Enter key handlers
+            newCityNameInput.addEventListener('keypress', function(e) {
+                if (e.key === 'Enter') {
+                    addNewCity();
+                }
+            });
+
+            editCityNameInput.addEventListener('keypress', function(e) {
+                if (e.key === 'Enter') {
+                    updateCityName();
+                }
+            });
+
+            adminPasswordInput.addEventListener('keypress', function(e) {
+                if (e.key === 'Enter') {
+                    submitPasswordButton.click();
+                }
+            });
         }
 
         // Load zones
@@ -1153,17 +1702,43 @@ body {
             }
         }
 
+        // Load congé reservations
+        async function loadCongeReservations() {
+            try {
+                const response = await fetch('/api/conge-reservations/');
+                const data = await response.json();
+
+                if (data.success) {
+                    congeReservations = data.reservations;
+                }
+            } catch (error) {
+                showMessage('Erreur lors du chargement des congés', 'error');
+                console.error('Error loading congé reservations:', error);
+            }
+        }
+
+        // Populate zone select for adding cities
+        function populateZoneSelect() {
+            cityZoneSelect.innerHTML = '<option value="">Sélectionner une zone</option>';
+            zones.forEach(zone => {
+                const option = document.createElement('option');
+                option.value = zone.id;
+                option.textContent = zone.name;
+                cityZoneSelect.appendChild(option);
+            });
+        }
+
         // Render zones or cities based on current view
         function renderZonesOrCities() {
             if (showZoneView) {
-                document.getElementById('panel-title-text').textContent = 'Zones';
-                document.getElementById('toggle-view-btn').textContent = '🔄';
-                document.getElementById('toggle-view-btn').title = 'Voir tous les chantiers';
+                panelTitleText.textContent = 'Zones';
+                toggleViewButton.textContent = '🏢';
+                toggleViewButton.title = 'Voir tous les chantiers';
                 renderZones();
             } else {
-                document.getElementById('panel-title-text').textContent = 'Tous les Chantiers';
-                document.getElementById('toggle-view-btn').textContent = '🗺️';
-                document.getElementById('toggle-view-btn').title = 'Voir par zones';
+                panelTitleText.textContent = 'Tous les Chantiers';
+                toggleViewButton.textContent = '🗺️';
+                toggleViewButton.title = 'Voir par zones';
                 renderAllCities();
             }
         }
@@ -1184,16 +1759,10 @@ body {
                         <div class="city-name">${zone.name}</div>
                         <div class="staff-count">${zone.cities.length} chantier(s), ${totalStaff} membre(s)</div>
                     </div>
-                    <div class="zone-actions">
-                        <button class="city-action-btn" onclick="editZoneName(${zone.id}, '${zone.name}')" title="Modifier la zone">✏️</button>
-                        <button class="city-action-btn" onclick="deleteZone(${zone.id}, '${zone.name}')" title="Supprimer la zone">🗑️</button>
-                    </div>
                 `;
 
-                zoneItem.addEventListener('click', function(e) {
-                    if (!e.target.classList.contains('city-action-btn')) {
-                        selectZone(zone.id, zone.name);
-                    }
+                zoneItem.addEventListener('click', function() {
+                    selectZone(zone.id, zone.name);
                 });
 
                 cityList.appendChild(zoneItem);
@@ -1240,11 +1809,11 @@ body {
             currentZoneId = zoneId;
             showZoneView = false;
 
-            document.getElementById('panel-title-text').innerHTML = `
+            panelTitleText.innerHTML = `
                 <span onclick="backToZones()" style="cursor: pointer; color: var(--button-primary);">← Zones</span>
                  / ${zoneName}
             `;
-            document.getElementById('toggle-view-btn').style.display = 'none';
+            toggleViewButton.style.display = 'none';
 
             renderZoneCities(zoneId);
         }
@@ -1291,9 +1860,62 @@ body {
         function backToZones() {
             currentZoneId = null;
             showZoneView = true;
-            document.getElementById('toggle-view-btn').style.display = 'inline-block';
+            toggleViewButton.style.display = 'inline-block';
             renderZonesOrCities();
         }
+
+        // Generate today's PDF report
+        async function generateTodaysPDF() {
+            generatePdfTodayButton.classList.add('loading');
+            generatePdfTodayButton.textContent = 'Génération...';
+
+            try {
+                const response = await fetch('/api/generate-pdf/', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': csrftoken
+                    }
+                });
+
+                if (response.ok) {
+                    const blob = await response.blob();
+                    const downloadUrl = window.URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = downloadUrl;
+
+                    const today = new Date();
+                    const dateStr = today.toISOString().split('T')[0];
+                    a.download = `rapport-presences-${dateStr}.pdf`;
+
+                    document.body.appendChild(a);
+                    a.click();
+
+                    window.URL.revokeObjectURL(downloadUrl);
+                    document.body.removeChild(a);
+
+                    generatePdfTodayButton.classList.remove('loading');
+                    generatePdfTodayButton.classList.add('success');
+                    generatePdfTodayButton.textContent = 'Téléchargé !';
+
+                    setTimeout(() => {
+                        generatePdfTodayButton.classList.remove('success');
+                        generatePdfTodayButton.textContent = 'Rapport PDF';
+                    }, 2000);
+
+                    showMessage('Rapport PDF généré avec succès !', 'success');
+                } else {
+                    throw new Error('Erreur lors de la génération du PDF');
+                }
+            } catch (error) {
+                generatePdfTodayButton.classList.remove('loading');
+                generatePdfTodayButton.textContent = 'Rapport PDF';
+                showMessage('Erreur lors de la génération du PDF', 'error');
+                console.error('Error generating PDF:', error);
+            }
+        }
+
+        // Keep all your existing functions here (selectCity, showPresentModal, addNewCity, updateCityName, deleteCity, etc.)
 
         // Select city and show its staff
         function selectCity(cityName, displayName) {
@@ -1318,267 +1940,20 @@ body {
             renderStaff(cityStaff);
         }
 
-        // Setup event listeners
-        function setupEventListeners() {
-            // Toggle view button
-            document.getElementById('toggle-view-btn').addEventListener('click', function() {
-                showZoneView = !showZoneView;
-                renderZonesOrCities();
-            });
-
-            // Add zone button
-            document.getElementById('add-zone-btn').addEventListener('click', function() {
-                document.getElementById('new-zone-name').value = '';
-                addZoneModal.style.display = 'block';
-            });
-
-            // Add city button
-            document.getElementById('add-city-btn').addEventListener('click', function() {
-                populateZoneSelect();
-                document.getElementById('new-city-name').value = '';
-                addCityModal.style.display = 'block';
-            });
-
-            // Submit new zone
-            document.getElementById('submit-new-zone').addEventListener('click', addNewZone);
-
-            // Submit edit zone
-            document.getElementById('submit-edit-zone').addEventListener('click', updateZoneName);
-
-            // Submit new city
-            document.getElementById('submit-new-city').addEventListener('click', addNewCity);
-
-            // Submit edit city
-            document.getElementById('submit-edit-city').addEventListener('click', updateCityName);
-
-            // Mark city present button
-            if (markCityPresentButton) {
-                markCityPresentButton.addEventListener('click', function() {
-                    if (currentCityId) {
-                        markCityPresent(currentCityName);
-                    }
-                });
-            }
-
-            // Generate PDF button
-            if (generatePdfTodayButton) {
-                generatePdfTodayButton.addEventListener('click', generateTodayPDF);
-            }
-
-            // Setup congé panel drag events
-            if (congePanel) {
-                congePanel.addEventListener('dragover', handleCongeDragOver);
-                congePanel.addEventListener('drop', handleCongeDrop);
-                congePanel.addEventListener('dragleave', handleCongeDragLeave);
-            }
-
-            // Admin modify button
-            if (adminModifyButton) {
-                adminModifyButton.addEventListener('click', function() {
-                    adminModal.style.display = 'block';
-                    document.getElementById('admin-password').value = '';
-                });
-            }
-
-            // Exit admin mode
-            if (exitAdminModeButton) {
-                exitAdminModeButton.addEventListener('click', function() {
-                    adminMode = false;
-                    adminModeIndicator.style.display = 'none';
-                    adminModifyButton.style.display = 'inline-block';
-                    showMessage('Mode administrateur désactivé.', 'info');
-                    if (currentCityId) {
-                        selectCity(currentCityId, currentCityName);
-                    }
-                });
-            }
-
-            // Close modals
-            closeModalButtons.forEach(function(button) {
-                button.addEventListener('click', function() {
-                    adminModal.style.display = 'none';
-                    absenceModal.style.display = 'none';
-                    addZoneModal.style.display = 'none';
-                    editZoneModal.style.display = 'none';
-                    addCityModal.style.display = 'none';
-                    editCityModal.style.display = 'none';
-                });
-            });
-
-            // Click outside modal to close
-            window.addEventListener('click', function(e) {
-                if (e.target === adminModal) adminModal.style.display = 'none';
-                if (e.target === absenceModal) absenceModal.style.display = 'none';
-                if (e.target === addZoneModal) addZoneModal.style.display = 'none';
-                if (e.target === editZoneModal) editZoneModal.style.display = 'none';
-                if (e.target === addCityModal) addCityModal.style.display = 'none';
-                if (e.target === editCityModal) editCityModal.style.display = 'none';
-            });
-
-            // Submit password
-            document.getElementById('submit-password').addEventListener('click', async function() {
-                try {
-                    const response = await fetch('/api/verify-admin/', {
-                        method: 'POST',
-                        headers: {
-                            'Content-Type': 'application/json',
-                            'X-CSRFToken': csrftoken
-                        },
-                        body: JSON.stringify({ password: document.getElementById('admin-password').value })
-                    });
-
-                    const data = await response.json();
-
-                    if (data.success) {
-                        adminMode = true;
-                        adminModal.style.display = 'none';
-                        adminModeIndicator.style.display = 'flex';
-                        adminModifyButton.style.display = 'none';
-                        showMessage('Mode administrateur activé.', 'success');
-                        if (currentCityId) {
-                            selectCity(currentCityId, currentCityName);
-                        }
-                    } else {
-                        showMessage('Mot de passe incorrect !', 'error');
-                    }
-                } catch (error) {
-                    showMessage('Erreur lors de la vérification', 'error');
-                    console.error('Error verifying admin:', error);
-                }
-            });
-
-            // Submit absence reason
-            document.getElementById('submit-absence').addEventListener('click', function() {
-                if (currentAbsentStaffId) {
-                    const reason = document.getElementById('absence-reason').value.trim();
-                    markStaffAbsent(currentAbsentStaffId, reason);
-                    absenceModal.style.display = 'none';
-                    currentAbsentStaffId = null;
-                }
-            });
+        // Show present modal
+        function showPresentModal(staffId, staffName) {
+            currentPresentStaffId = staffId;
+            presentStaffNameElement.textContent = staffName;
+            hoursWorkedSlider.value = 8;
+            hoursValueDisplay.textContent = '8h';
+            grandDeplacementCheckbox.checked = false;
+            presentModal.style.display = 'block';
         }
 
-        // Zone and City management functions
-        function populateZoneSelect() {
-            const select = document.getElementById('city-zone-select');
-            select.innerHTML = '<option value="">Sélectionner une zone</option>';
-            zones.forEach(zone => {
-                const option = document.createElement('option');
-                option.value = zone.id;
-                option.textContent = zone.name;
-                select.appendChild(option);
-            });
-        }
-
-        async function addNewZone() {
-            const zoneName = document.getElementById('new-zone-name').value.trim();
-            if (!zoneName) {
-                showMessage('Veuillez entrer un nom de zone.', 'error');
-                return;
-            }
-
-            try {
-                const response = await fetch('/api/add-zone/', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'X-CSRFToken': csrftoken
-                    },
-                    body: JSON.stringify({ name: zoneName })
-                });
-
-                const data = await response.json();
-
-                if (data.success) {
-                    showMessage(data.message, 'success');
-                    addZoneModal.style.display = 'none';
-                    await loadZones();
-                    renderZonesOrCities();
-                } else {
-                    showMessage(data.message, 'error');
-                }
-            } catch (error) {
-                showMessage('Erreur lors de l\'ajout de la zone', 'error');
-                console.error('Error adding zone:', error);
-            }
-        }
-
-        function editZoneName(zoneId, zoneName) {
-            currentEditZoneId = zoneId;
-            document.getElementById('edit-zone-name').value = zoneName;
-            editZoneModal.style.display = 'block';
-        }
-
-        async function updateZoneName() {
-            const newName = document.getElementById('edit-zone-name').value.trim();
-            if (!newName || !currentEditZoneId) {
-                showMessage('Veuillez entrer un nouveau nom.', 'error');
-                return;
-            }
-
-            try {
-                const response = await fetch('/api/update-zone-name/', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'X-CSRFToken': csrftoken
-                    },
-                    body: JSON.stringify({
-                        zone_id: currentEditZoneId,
-                        new_name: newName
-                    })
-                });
-
-                const data = await response.json();
-
-                if (data.success) {
-                    showMessage(data.message, 'success');
-                    editZoneModal.style.display = 'none';
-                    currentEditZoneId = null;
-                    await loadZones();
-                    renderZonesOrCities();
-                } else {
-                    showMessage(data.message, 'error');
-                }
-            } catch (error) {
-                showMessage('Erreur lors de la modification', 'error');
-                console.error('Error updating zone name:', error);
-            }
-        }
-
-        async function deleteZone(zoneId, zoneName) {
-            if (!confirm(`Êtes-vous sûr de vouloir supprimer la zone "${zoneName}" ?`)) {
-                return;
-            }
-
-            try {
-                const response = await fetch('/api/delete-zone/', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'X-CSRFToken': csrftoken
-                    },
-                    body: JSON.stringify({ zone_id: zoneId })
-                });
-
-                const data = await response.json();
-
-                if (data.success) {
-                    showMessage(data.message, 'success');
-                    await loadZones();
-                    renderZonesOrCities();
-                } else {
-                    showMessage(data.message, 'error');
-                }
-            } catch (error) {
-                showMessage('Erreur lors de la suppression', 'error');
-                console.error('Error deleting zone:', error);
-            }
-        }
-
+        // Add new city with zone support
         async function addNewCity() {
-            const cityName = document.getElementById('new-city-name').value.trim();
-            const zoneId = document.getElementById('city-zone-select').value;
+            const cityName = newCityNameInput.value.trim();
+            const zoneId = cityZoneSelect.value;
 
             if (!cityName) {
                 showMessage('Veuillez entrer un nom de chantier.', 'error');
@@ -1619,14 +1994,9 @@ body {
             }
         }
 
-        function editCityName(cityId, cityName) {
-            currentEditCityId = cityId;
-            document.getElementById('edit-city-name').value = cityName;
-            editCityModal.style.display = 'block';
-        }
-
+        // Update city name
         async function updateCityName() {
-            const newName = document.getElementById('edit-city-name').value.trim();
+            const newName = editCityNameInput.value.trim();
             if (!newName || !currentEditCityId) {
                 showMessage('Veuillez entrer un nouveau nom.', 'error');
                 return;
@@ -1669,6 +2039,7 @@ body {
             }
         }
 
+        // Delete city
         async function deleteCity(cityId, cityName) {
             if (!confirm(`Êtes-vous sûr de vouloir supprimer le chantier "${cityName}" ?`)) {
                 return;
@@ -1709,48 +2080,13 @@ body {
             }
         }
 
-        // Generate PDF for today
-        async function generateTodayPDF() {
-            const button = generatePdfTodayButton;
-            button.disabled = true;
-            button.textContent = 'Génération...';
-
-            try {
-                const response = await fetch('/api/generate-pdf/', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'X-CSRFToken': csrftoken
-                    }
-                });
-
-                if (response.ok) {
-                    const blob = await response.blob();
-                    const downloadUrl = window.URL.createObjectURL(blob);
-                    const a = document.createElement('a');
-                    a.href = downloadUrl;
-
-                    const today = new Date();
-                    const dateStr = today.toISOString().split('T')[0];
-                    a.download = `rapport-presences-${dateStr}.pdf`;
-
-                    document.body.appendChild(a);
-                    a.click();
-
-                    window.URL.revokeObjectURL(downloadUrl);
-                    document.body.removeChild(a);
-
-                    showMessage('PDF généré avec succès !', 'success');
-                } else {
-                    throw new Error('Erreur lors de la génération du PDF');
-                }
-            } catch (error) {
-                showMessage('Erreur lors de la génération du PDF', 'error');
-                console.error('Error generating PDF:', error);
-            } finally {
-                button.disabled = false;
-                button.textContent = 'PDF Rapport';
-            }
+        // Edit city name
+        function editCityName(cityId, cityName) {
+            currentEditCityId = cityId;
+            editCityNameInput.value = cityName;
+            editCityModal.style.display = 'block';
+            editCityNameInput.focus();
+            editCityNameInput.select();
         }
 
         // Render staff with attendance information
@@ -1782,6 +2118,16 @@ body {
                     absenceReasonHtml = '<div class="absence-reason">Motif: ' + member.absence_reason + '</div>';
                 }
 
+                let hoursWorkedHtml = '';
+                if (member.hours_worked && member.status === 'present') {
+                    hoursWorkedHtml = '<div class="hours-worked">' + member.hours_worked + 'h travaillées</div>';
+                }
+
+                let grandDeplacementHtml = '';
+                if (member.grand_deplacement && member.status === 'present') {
+                    grandDeplacementHtml = '<div class="grand-deplacement">Grand déplacement (nuit)</div>';
+                }
+
                 const isLocked = member.status !== 'undefined' && !adminMode;
                 const lockedIcon = isLocked ? '<span class="locked-icon" title="Statut verrouillé">🔒</span>' : '';
 
@@ -1796,18 +2142,20 @@ body {
                         <div class="attendance-info">
                             <div class="status-text">${statusText}</div>
                             ${timestampHtml}
+                            ${hoursWorkedHtml}
+                            ${grandDeplacementHtml}
                             ${absenceReasonHtml}
                         </div>
                     </div>
                     <div class="attendance-actions">
-                        <button class="button small present-btn" onclick="markStaffPresent(${member.id})" ${isLocked ? 'disabled' : ''}>
+                        <button class="button small present-btn" onclick="showPresentModal(${member.id}, '${member.name}')" ${isLocked ? 'disabled' : ''}>
                             Présent
                         </button>
                         <button class="button small absent-btn" onclick="showAbsenceModal(${member.id})" ${isLocked ? 'disabled' : ''}>
                             Absent
                         </button>
-                        <button class="button small conge-btn" onclick="markStaffConge(${member.id})" ${isLocked ? 'disabled' : ''}>
-                            Congé
+                        <button class="button small conge-btn" onclick="showCongePeriodModal(${member.id})" title="Congé avec période">
+                            Congé Période
                         </button>
                         ${lockedIcon}
                     </div>
@@ -1846,15 +2194,33 @@ body {
             return 'Non défini';
         }
 
-        // Show absence reason modal
+        // Show modals
         function showAbsenceModal(staffId) {
             currentAbsentStaffId = staffId;
-            document.getElementById('absence-reason').value = '';
+            absenceReasonInput.value = '';
             absenceModal.style.display = 'block';
         }
 
-        // API calls for marking attendance
-        async function markStaffPresent(staffId) {
+        function showCongePeriodModal(staffId) {
+            currentCongeStaffId = staffId;
+
+            const today = new Date();
+            const tomorrow = new Date(today);
+            tomorrow.setDate(tomorrow.getDate() + 1);
+
+            congeStartDateInput.value = today.toISOString().split('T')[0];
+            congeEndDateInput.value = tomorrow.toISOString().split('T')[0];
+            congeReasonInput.value = '';
+
+            congePeriodModal.style.display = 'block';
+        }
+
+        // Keep all your existing API call functions and drag/drop handlers
+        // markStaffPresent, markStaffAbsent, markStaffConge, markStaffCongePeriod,
+        // renderCongeList, refreshData, markCityPresent, handleStaffDragStart, etc.
+
+        // All existing functions remain the same...
+        async function markStaffPresent(staffId, hoursWorked, grandDeplacement) {
             try {
                 const response = await fetch('/api/mark-present/', {
                     method: 'POST',
@@ -1862,7 +2228,11 @@ body {
                         'Content-Type': 'application/json',
                         'X-CSRFToken': csrftoken
                     },
-                    body: JSON.stringify({ staff_id: staffId })
+                    body: JSON.stringify({
+                        staff_id: staffId,
+                        hours_worked: hoursWorked,
+                        grand_deplacement: grandDeplacement
+                    })
                 });
 
                 const data = await response.json();
@@ -1926,6 +2296,149 @@ body {
             }
         }
 
+        async function markStaffCongePeriod(staffId, startDate, endDate, reason) {
+            try {
+                const response = await fetch('/api/mark-conge-period/', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': csrftoken
+                    },
+                    body: JSON.stringify({
+                        staff_id: staffId,
+                        start_date: startDate,
+                        end_date: endDate,
+                        reason: reason
+                    })
+                });
+
+                const data = await response.json();
+                if (data.success) {
+                    showMessage(data.message, 'success');
+                    await refreshData();
+                } else {
+                    showMessage(data.message, 'error');
+                }
+            } catch (error) {
+                showMessage('Erreur lors de la mise à jour', 'error');
+            }
+        }
+
+        // Render congé list
+        function renderCongeList() {
+            if (congeReservations.length === 0) {
+                congeList.innerHTML = '<div class="conge-empty"><div>Aucun personnel en congé</div></div>';
+            } else {
+                congeList.innerHTML = '';
+
+                const currentConges = congeReservations.filter(res => res.is_current);
+                const futureConges = congeReservations.filter(res => !res.is_current);
+
+                if (currentConges.length > 0) {
+                    currentConges.forEach(function(reservation) {
+                        const congeItem = document.createElement('div');
+                        congeItem.className = `conge-item current-conge ${reservation.is_single_day ? 'single-day' : ''}`;
+
+                        const dateDisplay = reservation.is_single_day
+                            ? 'Aujourd\'hui uniquement'
+                            : `Du ${reservation.start_date_display} au ${reservation.end_date_display}`;
+
+                        congeItem.innerHTML = `
+                            <div class="conge-item-header">${reservation.staff_name} (En cours)</div>
+                            <div class="conge-item-dates">${dateDisplay}</div>
+                            ${reservation.reason ? `<div class="conge-item-reason">${reservation.reason}</div>` : ''}
+                            <button class="conge-item-remove" onclick="removeCongeItem('${reservation.id}', '${reservation.type}')" title="Supprimer">&times;</button>
+                        `;
+
+                        congeList.appendChild(congeItem);
+                    });
+                }
+
+                if (currentConges.length > 0 && futureConges.length > 0) {
+                    const separator = document.createElement('div');
+                    separator.innerHTML = '<div style="text-align: center; font-size: 11px; opacity: 0.7; margin: 10px 0; border-top: 1px solid rgba(255,255,255,0.3); padding-top: 8px;">Congés à venir</div>';
+                    congeList.appendChild(separator);
+                }
+
+                if (futureConges.length > 0) {
+                    futureConges.forEach(function(reservation) {
+                        const congeItem = document.createElement('div');
+                        congeItem.className = 'conge-item future-conge';
+
+                        congeItem.innerHTML = `
+                            <div class="conge-item-header">${reservation.staff_name} (À venir)</div>
+                            <div class="conge-item-dates">Du ${reservation.start_date_display} au ${reservation.end_date_display}</div>
+                            ${reservation.reason ? `<div class="conge-item-reason">${reservation.reason}</div>` : ''}
+                            <button class="conge-item-remove" onclick="removeCongeItem('${reservation.id}', '${reservation.type}')" title="Supprimer">&times;</button>
+                        `;
+
+                        congeList.appendChild(congeItem);
+                    });
+                }
+            }
+        }
+
+        // Remove congé
+        async function removeCongeItem(id, type) {
+            if (!confirm('Êtes-vous sûr de vouloir supprimer ce congé ?')) {
+                return;
+            }
+
+            try {
+                let endpoint, payload;
+
+                if (type === 'reservation') {
+                    endpoint = '/api/remove-conge-reservation/';
+                    payload = { reservation_id: id.replace('reservation_', '') };
+                } else if (type === 'daily') {
+                    endpoint = '/api/remove-daily-conge/';
+                    payload = { staff_id: id.replace('daily_', '') };
+                }
+
+                const response = await fetch(endpoint, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': csrftoken
+                    },
+                    body: JSON.stringify(payload)
+                });
+
+                const data = await response.json();
+                if (data.success) {
+                    showMessage(data.message, 'success');
+                    await refreshData();
+                } else {
+                    showMessage(data.message, 'error');
+                }
+            } catch (error) {
+                showMessage('Erreur lors de la suppression', 'error');
+            }
+        }
+
+        // Refresh data
+        async function refreshData() {
+            await loadAllStaff();
+            await loadZones();
+            await loadCongeReservations();
+
+            // Maintain current view state
+            if (currentZoneId && !showZoneView) {
+                // We're currently viewing a specific zone's cities
+                renderZoneCities(currentZoneId);
+            } else {
+                // We're in the main zones view or all cities view
+                renderZonesOrCities();
+            }
+
+            renderCongeList();
+
+            if (currentCityId) {
+                selectCity(currentCityId, currentCityName);
+            }
+        }
+
+        // Mark city present
         async function markCityPresent(cityName) {
             try {
                 const response = await fetch('/api/mark-city-present/', {
@@ -1946,25 +2459,6 @@ body {
                 }
             } catch (error) {
                 showMessage('Erreur lors de la mise à jour', 'error');
-            }
-        }
-
-        // Render congé list
-        function renderCongeList() {
-            const congeStaff = allStaff.filter(function(staff) {
-                return staff.status === 'conge';
-            });
-
-            if (congeStaff.length === 0) {
-                congeList.innerHTML = '<div class="conge-empty"><div>Aucun personnel en congé</div></div>';
-            } else {
-                congeList.innerHTML = '';
-                congeStaff.forEach(function(staff) {
-                    const congeItem = document.createElement('div');
-                    congeItem.className = 'conge-item';
-                    congeItem.textContent = staff.name;
-                    congeList.appendChild(congeItem);
-                });
             }
         }
 
@@ -2051,17 +2545,6 @@ body {
             }
         }
 
-        // Refresh data
-        async function refreshData() {
-            await loadAllStaff();
-            await loadZones();
-            renderZonesOrCities();
-            renderCongeList();
-            if (currentCityId) {
-                selectCity(currentCityId, currentCityName);
-            }
-        }
-
         // Show message
         function showMessage(text, type) {
             messageElement.textContent = text;
@@ -2077,7 +2560,7 @@ body {
             }, 3000);
         }
 
-        // Initialize the application
+        // Initialize
         init();
     </script>
 </body>
