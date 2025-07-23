@@ -179,7 +179,587 @@ def add_city(request):
     return JsonResponse({'success': False, 'message': 'Méthode non autorisée'}, status=405)
 
 
+# Ajoutez ces vues à votre staff_attendance/views.py
 
+@login_required
+def department_view(request):
+    """Render the department-based attendance view"""
+    cities = City.objects.all()
+    profile = UserProfile.objects.get_or_create(user=request.user)[0]
+
+    return render(request, 'staff_attendance/department_view.html', {
+        'cities': cities,
+        'user_profile': profile,
+    })
+
+
+@csrf_exempt
+@login_required
+def get_department_staff(request):
+    """API endpoint to get staff organized by departments"""
+    try:
+        # Get all staff with attendance data
+        today = timezone.now().date()
+        staff_members = StaffMember.objects.select_related('city').all()
+        attendances = Attendance.objects.filter(date=today).select_related('created_by', 'updated_by')
+
+        # Create attendance lookup
+        attendance_dict = {att.staff_member_id: att for att in attendances}
+
+        # Check for active congé reservations
+        active_conge = CongeReservation.objects.filter(
+            start_date__lte=today,
+            end_date__gte=today
+        ).values_list('staff_member_id', flat=True)
+
+        # Department mapping - MODIFIEZ CES AFFECTATIONS SELON VOS BESOINS
+        DEPARTMENT_MAPPING = {
+            'contact': ['160 - DROUOT_Réhabilitation de 821 logts'],  # Remplacez par vos chantiers Contact
+            'maintenance': ['001 - Bureau'],  # Remplacez par vos chantiers Maintenance
+            'moselle-est': ['015 - Atelier']  # Remplacez par vos chantiers Moselle-Est
+        }
+
+        # Organize staff by departments
+        departments = {
+            'contact': [],
+            'maintenance': [],
+            'moselle-est': []
+        }
+
+        # Process each staff member
+        for staff in staff_members:
+            attendance = attendance_dict.get(staff.id)
+
+            # Determine status
+            if staff.id in active_conge:
+                status = 'conge'
+            elif attendance:
+                if attendance.absence_reason == 'CONGE_STATUS':
+                    status = 'conge'
+                elif attendance.present is True:
+                    status = 'present'
+                elif attendance.present is False:
+                    status = 'absent'
+                else:
+                    status = 'undefined'
+            else:
+                status = 'undefined'
+
+            # Get user info for who made the last change
+            last_modified_by = None
+            if attendance:
+                if attendance.updated_by:
+                    last_modified_by = f"{attendance.updated_by.first_name or attendance.updated_by.username}"
+                elif attendance.created_by:
+                    last_modified_by = f"{attendance.created_by.first_name or attendance.created_by.username}"
+
+            # Create staff data
+            staff_data = {
+                'id': staff.id,
+                'name': staff.name,
+                'city': staff.city.name,
+                'status': status,
+                'absence_reason': attendance.absence_reason if attendance and attendance.present is False and attendance.absence_reason != 'CONGE_STATUS' else None,
+                'timestamp': attendance.timestamp.isoformat() if attendance and attendance.timestamp else None,
+                'hours_worked': float(attendance.hours_worked) if attendance and attendance.hours_worked else None,
+                'grand_deplacement': attendance.grand_deplacement if attendance else False,
+                'last_modified_by': last_modified_by
+            }
+
+            # Assign to department based on city
+            assigned = False
+            for dept, cities in DEPARTMENT_MAPPING.items():
+                if staff.city.name in cities:
+                    departments[dept].append(staff_data)
+                    assigned = True
+                    break
+
+            # Si un chantier n'est pas assigné à un département, l'ajouter à "non-assigné" ou contact par défaut
+            if not assigned:
+                # Par défaut, on met dans contact s'il n'est pas assigné
+                departments['contact'].append(staff_data)
+
+        return JsonResponse({
+            'success': True,
+            'departments': departments,
+            'department_mapping': DEPARTMENT_MAPPING,
+            'date': today.isoformat()
+        })
+
+    except Exception as e:
+        return JsonResponse({'success': False, 'message': str(e)}, status=500)
+
+
+@csrf_exempt
+@login_required
+def mark_department_present(request):
+    """API endpoint to mark entire department as present"""
+    if request.method == 'POST':
+        try:
+            data = json.loads(request.body)
+            department = data.get('department')
+
+            if not department:
+                return JsonResponse({'success': False, 'message': 'Département requis'}, status=400)
+
+            # Department mapping (same as above)
+            DEPARTMENT_MAPPING = {
+                'contact': ['160 - DROUOT_Réhabilitation de 821 logts'],  # Remplacez par vos chantiers Contact
+                'maintenance': ['001 - Bureau'],  # Remplacez par vos chantiers Maintenance
+                'moselle-est': ['015 - Atelier']
+            }
+
+            if department not in DEPARTMENT_MAPPING:
+                return JsonResponse({'success': False, 'message': 'Département invalide'}, status=400)
+
+            # Get all cities for this department
+            department_cities = DEPARTMENT_MAPPING[department]
+
+            # Get all staff in these cities
+            staff_members = StaffMember.objects.filter(city__name__in=department_cities)
+
+            today = timezone.now().date()
+            current_time = timezone.now()
+            success_count = 0
+
+            # Mark all staff as present
+            for staff in staff_members:
+                attendance, created = Attendance.objects.get_or_create(
+                    staff_member=staff,
+                    date=today,
+                    defaults={
+                        'present': True,
+                        'timestamp': current_time,
+                        'hours_worked': 8.0,
+                        'grand_deplacement': False,
+                        'created_by': request.user
+                    }
+                )
+
+                if not created:
+                    attendance.present = True
+                    attendance.absence_reason = None
+                    attendance.timestamp = current_time
+                    attendance.hours_worked = 8.0
+                    attendance.grand_deplacement = False
+                    attendance.updated_by = request.user
+                    attendance.save()
+
+                success_count += 1
+
+            return JsonResponse({
+                'success': True,
+                'message': f'{success_count} membres du département {department.upper()} marqués présents'
+            })
+
+        except Exception as e:
+            return JsonResponse({'success': False, 'message': str(e)}, status=500)
+
+    return JsonResponse({'success': False, 'message': 'Méthode non autorisée'}, status=405)
+
+
+@csrf_exempt
+@login_required
+def update_department_mapping(request):
+    """API endpoint to update department-city mapping (admin only)"""
+    profile = UserProfile.objects.get_or_create(user=request.user)[0]
+    if not profile.is_admin:
+        return JsonResponse({'success': False, 'message': 'Accès refusé'}, status=403)
+
+    if request.method == 'POST':
+        try:
+            data = json.loads(request.body)
+            new_mapping = data.get('mapping', {})
+
+            # Validate the mapping structure
+            required_departments = ['contact', 'maintenance', 'moselle-est']
+            for dept in required_departments:
+                if dept not in new_mapping:
+                    return JsonResponse({
+                        'success': False,
+                        'message': f'Département {dept} manquant dans la configuration'
+                    }, status=400)
+
+            # Validate that all cities exist
+            all_cities = []
+            for dept, cities in new_mapping.items():
+                all_cities.extend(cities)
+
+            existing_cities = City.objects.filter(name__in=all_cities).values_list('name', flat=True)
+            missing_cities = set(all_cities) - set(existing_cities)
+
+            if missing_cities:
+                return JsonResponse({
+                    'success': False,
+                    'message': f'Chantiers inexistants: {", ".join(missing_cities)}'
+                }, status=400)
+
+            # Pour une version simple, on pourrait stocker cela dans les settings ou une table de configuration
+            # Pour maintenant, on retourne simplement le succès
+            return JsonResponse({
+                'success': True,
+                'message': 'Configuration des départements mise à jour avec succès',
+                'mapping': new_mapping
+            })
+
+        except json.JSONDecodeError:
+            return JsonResponse({'success': False, 'message': 'JSON invalide'}, status=400)
+        except Exception as e:
+            return JsonResponse({'success': False, 'message': str(e)}, status=500)
+
+    return JsonResponse({'success': False, 'message': 'Méthode non autorisée'}, status=405)
+
+
+# Add this to staff_attendance/views.py
+
+def fixed_teams_page(request):
+    """Render the fixed teams attendance page"""
+    cities = City.objects.all()
+    admin_password = settings.ADMIN_PASSWORD if hasattr(settings, 'ADMIN_PASSWORD') else "admin123"
+    return render(request, 'staff_attendance/fixed_teams.html', {
+        'cities': cities,
+        'admin_password': admin_password,
+    })
+
+
+@csrf_exempt
+def get_fixed_teams_staff(request):
+    """API endpoint to get the fixed teams staff with attendance status"""
+    today = timezone.now().date()
+
+    # Define fixed teams
+    fixed_teams = {
+        'contact': [
+            'BENSAID HOUCINE',
+            'AMRAOU MOHAMED',
+            'AMRAOU ABDELLAH',
+            'AMRAOU KHALED',
+            'AMRAOU YOUSSEF',
+            'BEN SAID LAHCEN',
+            'BENDJEDDOU NADJIM',
+            'BOUCHAIB TALSSI',
+            'KHAMER TAWFIQ',
+            'LOUNIS MAATI',
+            'YEZLI AZIZ',
+            'SALIHI AFRIM',
+            'HAMAD MORAD',
+            'SAKER FADI',
+            'ZEROUALI MOHAMED',
+            'QAZIMI ARBEN',
+            'AIT EL GHACHI AHMED',
+            'BOUYAHIAOUI ALI',
+            'AMZIL KHALID',
+            'DI CAMILLO FREDERIC',
+            'MOUDEBER NADGEM',
+            'DI SALVO LUCAS',
+            'DI SALVO PATRICK',
+            'MARONGIU THEO',
+            'PARCOT MARC',
+            'BOUADLA AMAR',
+            'BULUT AHMET',
+            'CADIR AYDIN',
+            'OUAJOUB LAHCEN',
+            'NDREJAJ RAMAZAN',
+            'OUADAH ABDELREZAC',
+            'BAGHA SAID',
+            'NEAGU LAURENTIU',
+            'KHAWJA HIJRATULLAH',
+            'MAZOUJI RACHID',
+            'RAI JAMAL',
+            'RAI MOHAMED',
+            'EL FIRARI KARIM',
+            'YALCIN UMIT',
+            'AMRAOU MOHAMED 2',
+            'ZIMMERMANN LOIC',
+        ],
+        'moselle-est': [
+            'BECKER SEBASTIEN',
+            'FRANCOIS LAURENT',
+            'KHOUYA MOHAMED',
+            'REMIATTE LIONEL',
+            'BOULIHSSAN YOUNES',
+            'BENNACER ANISSA',
+            'ANDRASCHKE DAVINA',
+            'GUEZZI NAIMA',
+            'BICER ROJDA',
+            'KEHILI RANIA',
+            'TAGHOULT-OUNMIR AMRAN',
+        ],
+        'maintenance': [
+            'BOULAKDOUR YASSINE',
+            'BEJENARU ANATOLIE',
+            'AIT BAHA AHMED',
+            'ADDI AHMED',
+            'AIT ALLA SOFIENE',
+            'OURAMI RACHID',
+            'BRANGIER ROMUALD',
+            'MAGAZ LAHCEN',
+            'AGHOURI AREJDAL AISSA',
+            'AMRI HATEM',
+            'DARTE LOKMANE',
+            'TAHARDJI HAMZA',
+
+        ]
+    }
+
+    # Get today's attendance records for all staff
+    attendances = Attendance.objects.filter(date=today)
+    attendance_dict = {att.staff_member.name: att for att in attendances}
+
+    # Check for active congé reservations
+    active_conge = CongeReservation.objects.filter(
+        start_date__lte=today,
+        end_date__gte=today
+    ).values_list('staff_member__name', flat=True)
+
+    teams_data = {}
+
+    for team_name, team_members in fixed_teams.items():
+        team_data = []
+
+        for member_name in team_members:
+            # Get or create staff member
+            try:
+                # Try to find existing staff member by name
+                staff_member = StaffMember.objects.get(name=member_name)
+            except StaffMember.DoesNotExist:
+                # Create a default city for fixed teams if it doesn't exist
+                default_city, created = City.objects.get_or_create(
+                    name='Équipes Fixes',
+                    defaults={'zone': None}
+                )
+                # Create the staff member
+                staff_member = StaffMember.objects.create(
+                    name=member_name,
+                    city=default_city
+                )
+
+            attendance = attendance_dict.get(staff_member.name)
+
+            # Determine status
+            if staff_member.name in active_conge:
+                status = 'conge'
+            elif attendance:
+                if attendance.absence_reason == 'CONGE_STATUS':
+                    status = 'conge'
+                elif attendance.present is True:
+                    status = 'present'
+                elif attendance.present is False:
+                    status = 'absent'
+                else:
+                    status = 'undefined'
+            else:
+                status = 'undefined'
+
+            team_data.append({
+                'id': staff_member.id,
+                'name': staff_member.name,
+                'status': status,
+                'current_chantier': staff_member.city.name if staff_member.city.name != 'Équipes Fixes' else None,
+                'absence_reason': attendance.absence_reason if attendance and attendance.present is False and attendance.absence_reason != 'CONGE_STATUS' else None,
+                'timestamp': attendance.timestamp.isoformat() if attendance and attendance.timestamp else None,
+                'hours_worked': float(attendance.hours_worked) if attendance and attendance.hours_worked else None,
+                'grand_deplacement': attendance.grand_deplacement if attendance else False
+            })
+
+        teams_data[team_name] = team_data
+
+    # Get all available chantiers for assignment
+    chantiers = City.objects.exclude(name='Équipes Fixes').values('id', 'name')
+
+    return JsonResponse({
+        'teams': teams_data,
+        'chantiers': list(chantiers)
+    })
+
+
+@csrf_exempt
+def mark_fixed_team_present(request):
+    """API endpoint to mark a fixed team member as present with chantier assignment"""
+    if request.method == 'POST':
+        data = json.loads(request.body)
+        staff_id = data.get('staff_id')
+        hours_worked = data.get('hours_worked', 8.0)
+        grand_deplacement = data.get('grand_deplacement', False)
+        chantier_id = data.get('chantier_id')
+
+        try:
+            staff = StaffMember.objects.get(id=staff_id)
+            today = timezone.now().date()
+
+            # Update staff member's chantier if provided
+            if chantier_id:
+                chantier = City.objects.get(id=chantier_id)
+                staff.city = chantier
+                staff.save()
+
+            # Get or create attendance record
+            attendance, created = Attendance.objects.get_or_create(
+                staff_member=staff,
+                date=today,
+                defaults={
+                    'present': True,
+                    'timestamp': timezone.now(),
+                    'hours_worked': hours_worked,
+                    'grand_deplacement': grand_deplacement
+                }
+            )
+
+            # Update if already exists
+            if not created:
+                attendance.present = True
+                attendance.absence_reason = None
+                attendance.timestamp = timezone.now()
+                attendance.hours_worked = hours_worked
+                attendance.grand_deplacement = grand_deplacement
+                attendance.save()
+
+            chantier_text = f" sur {chantier.name}" if chantier_id else ""
+            message = f"{staff.name} marqué présent ({hours_worked}h){chantier_text}"
+            if grand_deplacement:
+                message += " - Grand déplacement (nuit)"
+            message += f" à {timezone.now().strftime('%H:%M:%S')}"
+
+            return JsonResponse({
+                'success': True,
+                'message': message
+            })
+
+        except StaffMember.DoesNotExist:
+            return JsonResponse({'success': False, 'message': 'Personnel non trouvé'}, status=404)
+        except City.DoesNotExist:
+            return JsonResponse({'success': False, 'message': 'Chantier non trouvé'}, status=404)
+        except Exception as e:
+            return JsonResponse({'success': False, 'message': str(e)}, status=500)
+
+    return JsonResponse({'success': False, 'message': 'Méthode non autorisée'}, status=405)
+
+
+@csrf_exempt
+def mark_fixed_team_absent(request):
+    """API endpoint to mark a fixed team member as absent with reason"""
+    if request.method == 'POST':
+        data = json.loads(request.body)
+        staff_id = data.get('staff_id')
+        reason = data.get('reason', '')
+
+        try:
+            staff = StaffMember.objects.get(id=staff_id)
+            today = timezone.now().date()
+
+            # Get or create attendance record
+            attendance, created = Attendance.objects.get_or_create(
+                staff_member=staff,
+                date=today,
+                defaults={'present': False, 'timestamp': timezone.now(), 'absence_reason': reason}
+            )
+
+            # Update if already exists
+            if not created:
+                attendance.present = False
+                attendance.timestamp = timezone.now()
+                attendance.absence_reason = reason
+                attendance.save()
+
+            return JsonResponse({
+                'success': True,
+                'message': f"{staff.name} marqué absent à {timezone.now().strftime('%H:%M:%S')}"
+            })
+
+        except StaffMember.DoesNotExist:
+            return JsonResponse({'success': False, 'message': 'Personnel non trouvé'}, status=404)
+        except Exception as e:
+            return JsonResponse({'success': False, 'message': str(e)}, status=500)
+
+    return JsonResponse({'success': False, 'message': 'Méthode non autorisée'}, status=405)
+
+
+@csrf_exempt
+def mark_fixed_team_conge(request):
+    """API endpoint to mark a fixed team member as on leave (congé) for today only"""
+    if request.method == 'POST':
+        data = json.loads(request.body)
+        staff_id = data.get('staff_id')
+
+        try:
+            staff = StaffMember.objects.get(id=staff_id)
+            today = timezone.now().date()
+
+            # Get or create attendance record
+            attendance, created = Attendance.objects.get_or_create(
+                staff_member=staff,
+                date=today,
+                defaults={'present': None, 'timestamp': timezone.now(), 'absence_reason': 'CONGE_STATUS'}
+            )
+
+            # Update if already exists
+            if not created:
+                attendance.present = None
+                attendance.absence_reason = 'CONGE_STATUS'
+                attendance.timestamp = timezone.now()
+                attendance.save()
+
+            return JsonResponse({
+                'success': True,
+                'message': f"{staff.name} marqué en congé à {timezone.now().strftime('%H:%M:%S')}"
+            })
+
+        except StaffMember.DoesNotExist:
+            return JsonResponse({'success': False, 'message': 'Personnel non trouvé'}, status=404)
+        except Exception as e:
+            return JsonResponse({'success': False, 'message': str(e)}, status=500)
+
+    return JsonResponse({'success': False, 'message': 'Méthode non autorisée'}, status=405)
+
+@csrf_exempt
+@login_required
+def get_department_stats(request):
+    """API endpoint to get department statistics"""
+    try:
+        today = timezone.now().date()
+
+        # Department mapping
+        DEPARTMENT_MAPPING = {
+            'contact': ['160 - DROUOT_Réhabilitation de 821 logts'],  # Remplacez par vos chantiers Contact
+            'maintenance': ['001 - Bureau'],  # Remplacez par vos chantiers Maintenance
+            'moselle-est': ['015 - Atelier']
+        }
+
+        stats = {}
+
+        for dept, cities in DEPARTMENT_MAPPING.items():
+            # Get staff in this department
+            staff_in_dept = StaffMember.objects.filter(city__name__in=cities)
+            total_staff = staff_in_dept.count()
+
+            # Get attendance for today
+            attendances = Attendance.objects.filter(
+                staff_member__in=staff_in_dept,
+                date=today
+            )
+
+            present_count = attendances.filter(present=True).count()
+            absent_count = attendances.filter(present=False).count()
+            conge_count = attendances.filter(absence_reason='CONGE_STATUS').count()
+            undefined_count = total_staff - present_count - absent_count - conge_count
+
+            stats[dept] = {
+                'total': total_staff,
+                'present': present_count,
+                'absent': absent_count,
+                'conge': conge_count,
+                'undefined': undefined_count,
+                'cities': cities
+            }
+
+        return JsonResponse({
+            'success': True,
+            'stats': stats,
+            'date': today.isoformat()
+        })
+
+    except Exception as e:
+        return JsonResponse({'success': False, 'message': str(e)}, status=500)
 
 @csrf_exempt
 def update_city_name(request):

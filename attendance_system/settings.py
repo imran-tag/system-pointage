@@ -15,6 +15,7 @@ LOGOUT_REDIRECT_URL = '/login/'
 SESSION_COOKIE_AGE = 86400  # 24 hours
 SESSION_EXPIRE_AT_BROWSER_CLOSE = True
 SESSION_SAVE_EVERY_REQUEST = True
+
 # Load environment variables from .env file
 load_dotenv()
 

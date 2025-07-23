@@ -1,0 +1,1200 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gestion des Équipes Fixes</title>
+    <style>
+:root {
+    /* Light theme variables */
+    --bg-color: #f5f7fa;
+    --card-bg: white;
+    --text-color: #2c3e50;
+    --header-color: #2c3e50;
+    --border-color: #eee;
+    --team-contact-bg: linear-gradient(135deg, #3498db, #2980b9);
+    --team-moselle-bg: linear-gradient(135deg, #e74c3c, #c0392b);
+    --team-maintenance-bg: linear-gradient(135deg, #f39c12, #d68910);
+    --button-primary: #3498db;
+    --button-primary-hover: #2980b9;
+    --button-success: #28a745;
+    --button-success-hover: #218838;
+    --button-danger: #dc3545;
+    --button-danger-hover: #c82333;
+    --message-success-bg: #d4edda;
+    --message-success-color: #155724;
+    --message-error-bg: #f8d7da;
+    --message-error-color: #721c24;
+    --message-info-bg: #d1ecf1;
+    --message-info-color: #0c5460;
+    --select-bg: white;
+    --select-border: #ddd;
+}
+
+/* Dark theme variables */
+body.dark-mode {
+    --bg-color: #1d1c1c;
+    --card-bg: #262626;
+    --text-color: #e0e0e0;
+    --header-color: #e0e0e0;
+    --border-color: #333;
+    --team-contact-bg: linear-gradient(135deg, #2980b9, #1f4e79);
+    --team-moselle-bg: linear-gradient(135deg, #c0392b, #922b21);
+    --team-maintenance-bg: linear-gradient(135deg, #d68910, #b7670f);
+    --button-primary: #2980b9;
+    --button-primary-hover: #3498db;
+    --button-success: #218838;
+    --button-success-hover: #28a745;
+    --button-danger: #c82333;
+    --button-danger-hover: #dc3545;
+    --message-success-bg: #0f401a;
+    --message-success-color: #a3d9b3;
+    --message-error-bg: #401a1a;
+    --message-error-color: #d9a3a3;
+    --message-info-bg: #164046;
+    --message-info-color: #a3d9d9;
+    --select-bg: #2d2d2d;
+    --select-border: #444;
+}
+
+/* Dark mode toggle switch */
+.theme-toggle {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-bottom: 20px;
+}
+
+.switch {
+    position: relative;
+    display: inline-block;
+    width: 60px;
+    height: 34px;
+    margin-left: 10px;
+}
+
+.switch input {
+    opacity: 0;
+    width: 0;
+    height: 0;
+}
+
+.slider {
+    position: absolute;
+    cursor: pointer;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: #ccc;
+    transition: .4s;
+    border-radius: 34px;
+}
+
+.slider:before {
+    position: absolute;
+    content: "";
+    height: 26px;
+    width: 26px;
+    left: 4px;
+    bottom: 4px;
+    background-color: white;
+    transition: .4s;
+    border-radius: 50%;
+}
+
+input:checked + .slider {
+    background-color: #2196F3;
+}
+
+input:checked + .slider:before {
+    transform: translateX(26px);
+}
+
+.theme-icon {
+    margin-right: 8px;
+    font-size: 20px;
+}
+
+body {
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    margin: 0;
+    padding: 20px;
+    background-color: var(--bg-color);
+    color: var(--text-color);
+    min-height: 100vh;
+}
+
+.header {
+    text-align: center;
+    margin-bottom: 30px;
+}
+
+.header h1 {
+    color: var(--header-color);
+    margin-bottom: 10px;
+}
+
+.nav-buttons {
+    display: flex;
+    justify-content: center;
+    margin-bottom: 20px;
+    gap: 10px;
+}
+
+.button {
+    display: inline-block;
+    background-color: var(--button-primary);
+    color: white;
+    border: none;
+    padding: 12px 24px;
+    text-align: center;
+    text-decoration: none;
+    font-size: 16px;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: background-color 0.3s;
+}
+
+.button:hover {
+    background-color: var(--button-primary-hover);
+}
+
+.button.success {
+    background-color: var(--button-success);
+}
+
+.button.success:hover {
+    background-color: var(--button-success-hover);
+}
+
+.button.danger {
+    background-color: var(--button-danger);
+}
+
+.button.danger:hover {
+    background-color: var(--button-danger-hover);
+}
+
+.current-date {
+    text-align: center;
+    padding: 15px;
+    background: var(--message-info-bg);
+    color: var(--message-info-color);
+    border-radius: 8px;
+    margin-bottom: 20px;
+    font-weight: 500;
+    max-width: 1200px;
+    margin-left: auto;
+    margin-right: auto;
+}
+
+.teams-container {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 20px;
+    max-width: 1400px;
+    margin: 0 auto;
+}
+
+.team-panel {
+    background: var(--card-bg);
+    border-radius: 12px;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+    padding: 0;
+    height: fit-content;
+    max-height: 80vh;
+    overflow: hidden;
+    position: relative;
+}
+
+.team-header {
+    padding: 20px;
+    color: white;
+    border-radius: 12px 12px 0 0;
+    position: relative;
+    overflow: hidden;
+}
+
+.team-header::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 12px 12px 0 0;
+}
+
+.team-contact .team-header {
+    background: var(--team-contact-bg);
+}
+
+.team-moselle .team-header {
+    background: var(--team-moselle-bg);
+}
+
+.team-maintenance .team-header {
+    background: var(--team-maintenance-bg);
+}
+
+.team-title {
+    font-size: 20px;
+    font-weight: 600;
+    margin: 0;
+    position: relative;
+    z-index: 1;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.team-icon {
+    font-size: 24px;
+}
+
+.team-contact .team-icon::before {
+    content: '📞';
+}
+
+.team-moselle .team-icon::before {
+    content: '🏗️';
+}
+
+.team-maintenance .team-icon::before {
+    content: '🔧';
+}
+
+.team-content {
+    padding: 20px;
+    max-height: 60vh;
+    overflow-y: auto;
+}
+
+.staff-list {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+}
+
+.staff-item {
+    background: var(--card-bg);
+    border: 2px solid var(--border-color);
+    border-radius: 8px;
+    padding: 16px;
+    margin-bottom: 12px;
+    transition: all 0.3s ease;
+    position: relative;
+}
+
+.staff-item:hover {
+    background: #f8f9fa;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+.staff-info {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    margin-bottom: 12px;
+}
+
+.staff-name {
+    font-weight: 600;
+    font-size: 16px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.status-indicator {
+    display: inline-block;
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    flex-shrink: 0;
+}
+
+.status-indicator.present {
+    background-color: #2ecc71;
+    box-shadow: 0 0 0 2px rgba(46, 204, 113, 0.3);
+}
+
+.status-indicator.absent {
+    background-color: #e74c3c;
+    box-shadow: 0 0 0 2px rgba(231, 76, 60, 0.3);
+}
+
+.status-indicator.undefined {
+    background-color: #f39c12;
+    box-shadow: 0 0 0 2px rgba(243, 156, 18, 0.3);
+}
+
+.status-indicator.conge {
+    background-color: #9b59b6;
+    box-shadow: 0 0 0 2px rgba(155, 89, 182, 0.3);
+}
+
+.attendance-info {
+    font-size: 12px;
+    color: #666;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.status-text {
+    font-weight: 500;
+    color: var(--text-color);
+}
+
+.current-chantier {
+    font-size: 11px;
+    color: var(--button-primary);
+    background: rgba(52, 152, 219, 0.1);
+    padding: 2px 6px;
+    border-radius: 3px;
+    width: fit-content;
+    font-weight: 500;
+}
+
+.timestamp {
+    font-size: 11px;
+    color: #999;
+    font-style: italic;
+}
+
+.absence-reason {
+    font-style: italic;
+    font-size: 11px;
+    color: #e74c3c;
+    background: rgba(231, 76, 60, 0.1);
+    padding: 2px 6px;
+    border-radius: 3px;
+    width: fit-content;
+}
+
+.hours-worked {
+    font-size: 11px;
+    color: #2ecc71;
+    background: rgba(46, 204, 113, 0.1);
+    padding: 2px 6px;
+    border-radius: 3px;
+    width: fit-content;
+    font-weight: 500;
+}
+
+.grand-deplacement {
+    font-size: 10px;
+    color: #8e44ad;
+    background: rgba(142, 68, 173, 0.1);
+    padding: 2px 6px;
+    border-radius: 3px;
+    width: fit-content;
+    font-weight: 500;
+    text-transform: uppercase;
+}
+
+.attendance-actions {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+    align-items: center;
+}
+
+.button.small {
+    padding: 8px 12px;
+    font-size: 12px;
+    min-width: 70px;
+    border-radius: 4px;
+    font-weight: 500;
+}
+
+.button.present-btn {
+    background-color: #27ae60;
+    border: 1px solid #27ae60;
+}
+
+.button.present-btn:hover:not(:disabled) {
+    background-color: #2ecc71;
+    transform: translateY(-1px);
+    box-shadow: 0 2px 4px rgba(46, 204, 113, 0.3);
+}
+
+.button.absent-btn {
+    background-color: #c0392b;
+    border: 1px solid #c0392b;
+}
+
+.button.absent-btn:hover:not(:disabled) {
+    background-color: #e74c3c;
+    transform: translateY(-1px);
+    box-shadow: 0 2px 4px rgba(231, 76, 60, 0.3);
+}
+
+.button.conge-btn {
+    background-color: #8e44ad;
+    border: 1px solid #8e44ad;
+}
+
+.button.conge-btn:hover:not(:disabled) {
+    background-color: #9b59b6;
+    transform: translateY(-1px);
+    box-shadow: 0 2px 4px rgba(155, 89, 182, 0.3);
+}
+
+.button:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+    transform: none !important;
+    box-shadow: none !important;
+}
+
+.locked-icon {
+    display: inline-block;
+    margin-left: 5px;
+    font-size: 12px;
+    cursor: help;
+}
+
+.message {
+    padding: 10px;
+    margin: 10px 0;
+    border-radius: 4px;
+    text-align: center;
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    z-index: 1000;
+    min-width: 300px;
+    opacity: 0;
+    transform: translateX(100%);
+    transition: all 0.3s ease;
+}
+
+.message.show {
+    opacity: 1;
+    transform: translateX(0);
+}
+
+.success {
+    background-color: var(--message-success-bg);
+    color: var(--message-success-color);
+}
+
+.error {
+    background-color: var(--message-error-bg);
+    color: var(--message-error-color);
+}
+
+.info {
+    background-color: var(--message-info-bg);
+    color: var(--message-info-color);
+}
+
+.modal {
+    display: none;
+    position: fixed;
+    z-index: 1000;
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.5);
+}
+
+.modal-content {
+    background-color: var(--card-bg);
+    margin: 15% auto;
+    padding: 20px;
+    border-radius: 8px;
+    width: 400px;
+    color: var(--text-color);
+}
+
+.close {
+    color: #aaa;
+    float: right;
+    font-size: 28px;
+    font-weight: bold;
+    cursor: pointer;
+}
+
+.close:hover {
+    color: var(--text-color);
+}
+
+.form-group {
+    margin-bottom: 15px;
+}
+
+.form-group label {
+    display: block;
+    margin-bottom: 5px;
+    font-weight: 500;
+}
+
+.form-group input, .form-group textarea, .form-group select {
+    width: 100%;
+    padding: 8px;
+    border: 1px solid var(--border-color);
+    border-radius: 4px;
+    box-sizing: border-box;
+    color: var(--text-color);
+    background-color: var(--select-bg);
+}
+
+.form-group textarea {
+    min-height: 100px;
+    resize: vertical;
+}
+
+/* Slider styles */
+.slider-container {
+    margin: 15px 0;
+}
+
+.slider-input {
+    width: 100%;
+    -webkit-appearance: none;
+    height: 8px;
+    border-radius: 5px;
+    background: #ddd;
+    outline: none;
+    margin: 10px 0;
+}
+
+.slider-input::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    background: var(--button-primary);
+    cursor: pointer;
+}
+
+.slider-input::-moz-range-thumb {
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    background: var(--button-primary);
+    cursor: pointer;
+    border: none;
+}
+
+.slider-value {
+    display: flex;
+    justify-content: space-between;
+    font-size: 14px;
+    color: var(--text-color);
+    margin-top: 5px;
+}
+
+.current-value {
+    font-weight: bold;
+    color: var(--button-primary);
+}
+
+/* Checkbox styles */
+.checkbox-container {
+    display: flex;
+    align-items: center;
+    margin: 15px 0;
+}
+
+.checkbox-container input[type="checkbox"] {
+    width: auto;
+    margin-right: 10px;
+    transform: scale(1.2);
+}
+
+.checkbox-container label {
+    margin: 0;
+    cursor: pointer;
+}
+
+@media (max-width: 1200px) {
+    .teams-container {
+        grid-template-columns: 1fr;
+        gap: 15px;
+    }
+
+    .team-panel {
+        max-height: 60vh;
+    }
+}
+
+@media (max-width: 768px) {
+    .staff-item {
+        padding: 12px;
+    }
+
+    .attendance-actions {
+        flex-direction: column;
+        gap: 6px;
+    }
+
+    .attendance-actions .button {
+        width: 100%;
+    }
+}
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>Gestion des Équipes Fixes</h1>
+        <p>Contact • Moselle-Est • Maintenance</p>
+    </div>
+
+    <div class="theme-toggle">
+        <span class="theme-icon">☀️</span>
+        <label class="switch">
+            <input type="checkbox" id="dark-mode-toggle">
+            <span class="slider"></span>
+        </label>
+        <span class="theme-icon">🌙</span>
+    </div>
+
+    <div class="nav-buttons">
+        <a href="{% url 'staff_attendance:attendance_page' %}" class="button">Retour aux Présences</a>
+        <a href="{% url 'staff_attendance:attendance_history' %}" class="button">Historique</a>
+    </div>
+
+    <div class="current-date" id="current-date"></div>
+
+    <div id="message" class="message" style="display: none;"></div>
+
+    <div class="teams-container">
+        <!-- Contact Team -->
+        <div class="team-panel team-contact">
+            <div class="team-header">
+                <h2 class="team-title">
+                    <span class="team-icon"></span>
+                    Contact
+                </h2>
+            </div>
+            <div class="team-content">
+                <ul class="staff-list" id="contact-staff">
+                    <!-- Contact staff will be populated here -->
+                </ul>
+            </div>
+        </div>
+
+        <!-- Moselle-Est Team -->
+        <div class="team-panel team-moselle">
+            <div class="team-header">
+                <h2 class="team-title">
+                    <span class="team-icon"></span>
+                    Moselle-Est
+                </h2>
+            </div>
+            <div class="team-content">
+                <ul class="staff-list" id="moselle-est-staff">
+                    <!-- Moselle-Est staff will be populated here -->
+                </ul>
+            </div>
+        </div>
+
+        <!-- Maintenance Team -->
+        <div class="team-panel team-maintenance">
+            <div class="team-header">
+                <h2 class="team-title">
+                    <span class="team-icon"></span>
+                    Maintenance
+                </h2>
+            </div>
+            <div class="team-content">
+                <ul class="staff-list" id="maintenance-staff">
+                    <!-- Maintenance staff will be populated here -->
+                </ul>
+            </div>
+        </div>
+    </div>
+
+    <!-- Present Modal with Hours, Grand Déplacement and Chantier Selection -->
+    <div id="present-modal" class="modal">
+        <div class="modal-content">
+            <span class="close">&times;</span>
+            <h3>Marquer comme présent</h3>
+            <div id="present-staff-name" style="margin-bottom: 15px; font-weight: bold; color: var(--button-primary);"></div>
+
+            <div class="form-group">
+                <label for="chantier-select">Chantier assigné :</label>
+                <select id="chantier-select" class="select">
+                    <option value="">Sélectionner un chantier</option>
+                    <!-- Chantier options will be populated here -->
+                </select>
+            </div>
+
+            <div class="form-group">
+                <label for="hours-worked">Heures travaillées :</label>
+                <div class="slider-container">
+                    <input type="range" id="hours-worked" class="slider-input" min="0" max="9" step="0.5" value="8">
+                    <div class="slider-value">
+                        <span>0h</span>
+                        <span class="current-value" id="hours-value">8h</span>
+                        <span>9h</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="checkbox-container">
+                <input type="checkbox" id="grand-deplacement">
+                <label for="grand-deplacement">Grand déplacement (nuit)</label>
+            </div>
+
+            <button id="submit-present" class="button success">Valider</button>
+        </div>
+    </div>
+
+    <!-- Admin Password Modal -->
+    <div id="admin-modal" class="modal">
+        <div class="modal-content">
+            <span class="close">&times;</span>
+            <h3>Authentification Administrateur</h3>
+            <div class="form-group">
+                <label for="admin-password">Mot de passe :</label>
+                <input type="password" id="admin-password">
+            </div>
+            <button id="submit-password" class="button">Valider</button>
+        </div>
+    </div>
+
+    <!-- Absence Reason Modal -->
+    <div id="absence-modal" class="modal">
+        <div class="modal-content">
+            <span class="close">&times;</span>
+            <h3>Motif d'absence</h3>
+            <div class="form-group">
+                <label for="absence-reason">Veuillez indiquer le motif d'absence :</label>
+                <textarea id="absence-reason" placeholder="Motif d'absence..."></textarea>
+            </div>
+            <button id="submit-absence" class="button">Valider</button>
+        </div>
+    </div>
+
+    {% csrf_token %}
+    <script>
+        // Get CSRF token
+        const csrftoken = document.querySelector('[name=csrfmiddlewaretoken]').value;
+
+        // Variables
+        let teamsData = {};
+        let chantiers = [];
+        let adminMode = false;
+        let currentPresentStaffId = null;
+        let currentAbsentStaffId = null;
+
+        // DOM elements
+        const messageElement = document.getElementById('message');
+        const currentDateElement = document.getElementById('current-date');
+        const contactStaffList = document.getElementById('contact-staff');
+        const moselleStaffList = document.getElementById('moselle-est-staff');
+        const maintenanceStaffList = document.getElementById('maintenance-staff');
+
+        // Modal elements
+        const presentModal = document.getElementById('present-modal');
+        const adminModal = document.getElementById('admin-modal');
+        const absenceModal = document.getElementById('absence-modal');
+        const closeModalButtons = document.querySelectorAll('.close');
+
+        // Input elements
+        const presentStaffNameElement = document.getElementById('present-staff-name');
+        const chantierSelect = document.getElementById('chantier-select');
+        const hoursWorkedSlider = document.getElementById('hours-worked');
+        const hoursValueDisplay = document.getElementById('hours-value');
+        const grandDeplacementCheckbox = document.getElementById('grand-deplacement');
+        const adminPasswordInput = document.getElementById('admin-password');
+        const absenceReasonInput = document.getElementById('absence-reason');
+
+        // Button elements
+        const submitPresentButton = document.getElementById('submit-present');
+        const submitPasswordButton = document.getElementById('submit-password');
+        const submitAbsenceButton = document.getElementById('submit-absence');
+
+        // Hours slider functionality
+        hoursWorkedSlider.addEventListener('input', function() {
+            hoursValueDisplay.textContent = this.value + 'h';
+        });
+
+        // Dark mode toggle functionality
+        const darkModeToggle = document.getElementById('dark-mode-toggle');
+        const prefersDarkScheme = window.matchMedia('(prefers-color-scheme: dark)');
+        const currentTheme = localStorage.getItem('theme');
+
+        if (currentTheme === 'dark' || (!currentTheme && prefersDarkScheme.matches)) {
+            document.body.classList.add('dark-mode');
+            darkModeToggle.checked = true;
+        } else {
+            document.body.classList.remove('dark-mode');
+            darkModeToggle.checked = false;
+        }
+
+        darkModeToggle.addEventListener('change', function() {
+            if (this.checked) {
+                document.body.classList.add('dark-mode');
+                localStorage.setItem('theme', 'dark');
+            } else {
+                document.body.classList.remove('dark-mode');
+                localStorage.setItem('theme', 'light');
+            }
+        });
+
+        // Initialize
+        async function init() {
+            await loadTeamsData();
+            renderAllTeams();
+            setupCurrentDate();
+            setupEventListeners();
+        }
+
+        // Setup current date display
+        function setupCurrentDate() {
+            const today = new Date();
+            const options = {
+                weekday: 'long',
+                year: 'numeric',
+                month: 'long',
+                day: 'numeric'
+            };
+            currentDateElement.textContent = 'Présences du ' + today.toLocaleDateString('fr-FR', options);
+        }
+
+        // Setup event listeners
+        function setupEventListeners() {
+            // Submit present
+            if (submitPresentButton) {
+                submitPresentButton.addEventListener('click', function() {
+                    if (currentPresentStaffId) {
+                        const chantier = chantierSelect.value;
+                        const hoursWorked = parseFloat(hoursWorkedSlider.value);
+                        const grandDeplacement = grandDeplacementCheckbox.checked;
+                        markStaffPresent(currentPresentStaffId, chantier, hoursWorked, grandDeplacement);
+                        presentModal.style.display = 'none';
+                        currentPresentStaffId = null;
+                    }
+                });
+            }
+
+            // Submit absence reason
+            if (submitAbsenceButton) {
+                submitAbsenceButton.addEventListener('click', function() {
+                    if (currentAbsentStaffId) {
+                        const reason = absenceReasonInput.value.trim();
+                        markStaffAbsent(currentAbsentStaffId, reason);
+                        absenceModal.style.display = 'none';
+                        currentAbsentStaffId = null;
+                    }
+                });
+            }
+
+            // Submit admin password
+            if (submitPasswordButton) {
+                submitPasswordButton.addEventListener('click', async function() {
+                    try {
+                        const response = await fetch('/api/verify-admin/', {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json',
+                                'X-CSRFToken': csrftoken
+                            },
+                            body: JSON.stringify({ password: adminPasswordInput.value })
+                        });
+
+                        const data = await response.json();
+
+                        if (data.success) {
+                            adminMode = true;
+                            adminModal.style.display = 'none';
+                            showMessage('Mode administrateur activé.', 'success');
+                            renderAllTeams();
+                        } else {
+                            showMessage('Mot de passe incorrect !', 'error');
+                        }
+                    } catch (error) {
+                        showMessage('Erreur lors de la vérification', 'error');
+                        console.error('Error verifying admin:', error);
+                    }
+                });
+            }
+
+            // Close modals
+            closeModalButtons.forEach(function(button) {
+                button.addEventListener('click', function() {
+                    presentModal.style.display = 'none';
+                    adminModal.style.display = 'none';
+                    absenceModal.style.display = 'none';
+                });
+            });
+
+            // Click outside modal to close
+            window.addEventListener('click', function(e) {
+                if (e.target === presentModal) presentModal.style.display = 'none';
+                if (e.target === adminModal) adminModal.style.display = 'none';
+                if (e.target === absenceModal) absenceModal.style.display = 'none';
+            });
+
+            // Enter key handlers
+            adminPasswordInput.addEventListener('keypress', function(e) {
+                if (e.key === 'Enter') {
+                    submitPasswordButton.click();
+                }
+            });
+        }
+
+        // Load teams data
+        async function loadTeamsData() {
+            try {
+                const response = await fetch('/api/fixed-teams-staff/');
+                const data = await response.json();
+
+                if (data.teams && data.chantiers) {
+                    teamsData = data.teams;
+                    chantiers = data.chantiers;
+                    populateChantierSelect();
+                }
+            } catch (error) {
+                showMessage('Erreur lors du chargement des données', 'error');
+                console.error('Error loading teams data:', error);
+            }
+        }
+
+        // Populate chantier select
+        function populateChantierSelect() {
+            chantierSelect.innerHTML = '<option value="">Sélectionner un chantier</option>';
+            chantiers.forEach(chantier => {
+                const option = document.createElement('option');
+                option.value = chantier.id;
+                option.textContent = chantier.name;
+                chantierSelect.appendChild(option);
+            });
+        }
+
+        // Render all teams
+        function renderAllTeams() {
+            renderTeam('contact', contactStaffList);
+            renderTeam('moselle-est', moselleStaffList);
+            renderTeam('maintenance', maintenanceStaffList);
+        }
+
+        // Render team staff
+        function renderTeam(teamName, listElement) {
+            listElement.innerHTML = '';
+
+            if (!teamsData[teamName]) {
+                listElement.innerHTML = '<li style="text-align: center; color: #999; padding: 20px;">Aucun personnel dans cette équipe</li>';
+                return;
+            }
+
+            teamsData[teamName].forEach(function(member) {
+                const staffItem = document.createElement('li');
+                staffItem.className = 'staff-item';
+
+                const statusClass = getStatusClass(member.status);
+                const statusText = getStatusText(member.status);
+
+                let timestampHtml = '';
+                if (member.timestamp) {
+                    const time = new Date(member.timestamp).toLocaleTimeString();
+                    timestampHtml = '<div class="timestamp">' + time + '</div>';
+                }
+
+                let absenceReasonHtml = '';
+                if (member.absence_reason) {
+                    absenceReasonHtml = '<div class="absence-reason">Motif: ' + member.absence_reason + '</div>';
+                }
+
+                let hoursWorkedHtml = '';
+                if (member.hours_worked && member.status === 'present') {
+                    hoursWorkedHtml = '<div class="hours-worked">' + member.hours_worked + 'h travaillées</div>';
+                }
+
+                let grandDeplacementHtml = '';
+                if (member.grand_deplacement && member.status === 'present') {
+                    grandDeplacementHtml = '<div class="grand-deplacement">Grand déplacement (nuit)</div>';
+                }
+
+                let currentChantierHtml = '';
+                if (member.current_chantier && member.status === 'present') {
+                    currentChantierHtml = '<div class="current-chantier">Chantier: ' + member.current_chantier + '</div>';
+                }
+
+                const isLocked = member.status !== 'undefined' && !adminMode;
+                const lockedIcon = isLocked ? '<span class="locked-icon" title="Statut verrouillé">🔒</span>' : '';
+
+                staffItem.innerHTML = `
+                    <div class="staff-info">
+                        <div class="staff-name">
+                            <span class="status-indicator ${statusClass}"></span>
+                            ${member.name}
+                        </div>
+                        <div class="attendance-info">
+                            <div class="status-text">${statusText}</div>
+                            ${currentChantierHtml}
+                            ${timestampHtml}
+                            ${hoursWorkedHtml}
+                            ${grandDeplacementHtml}
+                            ${absenceReasonHtml}
+                        </div>
+                    </div>
+                    <div class="attendance-actions">
+                        <button class="button small present-btn" onclick="showPresentModal(${member.id}, '${member.name}')" ${isLocked ? 'disabled' : ''}>
+                            Présent
+                        </button>
+                        <button class="button small absent-btn" onclick="showAbsenceModal(${member.id})" ${isLocked ? 'disabled' : ''}>
+                            Absent
+                        </button>
+                        <button class="button small conge-btn" onclick="markStaffConge(${member.id})" ${isLocked ? 'disabled' : ''}>
+                            Congé
+                        </button>
+                        ${lockedIcon}
+                    </div>
+                `;
+
+                listElement.appendChild(staffItem);
+            });
+        }
+
+        // Get status class and text
+        function getStatusClass(status) {
+            if (status === 'present') return 'present';
+            if (status === 'absent') return 'absent';
+            if (status === 'conge') return 'conge';
+            return 'undefined';
+        }
+
+        function getStatusText(status) {
+            if (status === 'present') return 'Présent';
+            if (status === 'absent') return 'Absent';
+            if (status === 'conge') return 'En congé';
+            return 'Non défini';
+        }
+
+        // Show present modal
+        function showPresentModal(staffId, staffName) {
+            currentPresentStaffId = staffId;
+            presentStaffNameElement.textContent = staffName;
+
+            chantierSelect.value = '';
+            hoursWorkedSlider.value = 8;
+            hoursValueDisplay.textContent = '8h';
+            grandDeplacementCheckbox.checked = false;
+
+            presentModal.style.display = 'block';
+        }
+
+        // Show absence modal
+        function showAbsenceModal(staffId) {
+            currentAbsentStaffId = staffId;
+            absenceReasonInput.value = '';
+            absenceModal.style.display = 'block';
+        }
+
+        // API calls for marking attendance
+        async function markStaffPresent(staffId, chantierId, hoursWorked, grandDeplacement) {
+            try {
+                const response = await fetch('/api/mark-fixed-team-present/', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': csrftoken
+                    },
+                    body: JSON.stringify({
+                        staff_id: staffId,
+                        chantier_id: chantierId,
+                        hours_worked: hoursWorked,
+                        grand_deplacement: grandDeplacement
+                    })
+                });
+
+                const data = await response.json();
+                if (data.success) {
+                    showMessage(data.message, 'success');
+                    await refreshData();
+                } else {
+                    showMessage(data.message, 'error');
+                }
+            } catch (error) {
+                showMessage('Erreur lors de la mise à jour', 'error');
+            }
+        }
+
+        async function markStaffAbsent(staffId, reason) {
+            try {
+                const response = await fetch('/api/mark-fixed-team-absent/', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': csrftoken
+                    },
+                    body: JSON.stringify({
+                        staff_id: staffId,
+                        reason: reason
+                    })
+                });
+
+                const data = await response.json();
+                if (data.success) {
+                    showMessage(data.message, 'success');
+                    await refreshData();
+                } else {
+                    showMessage(data.message, 'error');
+                }
+            } catch (error) {
+                showMessage('Erreur lors de la mise à jour', 'error');
+            }
+        }
+
+        async function markStaffConge(staffId) {
+            try {
+                const response = await fetch('/api/mark-fixed-team-conge/', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': csrftoken
+                    },
+                    body: JSON.stringify({ staff_id: staffId })
+                });
+
+                const data = await response.json();
+                if (data.success) {
+                    showMessage(data.message, 'success');
+                    await refreshData();
+                } else {
+                    showMessage(data.message, 'error');
+                }
+            } catch (error) {
+                showMessage('Erreur lors de la mise à jour', 'error');
+            }
+        }
+
+        // Refresh data
+        async function refreshData() {
+            await loadTeamsData();
+            renderAllTeams();
+        }
+
+        // Show message
+        function showMessage(text, type) {
+            messageElement.textContent = text;
+            messageElement.className = 'message ' + type;
+            messageElement.style.display = 'block';
+            messageElement.classList.add('show');
+
+            setTimeout(function() {
+                messageElement.classList.remove('show');
+                setTimeout(function() {
+                    messageElement.style.display = 'none';
+                }, 300);
+            }, 3000);
+        }
+
+        // Initialize
+        init();
+    </script>
+</body>
+</html>
