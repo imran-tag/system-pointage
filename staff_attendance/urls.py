@@ -1,13 +1,23 @@
-# staff_attendance/urls.py
+# staff_attendance/urls.py - Fixed URLs to prevent redirect loop
+
 from django.urls import path
 from . import views
 
 app_name = 'staff_attendance'
 
 urlpatterns = [
-    path('', views.attendance_page, name='attendance_page'),
+    # Authentication URLs - These should come FIRST
+    path('login/', views.login_view, name='login'),
+    path('logout/', views.logout_view, name='logout'),
+    path('api/login/', views.login_api, name='login_api'),
+    path('api/current-user/', views.get_current_user, name='get_current_user'),
+
+    # Main application URLs
+    path('', views.home_redirect, name='home_redirect'),  # This handles the root redirect
+    path('attendance/', views.attendance_page, name='attendance_page'),
     path('history/', views.attendance_history, name='attendance_history'),
     path('manage-staff/', views.staff_management, name='staff_management'),
+    path('users/', views.user_management, name='user_management'),
 
     # Staff API endpoints
     path('api/staff/', views.get_staff_list, name='get_staff_list'),
@@ -35,6 +45,11 @@ urlpatterns = [
     path('api/conge-reservations/', views.get_conge_reservations, name='get_conge_reservations'),
     path('api/remove-conge-reservation/', views.remove_conge_reservation, name='remove_conge_reservation'),
     path('api/remove-daily-conge/', views.remove_daily_conge, name='remove_daily_conge'),
+
+    # User management API endpoints
+    path('api/users/', views.get_users_list, name='get_users_list'),
+    path('api/create-user/', views.create_user, name='create_user'),
+    path('api/delete-user/', views.delete_user, name='delete_user'),
 
     # Admin and reports
     path('api/verify-admin/', views.verify_admin, name='verify_admin'),

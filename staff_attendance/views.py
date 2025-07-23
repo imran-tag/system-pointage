@@ -1,4 +1,4 @@
-from django.shortcuts import render
+from django.shortcuts import render, redirect
 from django.http import JsonResponse, HttpResponse
 from django.views.decorators.csrf import csrf_exempt
 from django.utils import timezone
@@ -7,8 +7,11 @@ import json
 import datetime
 from django.db.models import Count, Q
 import os
+from django.contrib.auth import authenticate, login, logout
+from django.contrib.auth.decorators import login_required
+from django.contrib.auth.models import User
 
-from .models import City, StaffMember, Attendance, CongeReservation, Zone
+from .models import City, StaffMember, Attendance, CongeReservation, Zone, UserProfile
 
 # Generate PDF
 from reportlab.pdfgen import canvas
@@ -19,25 +22,114 @@ from reportlab.lib.styles import getSampleStyleSheet
 from io import BytesIO
 
 
+def login_view(request):
+    """Handle user login"""
+    # If user is already authenticated, redirect to attendance page
+    if request.user.is_authenticated:
+        return redirect('staff_attendance:attendance_page')
+
+    if request.method == 'POST':
+        username = request.POST.get('username')
+        password = request.POST.get('password')
+
+        if not username or not password:
+            return render(request, 'staff_attendance/login.html', {
+                'error': 'Veuillez remplir tous les champs'
+            })
+
+        user = authenticate(request, username=username, password=password)
+        if user is not None:
+            login(request, user)
+            # Create user profile if it doesn't exist
+            UserProfile.objects.get_or_create(user=user)
+            return redirect('staff_attendance:attendance_page')
+        else:
+            return render(request, 'staff_attendance/login.html', {
+                'error': 'Nom d\'utilisateur ou mot de passe incorrect'
+            })
+
+    return render(request, 'staff_attendance/login.html')
+
+
+@csrf_exempt
+def login_api(request):
+    """API endpoint for login"""
+    if request.method == 'POST':
+        data = json.loads(request.body)
+        username = data.get('username')
+        password = data.get('password')
+
+        user = authenticate(request, username=username, password=password)
+        if user is not None:
+            login(request, user)
+            profile = UserProfile.objects.get_or_create(user=user)[0]
+            return JsonResponse({
+                'success': True,
+                'message': f'Bienvenue {user.first_name or user.username}',
+                'user': {
+                    'id': user.id,
+                    'username': user.username,
+                    'first_name': user.first_name,
+                    'last_name': user.last_name,
+                    'role': profile.role,
+                    'is_admin': profile.is_admin,
+                    'can_modify_all': profile.can_modify_all
+                }
+            })
+        else:
+            return JsonResponse({
+                'success': False,
+                'message': 'Nom d\'utilisateur ou mot de passe incorrect'
+            }, status=401)
+
+    return JsonResponse({'success': False, 'message': 'Méthode non autorisée'}, status=405)
+
+
+def logout_view(request):
+    """Handle user logout"""
+    logout(request)
+    return redirect('staff_attendance:login')
+
+
+
+@login_required
 def attendance_page(request):
     """Render the main attendance page"""
     cities = City.objects.all()
-    admin_password = settings.ADMIN_PASSWORD if hasattr(settings, 'ADMIN_PASSWORD') else "admin123"
+    profile = UserProfile.objects.get_or_create(user=request.user)[0]
+
     return render(request, 'staff_attendance/attendance.html', {
         'cities': cities,
-        'admin_password': admin_password,
+        'user_profile': profile,
     })
 
 
+@login_required
 def attendance_history(request):
     """Render the attendance history page"""
     cities = City.objects.all()
-    admin_password = settings.ADMIN_PASSWORD if hasattr(settings, 'ADMIN_PASSWORD') else "admin123"
+    profile = UserProfile.objects.get_or_create(user=request.user)[0]
+
     return render(request, 'staff_attendance/attendance_history.html', {
         'cities': cities,
-        'admin_password': admin_password,
+        'user_profile': profile,
     })
 
+
+@login_required
+def user_management(request):
+    """Render the user management page (admin only)"""
+    profile = UserProfile.objects.get_or_create(user=request.user)[0]
+    if not profile.is_admin:
+        return redirect('staff_attendance:attendance_page')
+
+    users = User.objects.all().select_related('profile')
+    zones = Zone.objects.all()
+
+    return render(request, 'staff_attendance/user_management.html', {
+        'users': users,
+        'zones': zones,
+    })
 
 def staff_management(request):
     """Render the staff management page for drag and drop functionality"""
@@ -156,8 +248,9 @@ def delete_city(request):
 
 
 @csrf_exempt
+@login_required
 def mark_conge_with_period(request):
-    """API endpoint to mark a staff member as on leave with date period"""
+    """API endpoint to mark a staff member as on leave with user tracking"""
     if request.method == 'POST':
         data = json.loads(request.body)
         staff_id = data.get('staff_id')
@@ -175,7 +268,9 @@ def mark_conge_with_period(request):
             # Validate dates
             if start_date_obj > end_date_obj:
                 return JsonResponse(
-                    {'success': False, 'message': 'La date de début doit être antérieure à la date de fin'}, status=400)
+                    {'success': False, 'message': 'La date de début doit être antérieure à la date de fin'},
+                    status=400
+                )
 
             # Check for overlapping congé periods
             overlapping = CongeReservation.objects.filter(
@@ -187,19 +282,23 @@ def mark_conge_with_period(request):
             if overlapping:
                 return JsonResponse(
                     {'success': False, 'message': 'Cette période de congé chevauche avec une période existante'},
-                    status=400)
+                    status=400
+                )
 
-            # Create congé reservation
+            # Create congé reservation with user tracking
             conge = CongeReservation.objects.create(
                 staff_member=staff,
                 start_date=start_date_obj,
                 end_date=end_date_obj,
-                reason=reason
+                reason=reason,
+                created_by=request.user  # Track who created it
             )
+
+            message = f"{staff.name} en congé du {start_date_obj.strftime('%d/%m/%Y')} au {end_date_obj.strftime('%d/%m/%Y')} (créé par {request.user.first_name or request.user.username})"
 
             return JsonResponse({
                 'success': True,
-                'message': f"{staff.name} en congé du {start_date_obj.strftime('%d/%m/%Y')} au {end_date_obj.strftime('%d/%m/%Y')}"
+                'message': message
             })
 
         except StaffMember.DoesNotExist:
@@ -210,6 +309,92 @@ def mark_conge_with_period(request):
             return JsonResponse({'success': False, 'message': str(e)}, status=500)
 
     return JsonResponse({'success': False, 'message': 'Méthode non autorisée'}, status=405)
+
+
+@csrf_exempt
+@login_required
+def create_user(request):
+    """API endpoint to create a new user (admin only)"""
+    profile = UserProfile.objects.get_or_create(user=request.user)[0]
+    if not profile.is_admin:
+        return JsonResponse({'success': False, 'message': 'Accès refusé'}, status=403)
+
+    if request.method == 'POST':
+        data = json.loads(request.body)
+        username = data.get('username')
+        password = data.get('password')
+        first_name = data.get('first_name', '')
+        last_name = data.get('last_name', '')
+        role = data.get('role', 'user')
+        can_modify_all = data.get('can_modify_all', False)
+        assigned_zones = data.get('assigned_zones', [])
+
+        if not username or not password:
+            return JsonResponse({'success': False, 'message': 'Nom d\'utilisateur et mot de passe requis'}, status=400)
+
+        if User.objects.filter(username=username).exists():
+            return JsonResponse({'success': False, 'message': 'Ce nom d\'utilisateur existe déjà'}, status=400)
+
+        try:
+            # Create user
+            user = User.objects.create_user(
+                username=username,
+                password=password,
+                first_name=first_name,
+                last_name=last_name
+            )
+
+            # Create profile
+            user_profile = UserProfile.objects.create(
+                user=user,
+                role=role,
+                can_modify_all=can_modify_all
+            )
+
+            # Assign zones
+            if assigned_zones:
+                zones = Zone.objects.filter(id__in=assigned_zones)
+                user_profile.assigned_zones.set(zones)
+
+            return JsonResponse({
+                'success': True,
+                'message': f'Utilisateur {username} créé avec succès',
+                'user': {
+                    'id': user.id,
+                    'username': user.username,
+                    'first_name': user.first_name,
+                    'last_name': user.last_name,
+                    'role': user_profile.role,
+                    'can_modify_all': user_profile.can_modify_all,
+                    'assigned_zones': list(user_profile.assigned_zones.values_list('name', flat=True))
+                }
+            })
+
+        except Exception as e:
+            return JsonResponse({'success': False, 'message': str(e)}, status=500)
+
+    return JsonResponse({'success': False, 'message': 'Méthode non autorisée'}, status=405)
+
+
+@csrf_exempt
+@login_required
+def get_current_user(request):
+    """API endpoint to get current user info"""
+    profile = UserProfile.objects.get_or_create(user=request.user)[0]
+
+    return JsonResponse({
+        'success': True,
+        'user': {
+            'id': request.user.id,
+            'username': request.user.username,
+            'first_name': request.user.first_name,
+            'last_name': request.last_name,
+            'role': profile.role,
+            'is_admin': profile.is_admin,
+            'can_modify_all': profile.can_modify_all,
+            'assigned_zones': list(profile.assigned_zones.values_list('name', flat=True))
+        }
+    })
 
 
 @csrf_exempt
@@ -333,23 +518,24 @@ def remove_daily_conge(request):
 
 
 @csrf_exempt
+@login_required
 def get_staff_list(request):
-    """API endpoint to get the list of staff members with attendance status"""
+    """API endpoint to get the list of staff members with attendance status and user info"""
     today = timezone.now().date()
 
     # Get all staff members with their cities
     staff_members = StaffMember.objects.select_related('city').all()
 
-    # Get today's attendance records
-    attendances = Attendance.objects.filter(date=today)
+    # Get today's attendance records with user info
+    attendances = Attendance.objects.filter(date=today).select_related('created_by', 'updated_by')
 
     # Create a dictionary for quick lookup
     attendance_dict = {att.staff_member_id: att for att in attendances}
 
-    # Check for active congé reservations (only current ones, not future or past)
+    # Check for active congé reservations
     active_conge = CongeReservation.objects.filter(
         start_date__lte=today,
-        end_date__gte=today  # Only currently active congés
+        end_date__gte=today
     ).values_list('staff_member_id', flat=True)
 
     # Prepare response data
@@ -357,7 +543,7 @@ def get_staff_list(request):
     for staff in staff_members:
         attendance = attendance_dict.get(staff.id)
 
-        # Check if staff is in congé TODAY (not just has a future congé)
+        # Check if staff is in congé TODAY
         if staff.id in active_conge:
             status = 'conge'
         elif attendance:
@@ -372,6 +558,14 @@ def get_staff_list(request):
         else:
             status = 'undefined'
 
+        # Get user info for who made the last change
+        last_modified_by = None
+        if attendance:
+            if attendance.updated_by:
+                last_modified_by = f"{attendance.updated_by.first_name or attendance.updated_by.username}"
+            elif attendance.created_by:
+                last_modified_by = f"{attendance.created_by.first_name or attendance.created_by.username}"
+
         staff_data.append({
             'id': staff.id,
             'name': staff.name,
@@ -380,13 +574,161 @@ def get_staff_list(request):
             'absence_reason': attendance.absence_reason if attendance and attendance.present is False and attendance.absence_reason != 'CONGE_STATUS' else None,
             'timestamp': attendance.timestamp.isoformat() if attendance and attendance.timestamp else None,
             'hours_worked': float(attendance.hours_worked) if attendance and attendance.hours_worked else None,
-            'grand_deplacement': attendance.grand_deplacement if attendance else False
+            'grand_deplacement': attendance.grand_deplacement if attendance else False,
+            'last_modified_by': last_modified_by  # NEW: Who made the last change
         })
 
     return JsonResponse({'staffMembers': staff_data})
 
 
+# Additional views to add to staff_attendance/views.py
+
+@csrf_exempt
+@login_required
+def get_users_list(request):
+    """API endpoint to get list of all users (admin only)"""
+    profile = UserProfile.objects.get_or_create(user=request.user)[0]
+    if not profile.is_admin:
+        return JsonResponse({'success': False, 'message': 'Accès refusé'}, status=403)
+
+    try:
+        users = User.objects.all().select_related('profile').prefetch_related('profile__assigned_zones')
+        users_data = []
+
+        for user in users:
+            user_profile = UserProfile.objects.get_or_create(user=user)[0]
+            assigned_zones = list(user_profile.assigned_zones.values_list('name', flat=True))
+
+            users_data.append({
+                'id': user.id,
+                'username': user.username,
+                'first_name': user.first_name,
+                'last_name': user.last_name,
+                'role': user_profile.role,
+                'can_modify_all': user_profile.can_modify_all,
+                'assigned_zones': assigned_zones,
+                'created_at': user_profile.created_at.isoformat(),
+                'last_login': user.last_login.isoformat() if user.last_login else None
+            })
+
+        return JsonResponse({
+            'success': True,
+            'users': users_data
+        })
+
+    except Exception as e:
+        return JsonResponse({'success': False, 'message': str(e)}, status=500)
+
+
+@csrf_exempt
+@login_required
+def delete_user(request):
+    """API endpoint to delete a user (admin only)"""
+    profile = UserProfile.objects.get_or_create(user=request.user)[0]
+    if not profile.is_admin:
+        return JsonResponse({'success': False, 'message': 'Accès refusé'}, status=403)
+
+    if request.method == 'POST':
+        data = json.loads(request.body)
+        user_id = data.get('user_id')
+
+        if not user_id:
+            return JsonResponse({'success': False, 'message': 'ID utilisateur requis'}, status=400)
+
+        # Prevent self-deletion
+        if user_id == request.user.id:
+            return JsonResponse({'success': False, 'message': 'Vous ne pouvez pas supprimer votre propre compte'},
+                                status=400)
+
+        try:
+            user = User.objects.get(id=user_id)
+            username = user.username
+            user.delete()
+
+            return JsonResponse({
+                'success': True,
+                'message': f'Utilisateur "{username}" supprimé avec succès'
+            })
+
+        except User.DoesNotExist:
+            return JsonResponse({'success': False, 'message': 'Utilisateur non trouvé'}, status=404)
+        except Exception as e:
+            return JsonResponse({'success': False, 'message': str(e)}, status=500)
+
+    return JsonResponse({'success': False, 'message': 'Méthode non autorisée'}, status=405)
+
+
+@csrf_exempt
+@login_required
+def get_attendance_with_users(request):
+    """API endpoint to get attendance history with user information"""
+    try:
+        # Get month and year from request parameters
+        month = request.GET.get('month')
+        year = request.GET.get('year')
+
+        if not month or not year:
+            today = timezone.now().date()
+            month = today.month
+            year = today.year
+        else:
+            month = int(month)
+            year = int(year)
+
+        # Calculate date range
+        import calendar
+        start_date = datetime.date(year, month, 1)
+        last_day = calendar.monthrange(year, month)[1]
+        end_date = datetime.date(year, month, last_day)
+
+        # Get attendance records with user information
+        attendances = Attendance.objects.filter(
+            date__gte=start_date,
+            date__lte=end_date
+        ).select_related('staff_member__city', 'created_by', 'updated_by').order_by('-date')
+
+        attendance_data = []
+        for attendance in attendances:
+            # Get the user who made the last change
+            last_modified_by = None
+            if attendance.updated_by:
+                last_modified_by = f"{attendance.updated_by.first_name} {attendance.updated_by.last_name}".strip()
+                if not last_modified_by:
+                    last_modified_by = attendance.updated_by.username
+            elif attendance.created_by:
+                last_modified_by = f"{attendance.created_by.first_name} {attendance.created_by.last_name}".strip()
+                if not last_modified_by:
+                    last_modified_by = attendance.created_by.username
+
+            attendance_data.append({
+                'staff_name': attendance.staff_member.name,
+                'city': attendance.staff_member.city.name,
+                'date': attendance.date.isoformat(),
+                'status': attendance.status,
+                'hours_worked': float(attendance.hours_worked) if attendance.hours_worked else None,
+                'grand_deplacement': attendance.grand_deplacement,
+                'absence_reason': attendance.absence_reason if attendance.present is False and attendance.absence_reason != 'CONGE_STATUS' else None,
+                'timestamp': attendance.timestamp.isoformat() if attendance.timestamp else None,
+                'last_modified_by': last_modified_by
+            })
+
+        return JsonResponse({
+            'success': True,
+            'attendance': attendance_data,
+            'month': month,
+            'year': year,
+            'month_name': calendar.month_name[month]
+        })
+
+    except Exception as e:
+        return JsonResponse({'success': False, 'message': str(e)}, status=500)
 # Add this to your views.py if you want an API endpoint to clean old congés
+def home_redirect(request):
+    """Handle root URL redirect based on authentication status"""
+    if request.user.is_authenticated:
+        return redirect('staff_attendance:attendance_page')
+    else:
+        return redirect('staff_attendance:login')
 
 @csrf_exempt
 def cleanup_past_conges(request):
@@ -567,12 +909,13 @@ def get_staff_by_city(request):
 
 
 @csrf_exempt
+@login_required
 def mark_present(request):
-    """API endpoint to mark a staff member as present with hours and grand déplacement"""
+    """API endpoint to mark a staff member as present with user tracking"""
     if request.method == 'POST':
         data = json.loads(request.body)
         staff_id = data.get('staff_id')
-        hours_worked = data.get('hours_worked', 8.0)  # Default to 8 hours
+        hours_worked = data.get('hours_worked', 8.0)
         grand_deplacement = data.get('grand_deplacement', False)
 
         try:
@@ -587,23 +930,25 @@ def mark_present(request):
                     'present': True,
                     'timestamp': timezone.now(),
                     'hours_worked': hours_worked,
-                    'grand_deplacement': grand_deplacement
+                    'grand_deplacement': grand_deplacement,
+                    'created_by': request.user  # Track who created it
                 }
             )
 
             # Update if already exists
             if not created:
                 attendance.present = True
-                attendance.absence_reason = None  # Clear any absence reason
+                attendance.absence_reason = None
                 attendance.timestamp = timezone.now()
                 attendance.hours_worked = hours_worked
                 attendance.grand_deplacement = grand_deplacement
+                attendance.updated_by = request.user  # Track who updated it
                 attendance.save()
 
             message = f"{staff.name} marqué présent ({hours_worked}h)"
             if grand_deplacement:
                 message += " - Grand déplacement (nuit)"
-            message += f" à {timezone.now().strftime('%H:%M:%S')}"
+            message += f" à {timezone.now().strftime('%H:%M:%S')} par {request.user.first_name or request.user.username}"
 
             return JsonResponse({
                 'success': True,
@@ -618,9 +963,11 @@ def mark_present(request):
     return JsonResponse({'success': False, 'message': 'Méthode non autorisée'}, status=405)
 
 
+
 @csrf_exempt
+@login_required
 def mark_absent(request):
-    """API endpoint to mark a staff member as absent with reason"""
+    """API endpoint to mark a staff member as absent with user tracking"""
     if request.method == 'POST':
         data = json.loads(request.body)
         staff_id = data.get('staff_id')
@@ -634,7 +981,12 @@ def mark_absent(request):
             attendance, created = Attendance.objects.get_or_create(
                 staff_member=staff,
                 date=today,
-                defaults={'present': False, 'timestamp': timezone.now(), 'absence_reason': reason}
+                defaults={
+                    'present': False,
+                    'timestamp': timezone.now(),
+                    'absence_reason': reason,
+                    'created_by': request.user
+                }
             )
 
             # Update if already exists
@@ -642,11 +994,14 @@ def mark_absent(request):
                 attendance.present = False
                 attendance.timestamp = timezone.now()
                 attendance.absence_reason = reason
+                attendance.updated_by = request.user
                 attendance.save()
+
+            message = f"{staff.name} marqué absent à {timezone.now().strftime('%H:%M:%S')} par {request.user.first_name or request.user.username}"
 
             return JsonResponse({
                 'success': True,
-                'message': f"{staff.name} marqué absent à {timezone.now().strftime('%H:%M:%S')}"
+                'message': message
             })
 
         except StaffMember.DoesNotExist:
@@ -655,6 +1010,9 @@ def mark_absent(request):
             return JsonResponse({'success': False, 'message': str(e)}, status=500)
 
     return JsonResponse({'success': False, 'message': 'Méthode non autorisée'}, status=405)
+
+
+
 
 
 @csrf_exempt

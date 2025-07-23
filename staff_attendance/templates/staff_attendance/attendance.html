@@ -1459,14 +1459,68 @@ body.dark-mode .zone-item.active {
 
         // Initialize
         async function init() {
-            await loadZones();
-            await loadAllStaff();
-            await loadCongeReservations();
-            renderZonesOrCities();
-            renderCongeList();
-            setupCurrentDate();
-            setupEventListeners();
-        }
+    await loadCurrentUser();
+    await loadZones();
+    await loadAllStaff();
+    await loadCongeReservations();
+    renderZonesOrCities();
+    renderCongeList();
+    setupCurrentDate();
+    setupEventListeners();
+}
+
+        const additionalStyles = `
+.current-user-indicator {
+    background: var(--card-bg);
+    border-radius: 8px;
+    padding: 15px;
+    margin-top: 20px;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+    text-align: center;
+}
+
+.user-info {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 15px;
+    flex-wrap: wrap;
+}
+
+.user-name {
+    font-weight: 600;
+    color: var(--header-color);
+}
+
+.user-role {
+    background: var(--button-primary);
+    color: white;
+    padding: 4px 8px;
+    border-radius: 12px;
+    font-size: 12px;
+    font-weight: 500;
+    text-transform: uppercase;
+}
+
+.modified-by {
+    font-size: 10px;
+    color: #7f8c8d;
+    font-style: italic;
+    margin-top: 2px;
+}
+
+@media (max-width: 768px) {
+    .user-info {
+        flex-direction: column;
+        gap: 10px;
+    }
+}
+`;
+
+// Add the additional styles to the page
+const styleSheet = document.createElement('style');
+styleSheet.textContent = additionalStyles;
+document.head.appendChild(styleSheet);
 
         // Setup current date display
         function setupCurrentDate() {
@@ -2091,93 +2145,145 @@ body.dark-mode .zone-item.active {
 
         // Render staff with attendance information
         function renderStaff(staff) {
-            staffList.innerHTML = '';
+    staffList.innerHTML = '';
 
-            if (staff.length === 0) {
-                staffList.innerHTML = '<div class="empty-state">Aucun personnel dans ce chantier</div>';
-                return;
-            }
+    if (staff.length === 0) {
+        staffList.innerHTML = '<div class="empty-state">Aucun personnel dans ce chantier</div>';
+        return;
+    }
 
-            staff.forEach(function(member) {
-                const staffItem = document.createElement('div');
-                staffItem.className = 'staff-item';
-                staffItem.draggable = true;
-                staffItem.dataset.staffId = member.id;
+    staff.forEach(function(member) {
+        const staffItem = document.createElement('div');
+        staffItem.className = 'staff-item';
+        staffItem.draggable = true;
+        staffItem.dataset.staffId = member.id;
 
-                const statusClass = getStatusClass(member.status);
-                const statusText = getStatusText(member.status);
+        const statusClass = getStatusClass(member.status);
+        const statusText = getStatusText(member.status);
 
-                let timestampHtml = '';
-                if (member.timestamp) {
-                    const time = new Date(member.timestamp).toLocaleTimeString();
-                    timestampHtml = '<div class="timestamp">' + time + '</div>';
-                }
-
-                let absenceReasonHtml = '';
-                if (member.absence_reason) {
-                    absenceReasonHtml = '<div class="absence-reason">Motif: ' + member.absence_reason + '</div>';
-                }
-
-                let hoursWorkedHtml = '';
-                if (member.hours_worked && member.status === 'present') {
-                    hoursWorkedHtml = '<div class="hours-worked">' + member.hours_worked + 'h travaillées</div>';
-                }
-
-                let grandDeplacementHtml = '';
-                if (member.grand_deplacement && member.status === 'present') {
-                    grandDeplacementHtml = '<div class="grand-deplacement">Grand déplacement (nuit)</div>';
-                }
-
-                const isLocked = member.status !== 'undefined' && !adminMode;
-                const lockedIcon = isLocked ? '<span class="locked-icon" title="Statut verrouillé">🔒</span>' : '';
-
-                staffItem.innerHTML = `
-                    <div class="staff-info">
-                        <div class="staff-name">
-                            <span class="status-indicator ${statusClass}"></span>
-                            ${member.name}
-                            <span class="drag-handle" title="Glisser pour déplacer">⋮⋮</span>
-                        </div>
-                        <div class="staff-city">${member.city}</div>
-                        <div class="attendance-info">
-                            <div class="status-text">${statusText}</div>
-                            ${timestampHtml}
-                            ${hoursWorkedHtml}
-                            ${grandDeplacementHtml}
-                            ${absenceReasonHtml}
-                        </div>
-                    </div>
-                    <div class="attendance-actions">
-                        <button class="button small present-btn" onclick="showPresentModal(${member.id}, '${member.name}')" ${isLocked ? 'disabled' : ''}>
-                            Présent
-                        </button>
-                        <button class="button small absent-btn" onclick="showAbsenceModal(${member.id})" ${isLocked ? 'disabled' : ''}>
-                            Absent
-                        </button>
-                        <button class="button small conge-btn" onclick="showCongePeriodModal(${member.id})" title="Congé avec période">
-                            Congé Période
-                        </button>
-                        ${lockedIcon}
-                    </div>
-                `;
-
-                staffItem.addEventListener('dragstart', handleStaffDragStart);
-                staffItem.addEventListener('dragend', handleStaffDragEnd);
-
-                const buttons = staffItem.querySelectorAll('button');
-                buttons.forEach(function(button) {
-                    button.addEventListener('mousedown', function(e) {
-                        e.stopPropagation();
-                        staffItem.draggable = false;
-                    });
-                    button.addEventListener('mouseup', function() {
-                        staffItem.draggable = true;
-                    });
-                });
-
-                staffList.appendChild(staffItem);
-            });
+        let timestampHtml = '';
+        if (member.timestamp) {
+            const time = new Date(member.timestamp).toLocaleTimeString();
+            timestampHtml = '<div class="timestamp">' + time + '</div>';
         }
+
+        let absenceReasonHtml = '';
+        if (member.absence_reason) {
+            absenceReasonHtml = '<div class="absence-reason">Motif: ' + member.absence_reason + '</div>';
+        }
+
+        let hoursWorkedHtml = '';
+        if (member.hours_worked && member.status === 'present') {
+            hoursWorkedHtml = '<div class="hours-worked">' + member.hours_worked + 'h travaillées</div>';
+        }
+
+        let grandDeplacementHtml = '';
+        if (member.grand_deplacement && member.status === 'present') {
+            grandDeplacementHtml = '<div class="grand-deplacement">Grand déplacement (nuit)</div>';
+        }
+
+        // NEW: Show who last modified the attendance
+        let modifiedByHtml = '';
+        if (member.last_modified_by && member.status !== 'undefined') {
+            modifiedByHtml = '<div class="modified-by">Modifié par: ' + member.last_modified_by + '</div>';
+        }
+
+        const isLocked = member.status !== 'undefined' && !adminMode;
+        const lockedIcon = isLocked ? '<span class="locked-icon" title="Statut verrouillé">🔒</span>' : '';
+
+        staffItem.innerHTML = `
+            <div class="staff-info">
+                <div class="staff-name">
+                    <span class="status-indicator ${statusClass}"></span>
+                    ${member.name}
+                    <span class="drag-handle" title="Glisser pour déplacer">⋮⋮</span>
+                </div>
+                <div class="staff-city">${member.city}</div>
+                <div class="attendance-info">
+                    <div class="status-text">${statusText}</div>
+                    ${timestampHtml}
+                    ${hoursWorkedHtml}
+                    ${grandDeplacementHtml}
+                    ${absenceReasonHtml}
+                    ${modifiedByHtml}
+                </div>
+            </div>
+            <div class="attendance-actions">
+                <button class="button small present-btn" onclick="showPresentModal(${member.id}, '${member.name}')" ${isLocked ? 'disabled' : ''}>
+                    Présent
+                </button>
+                <button class="button small absent-btn" onclick="showAbsenceModal(${member.id})" ${isLocked ? 'disabled' : ''}>
+                    Absent
+                </button>
+                <button class="button small conge-btn" onclick="showCongePeriodModal(${member.id})" title="Congé avec période">
+                    Congé Période
+                </button>
+                ${lockedIcon}
+            </div>
+        `;
+
+        staffItem.addEventListener('dragstart', handleStaffDragStart);
+        staffItem.addEventListener('dragend', handleStaffDragEnd);
+
+        const buttons = staffItem.querySelectorAll('button');
+        buttons.forEach(function(button) {
+            button.addEventListener('mousedown', function(e) {
+                e.stopPropagation();
+                staffItem.draggable = false;
+            });
+            button.addEventListener('mouseup', function() {
+                staffItem.draggable = true;
+            });
+        });
+
+        staffList.appendChild(staffItem);
+    });
+}
+
+        async function loadCurrentUser() {
+    try {
+        const response = await fetch('/api/current-user/');
+        const data = await response.json();
+
+        if (data.success) {
+            currentUser = data.user;
+
+            // Show user info in header or create a user indicator
+            const userIndicator = document.createElement('div');
+            userIndicator.className = 'current-user-indicator';
+            userIndicator.innerHTML = `
+                <div class="user-info">
+                    <span class="user-name">👤 ${currentUser.first_name} ${currentUser.last_name}</span>
+                    <span class="user-role">${getRoleDisplayName(currentUser.role)}</span>
+                    ${currentUser.is_admin ? '<a href="/users/" class="button small" style="margin-left: 10px;">Gérer Utilisateurs</a>' : ''}
+                    <button onclick="logout()" class="button small danger" style="margin-left: 10px;">Déconnexion</button>
+                </div>
+            `;
+
+            // Insert after header
+            const header = document.querySelector('.header');
+            header.appendChild(userIndicator);
+        }
+    } catch (error) {
+        console.error('Error loading current user:', error);
+    }
+}
+
+function getRoleDisplayName(role) {
+    const roleNames = {
+        'admin': 'Administrateur',
+        'manager': 'Manager',
+        'user': 'Utilisateur'
+    };
+    return roleNames[role] || role;
+}
+
+// Logout function
+function logout() {
+    if (confirm('Êtes-vous sûr de vouloir vous déconnecter ?')) {
+        window.location.href = '/logout/';
+    }
+}
 
         // Get status class and text
         function getStatusClass(status) {

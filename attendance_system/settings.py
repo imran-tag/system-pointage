@@ -7,6 +7,14 @@ import os
 import dj_database_url
 from dotenv import load_dotenv
 
+LOGIN_URL = '/login/'
+LOGIN_REDIRECT_URL = '/attendance/'
+LOGOUT_REDIRECT_URL = '/login/'
+
+# Session settings
+SESSION_COOKIE_AGE = 86400  # 24 hours
+SESSION_EXPIRE_AT_BROWSER_CLOSE = True
+SESSION_SAVE_EVERY_REQUEST = True
 # Load environment variables from .env file
 load_dotenv()
 

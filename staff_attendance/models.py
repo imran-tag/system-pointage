@@ -1,6 +1,8 @@
-# staff_attendance/models.py
+# staff_attendance/models.py - Updated with user tracking
+
 from django.db import models
 from django.utils import timezone
+from django.contrib.auth.models import User
 
 
 class Zone(models.Model):
@@ -41,11 +43,17 @@ class StaffMember(models.Model):
 class Attendance(models.Model):
     staff_member = models.ForeignKey(StaffMember, on_delete=models.CASCADE, related_name='attendances')
     date = models.DateField(default=timezone.now)
-    present = models.BooleanField(null=True, blank=True)  # Now allows NULL for congé
+    present = models.BooleanField(null=True, blank=True)
     timestamp = models.DateTimeField(null=True, blank=True)
     absence_reason = models.TextField(verbose_name="Motif d'absence", null=True, blank=True)
-    hours_worked = models.DecimalField(max_digits=3, decimal_places=1, null=True, blank=True, verbose_name="Heures travaillées")
+    hours_worked = models.DecimalField(max_digits=3, decimal_places=1, null=True, blank=True,
+                                       verbose_name="Heures travaillées")
     grand_deplacement = models.BooleanField(default=False, verbose_name="Grand déplacement (nuit)")
+
+    # NEW: Track which user made the change
+    created_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True, verbose_name="Créé par")
+    updated_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True,
+                                   related_name='updated_attendances', verbose_name="Modifié par")
 
     class Meta:
         unique_together = ['staff_member', 'date']
@@ -85,6 +93,9 @@ class CongeReservation(models.Model):
     reason = models.TextField(blank=True, null=True, verbose_name="Motif du congé")
     created_at = models.DateTimeField(auto_now_add=True)
 
+    # NEW: Track which user created the congé
+    created_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True, verbose_name="Créé par")
+
     class Meta:
         ordering = ['start_date']
 
@@ -93,7 +104,7 @@ class CongeReservation(models.Model):
 
     @property
     def is_active(self):
-        """Check if the congé is currently active (today is within the date range)"""
+        """Check if the congé is currently active"""
         today = timezone.now().date()
         return self.start_date <= today <= self.end_date
 
@@ -111,7 +122,6 @@ class CongeReservation(models.Model):
 
     def save(self, *args, **kwargs):
         super().save(*args, **kwargs)
-        # Automatically create attendance records for the congé period
         self.create_attendance_records()
 
     def create_attendance_records(self):
@@ -124,21 +134,21 @@ class CongeReservation(models.Model):
                 defaults={
                     'present': None,
                     'absence_reason': 'CONGE_STATUS',
-                    'timestamp': timezone.now()
+                    'timestamp': timezone.now(),
+                    'created_by': self.created_by
                 }
             )
 
-            # Update existing record if it's not already a congé
             if not created and attendance.absence_reason != 'CONGE_STATUS':
                 attendance.present = None
                 attendance.absence_reason = 'CONGE_STATUS'
                 attendance.timestamp = timezone.now()
+                attendance.updated_by = self.created_by
                 attendance.save()
 
             current_date += timezone.timedelta(days=1)
 
     def delete(self, *args, **kwargs):
-        # Remove attendance records for this congé period
         Attendance.objects.filter(
             staff_member=self.staff_member,
             date__gte=self.start_date,
@@ -147,15 +157,26 @@ class CongeReservation(models.Model):
         ).delete()
         super().delete(*args, **kwargs)
 
-    @classmethod
-    def cleanup_past_records(cls):
-        """
-        Utility method to clean up past congé records if needed.
-        This can be called manually or via a management command.
-        """
-        today = timezone.now().date()
-        past_conges = cls.objects.filter(end_date__lt=today)
-        count = past_conges.count()
-        # Uncomment the line below if you want to automatically delete past congé records
-        # past_conges.delete()
-        return count
+
+# NEW: User Profile model to extend User functionality
+class UserProfile(models.Model):
+    user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='profile')
+    role = models.CharField(max_length=20, choices=[
+        ('admin', 'Administrateur'),
+        ('manager', 'Manager'),
+        ('user', 'Utilisateur')
+    ], default='user')
+    can_modify_all = models.BooleanField(default=False, verbose_name="Peut modifier toutes les présences")
+    assigned_zones = models.ManyToManyField(Zone, blank=True, verbose_name="Zones assignées")
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f"{self.user.username} - {self.get_role_display()}"
+
+    @property
+    def is_admin(self):
+        return self.role == 'admin'
+
+    @property
+    def is_manager(self):
+        return self.role in ['admin', 'manager']
