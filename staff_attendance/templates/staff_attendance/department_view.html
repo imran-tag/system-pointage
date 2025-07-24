@@ -494,7 +494,12 @@ body {
     background-color: var(--message-info-bg);
     color: var(--message-info-color);
 }
-
+.modified-by {
+    font-size: 0.8em;
+    color: #666;
+    font-style: italic;
+    margin-top: 2px;
+}
 .modal {
     display: none;
     position: fixed;
@@ -948,20 +953,32 @@ body {
 
         // Load teams data
         async function loadTeamsData() {
-            try {
-                const response = await fetch('/api/fixed-teams-staff/');
-                const data = await response.json();
+    try {
+        const response = await fetch('/api/departments-data/');
+        const data = await response.json();
 
-                if (data.teams && data.chantiers) {
-                    teamsData = data.teams;
-                    chantiers = data.chantiers;
-                    populateChantierSelect();
-                }
-            } catch (error) {
-                showMessage('Erreur lors du chargement des données', 'error');
-                console.error('Error loading teams data:', error);
-            }
+        // DEBUG: Log the entire response
+        console.log('DEBUG: Full API response:', data);
+        console.log('DEBUG: data.success:', data.success);
+        console.log('DEBUG: data.departments:', data.departments);
+
+        if (data.success) {
+            teamsData = data.departments;  // Changed from data.teams to data.departments
+
+            // DEBUG: Log each team
+            console.log('DEBUG: teamsData after assignment:', teamsData);
+            console.log('DEBUG: contact team:', teamsData.contact);
+            console.log('DEBUG: moselle-est team:', teamsData['moselle-est']);
+            console.log('DEBUG: maintenance team:', teamsData.maintenance);
+
+            chantiers = data.chantiers;
+            populateChantierSelect();
         }
+    } catch (error) {
+        showMessage('Erreur lors du chargement des données', 'error');
+        console.error('Error loading teams data:', error);
+    }
+}
 
         // Populate chantier select
         function populateChantierSelect() {
@@ -983,81 +1000,101 @@ body {
 
         // Render team staff
         function renderTeam(teamName, listElement) {
-            listElement.innerHTML = '';
+    console.log('DEBUG: renderTeam called with:', teamName);
+    console.log('DEBUG: teamsData[teamName]:', teamsData[teamName]);
+    console.log('DEBUG: teamsData exists?', !!teamsData);
 
-            if (!teamsData[teamName]) {
-                listElement.innerHTML = '<li style="text-align: center; color: #999; padding: 20px;">Aucun personnel dans cette équipe</li>';
-                return;
-            }
+    listElement.innerHTML = '';
 
-            teamsData[teamName].forEach(function(member) {
-                const staffItem = document.createElement('li');
-                staffItem.className = 'staff-item';
+    if (!teamsData[teamName]) {
+        console.log('DEBUG: No team data found for:', teamName);
+        listElement.innerHTML = '<li style="text-align: center; color: #999; padding: 20px;">Aucun personnel dans cette équipe</li>';
+        return;
+    }
 
-                const statusClass = getStatusClass(member.status);
-                const statusText = getStatusText(member.status);
+    if (teamsData[teamName].length === 0) {
+        console.log('DEBUG: Team data is empty for:', teamName);
+        listElement.innerHTML = '<li style="text-align: center; color: #999; padding: 20px;">Aucun personnel dans cette équipe</li>';
+        return;
+    }
 
-                let timestampHtml = '';
-                if (member.timestamp) {
-                    const time = new Date(member.timestamp).toLocaleTimeString();
-                    timestampHtml = '<div class="timestamp">' + time + '</div>';
-                }
+    console.log('DEBUG: Found', teamsData[teamName].length, 'members for team:', teamName);
 
-                let absenceReasonHtml = '';
-                if (member.absence_reason) {
-                    absenceReasonHtml = '<div class="absence-reason">Motif: ' + member.absence_reason + '</div>';
-                }
+    teamsData[teamName].forEach(function(member) {
+        console.log('DEBUG: Processing member:', member.name, member);
 
-                let hoursWorkedHtml = '';
-                if (member.hours_worked && member.status === 'present') {
-                    hoursWorkedHtml = '<div class="hours-worked">' + member.hours_worked + 'h travaillées</div>';
-                }
+        const staffItem = document.createElement('li');
+        staffItem.className = 'staff-item';
 
-                let grandDeplacementHtml = '';
-                if (member.grand_deplacement && member.status === 'present') {
-                    grandDeplacementHtml = '<div class="grand-deplacement">Grand déplacement (nuit)</div>';
-                }
+        const statusClass = getStatusClass(member.status);
+        const statusText = getStatusText(member.status);
 
-                let currentChantierHtml = '';
-                if (member.current_chantier && member.status === 'present') {
-                    currentChantierHtml = '<div class="current-chantier">Chantier: ' + member.current_chantier + '</div>';
-                }
-
-                const isLocked = member.status !== 'undefined' && !adminMode;
-                const lockedIcon = isLocked ? '<span class="locked-icon" title="Statut verrouillé">🔒</span>' : '';
-
-                staffItem.innerHTML = `
-                    <div class="staff-info">
-                        <div class="staff-name">
-                            <span class="status-indicator ${statusClass}"></span>
-                            ${member.name}
-                        </div>
-                        <div class="attendance-info">
-                            <div class="status-text">${statusText}</div>
-                            ${currentChantierHtml}
-                            ${timestampHtml}
-                            ${hoursWorkedHtml}
-                            ${grandDeplacementHtml}
-                            ${absenceReasonHtml}
-                        </div>
-                    </div>
-                    <div class="attendance-actions">
-                        <button class="button small present-btn" onclick="showPresentModal(${member.id}, '${member.name}')" ${isLocked ? 'disabled' : ''}>
-                            Présent
-                        </button>
-                        <button class="button small absent-btn" onclick="showAbsenceModal(${member.id})" ${isLocked ? 'disabled' : ''}>
-                            Absent
-                        </button>
-                        <button class="button small conge-btn" onclick="markStaffConge(${member.id})" ${isLocked ? 'disabled' : ''}>
-                            Congé
-                        </button>
-                        ${lockedIcon}
-                    </div>
-                `;
-
-                listElement.appendChild(staffItem);
-            });
+        let timestampHtml = '';
+        if (member.timestamp) {
+            const time = new Date(member.timestamp).toLocaleTimeString();
+            timestampHtml = '<div class="timestamp">' + time + '</div>';
         }
+
+        let absenceReasonHtml = '';
+        if (member.absence_reason) {
+            absenceReasonHtml = '<div class="absence-reason">Motif: ' + member.absence_reason + '</div>';
+        }
+
+        let hoursWorkedHtml = '';
+        if (member.hours_worked && member.status === 'present') {
+            hoursWorkedHtml = '<div class="hours-worked">' + member.hours_worked + 'h travaillées</div>';
+        }
+
+        let grandDeplacementHtml = '';
+        if (member.grand_deplacement && member.status === 'present') {
+            grandDeplacementHtml = '<div class="grand-deplacement">Grand déplacement (nuit)</div>';
+        }
+
+        let currentChantierHtml = '';
+        if (member.current_chantier && member.status === 'present') {
+            currentChantierHtml = '<div class="current-chantier">Chantier: ' + member.current_chantier + '</div>';
+        }
+
+        // ADD: Modified by HTML
+        let modifiedByHtml = '';
+        if (member.last_modified_by && member.status !== 'undefined') {
+            modifiedByHtml = '<div class="modified-by">Modifié par: ' + member.last_modified_by + '</div>';
+        }
+
+        const isLocked = member.status !== 'undefined' && !adminMode;
+
+        staffItem.innerHTML = `
+            <div class="staff-info">
+                <div class="staff-name">
+                    <span class="status-indicator ${statusClass}"></span>
+                    ${member.name}
+                </div>
+                <div class="attendance-info">
+                    <div class="status-text">${statusText}</div>
+                    ${currentChantierHtml}
+                    ${timestampHtml}
+                    ${hoursWorkedHtml}
+                    ${grandDeplacementHtml}
+                    ${absenceReasonHtml}
+                    ${modifiedByHtml}
+                </div>
+            </div>
+            <div class="attendance-actions">
+                <button class="button small present-btn" onclick="showPresentModal(${member.id}, '${member.name}')" ${isLocked ? 'disabled' : ''}>
+                    Présent
+                </button>
+                <button class="button small absent-btn" onclick="showAbsenceModal(${member.id})" ${isLocked ? 'disabled' : ''}>
+                    Absent
+                </button>
+                <button class="button small conge-btn" onclick="markStaffConge(${member.id})" ${isLocked ? 'disabled' : ''}>
+                    Congé
+                </button>
+            </div>
+        `;
+
+        listElement.appendChild(staffItem);
+    });
+}
 
         // Get status class and text
         function getStatusClass(status) {

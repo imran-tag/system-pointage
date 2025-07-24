@@ -70,4 +70,5 @@ urlpatterns = [
     path('api/mark-fixed-team-present/', views.mark_fixed_team_present, name='mark_fixed_team_present'),
     path('api/mark-fixed-team-absent/', views.mark_fixed_team_absent, name='mark_fixed_team_absent'),
     path('api/mark-fixed-team-conge/', views.mark_fixed_team_conge, name='mark_fixed_team_conge'),
+path('api/departments-data/', views.get_departments_data, name='get_departments_data'),
 ]

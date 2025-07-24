@@ -423,6 +423,7 @@ def fixed_teams_page(request):
 
 
 @csrf_exempt
+@login_required
 def get_fixed_teams_staff(request):
     """API endpoint to get the fixed teams staff with attendance status"""
     today = timezone.now().date()
@@ -430,22 +431,22 @@ def get_fixed_teams_staff(request):
     # Define fixed teams
     fixed_teams = {
         'contact': [
-            'BENSAID LHOUCINE',
+            'BENSAID HOUCINE',
             'AMRAOU MOHAMED',
             'AMRAOU ABDELLAH',
             'AMRAOU KHALED',
             'AMRAOU YOUSSEF',
-            'BENSAID LAHCEN',
+            'BEN SAID LAHCEN',
             'BENDJEDDOU NADJIM',
             'BOUCHAIB TALSSI',
-            'KHAMER TAWFIK',
-            'MAATI LOUNIS',
+            'KHAMER TAWFIQ',
+            'LOUNIS MAATI',
             'YEZLI AZIZ',
-            'SALHI AFRIM',
+            'SALIHI AFRIM',
             'HAMAD MORAD',
             'SAKER FADI',
             'ZEROUALI MOHAMED',
-            'QUAZIMI ARBEN',
+            'QAZIMI ARBEN',
             'AIT EL GHACHI AHMED',
             'BOUYAHIAOUI ALI',
             'AMZIL KHALID',
@@ -453,7 +454,7 @@ def get_fixed_teams_staff(request):
             'MOUDEBER NADGEM',
             'DI SALVO LUCAS',
             'DI SALVO PATRICK',
-            'MARIUNGO THEO',
+            'MARONGIU THEO',
             'PARCOT MARC',
             'BOUADLA AMAR',
             'BULUT AHMET',
@@ -487,14 +488,14 @@ def get_fixed_teams_staff(request):
         ],
         'maintenance': [
             'BOULAKDOUR YASSINE',
-            'BEJNEARU ANATOLIE',
+            'BEJENARU ANATOLIE',
             'AIT BAHA AHMED',
             'ADDI AHMED',
             'AIT ALLA SOFIENE',
             'OURAMI RACHID',
             'BRANGIER ROMUALD',
             'MAGAZ LAHCEN',
-            'AGHOURAI AREJDAL AISSA',
+            'AGHOURI AREJDAL AISSA',
             'AMRI HATEM',
             'DARTE LOKMANE',
             'TAHARDJI HAMZA',
@@ -502,8 +503,9 @@ def get_fixed_teams_staff(request):
         ]
     }
 
-    # Get today's attendance records for all staff
-    attendances = Attendance.objects.filter(date=today)
+    # Get today's attendance records for all staff WITH USER INFO
+    attendances = Attendance.objects.filter(date=today).select_related('created_by',
+                                                                       'updated_by')  # ← ADD select_related
     attendance_dict = {att.staff_member.name: att for att in attendances}
 
     # Check for active congé reservations
@@ -518,25 +520,16 @@ def get_fixed_teams_staff(request):
         team_data = []
 
         for member_name in team_members:
-            # Get or create staff member
+            # Get or create staff member (keep your existing logic)
             try:
-                # Try to find existing staff member by name
                 staff_member = StaffMember.objects.get(name=member_name)
             except StaffMember.DoesNotExist:
-                # Create a default city for fixed teams if it doesn't exist
-                default_city, created = City.objects.get_or_create(
-                    name='Équipes Fixes',
-                    defaults={'zone': None}
-                )
-                # Create the staff member
-                staff_member = StaffMember.objects.create(
-                    name=member_name,
-                    city=default_city
-                )
+                # Create logic (keep your existing code)
+                pass
 
             attendance = attendance_dict.get(staff_member.name)
 
-            # Determine status
+            # Determine status (keep your existing logic)
             if staff_member.name in active_conge:
                 status = 'conge'
             elif attendance:
@@ -551,6 +544,14 @@ def get_fixed_teams_staff(request):
             else:
                 status = 'undefined'
 
+            # ADD THIS: Get user info for who made the last change
+            last_modified_by = None
+            if attendance:
+                if attendance.updated_by:
+                    last_modified_by = f"{attendance.updated_by.first_name or attendance.updated_by.username}"
+                elif attendance.created_by:
+                    last_modified_by = f"{attendance.created_by.first_name or attendance.created_by.username}"
+
             team_data.append({
                 'id': staff_member.id,
                 'name': staff_member.name,
@@ -559,12 +560,13 @@ def get_fixed_teams_staff(request):
                 'absence_reason': attendance.absence_reason if attendance and attendance.present is False and attendance.absence_reason != 'CONGE_STATUS' else None,
                 'timestamp': attendance.timestamp.isoformat() if attendance and attendance.timestamp else None,
                 'hours_worked': float(attendance.hours_worked) if attendance and attendance.hours_worked else None,
-                'grand_deplacement': attendance.grand_deplacement if attendance else False
+                'grand_deplacement': attendance.grand_deplacement if attendance else False,
+                'last_modified_by': last_modified_by  # ← ADD THIS LINE
             })
 
         teams_data[team_name] = team_data
 
-    # Get all available chantiers for assignment
+    # Get all available chantiers for assignment (keep existing)
     chantiers = City.objects.exclude(name='Équipes Fixes').values('id', 'name')
 
     return JsonResponse({
@@ -572,10 +574,10 @@ def get_fixed_teams_staff(request):
         'chantiers': list(chantiers)
     })
 
-
 @csrf_exempt
+@login_required  # Make sure this decorator is present!
 def mark_fixed_team_present(request):
-    """API endpoint to mark a fixed team member as present with chantier assignment"""
+    """API endpoint to mark a fixed team member as present with chantier assignment and USER TRACKING"""
     if request.method == 'POST':
         data = json.loads(request.body)
         staff_id = data.get('staff_id')
@@ -601,7 +603,8 @@ def mark_fixed_team_present(request):
                     'present': True,
                     'timestamp': timezone.now(),
                     'hours_worked': hours_worked,
-                    'grand_deplacement': grand_deplacement
+                    'grand_deplacement': grand_deplacement,
+                    'created_by': request.user  # ADD: Track who created it
                 }
             )
 
@@ -612,6 +615,7 @@ def mark_fixed_team_present(request):
                 attendance.timestamp = timezone.now()
                 attendance.hours_worked = hours_worked
                 attendance.grand_deplacement = grand_deplacement
+                attendance.updated_by = request.user  # ADD: Track who updated it
                 attendance.save()
 
             chantier_text = f" sur {chantier.name}" if chantier_id else ""
@@ -636,8 +640,9 @@ def mark_fixed_team_present(request):
 
 
 @csrf_exempt
+@login_required  # Make sure this decorator is present!
 def mark_fixed_team_absent(request):
-    """API endpoint to mark a fixed team member as absent with reason"""
+    """API endpoint to mark a fixed team member as absent with reason and USER TRACKING"""
     if request.method == 'POST':
         data = json.loads(request.body)
         staff_id = data.get('staff_id')
@@ -651,7 +656,12 @@ def mark_fixed_team_absent(request):
             attendance, created = Attendance.objects.get_or_create(
                 staff_member=staff,
                 date=today,
-                defaults={'present': False, 'timestamp': timezone.now(), 'absence_reason': reason}
+                defaults={
+                    'present': False,
+                    'timestamp': timezone.now(),
+                    'absence_reason': reason,
+                    'created_by': request.user  # ADD: Track who created it
+                }
             )
 
             # Update if already exists
@@ -659,6 +669,7 @@ def mark_fixed_team_absent(request):
                 attendance.present = False
                 attendance.timestamp = timezone.now()
                 attendance.absence_reason = reason
+                attendance.updated_by = request.user  # ADD: Track who updated it
                 attendance.save()
 
             return JsonResponse({
@@ -674,9 +685,12 @@ def mark_fixed_team_absent(request):
     return JsonResponse({'success': False, 'message': 'Méthode non autorisée'}, status=405)
 
 
+
+
 @csrf_exempt
+@login_required  # Make sure this decorator is present!
 def mark_fixed_team_conge(request):
-    """API endpoint to mark a fixed team member as on leave (congé) for today only"""
+    """API endpoint to mark a fixed team member as on leave (congé) for today only with USER TRACKING"""
     if request.method == 'POST':
         data = json.loads(request.body)
         staff_id = data.get('staff_id')
@@ -689,7 +703,12 @@ def mark_fixed_team_conge(request):
             attendance, created = Attendance.objects.get_or_create(
                 staff_member=staff,
                 date=today,
-                defaults={'present': None, 'timestamp': timezone.now(), 'absence_reason': 'CONGE_STATUS'}
+                defaults={
+                    'present': None,
+                    'timestamp': timezone.now(),
+                    'absence_reason': 'CONGE_STATUS',
+                    'created_by': request.user  # ADD: Track who created it
+                }
             )
 
             # Update if already exists
@@ -697,6 +716,7 @@ def mark_fixed_team_conge(request):
                 attendance.present = None
                 attendance.absence_reason = 'CONGE_STATUS'
                 attendance.timestamp = timezone.now()
+                attendance.updated_by = request.user  # ADD: Track who updated it
                 attendance.save()
 
             return JsonResponse({
@@ -710,6 +730,7 @@ def mark_fixed_team_conge(request):
             return JsonResponse({'success': False, 'message': str(e)}, status=500)
 
     return JsonResponse({'success': False, 'message': 'Méthode non autorisée'}, status=405)
+
 
 @csrf_exempt
 @login_required
@@ -1303,6 +1324,125 @@ def get_attendance_with_users(request):
     except Exception as e:
         return JsonResponse({'success': False, 'message': str(e)}, status=500)
 # Add this to your views.py if you want an API endpoint to clean old congés
+@csrf_exempt
+@login_required
+def get_departments_data(request):
+    """API endpoint to get staff organized by departments with user tracking - FINAL VERSION"""
+    try:
+        today = timezone.now().date()
+
+        # Fixed teams mapping
+        DEPARTMENT_MAPPING = {
+            'contact': [
+                'BENSAID HOUCINE', 'AMRAOU MOHAMED', 'AMRAOU ABDELLAH', 'AMRAOU KHALED',
+                'AMRAOU YOUSSEF', 'BEN SAID LAHCEN', 'BENDJEDDOU NADJIM', 'BOUCHAIB TALSSI',
+                'KHAMER TAWFIQ', 'LOUNIS MAATI', 'YEZLI AZIZ', 'SALIHI AFRIM',
+                'HAMAD MORAD', 'SAKER FADI', 'ZEROUALI MOHAMED', 'QAZIMI ARBEN',
+                'AIT EL GHACHI AHMED', 'BOUYAHIAOUI ALI', 'AMZIL KHALID', 'DI CAMILLO FREDERIC',
+                'MOUDEBER NADGEM', 'DI SALVO LUCAS', 'DI SALVO PATRICK', 'MARONGIU THEO',
+                'PARCOT MARC', 'BOUADLA AMAR', 'BULUT AHMET', 'CADIR AYDIN',
+                'OUAJOUB LAHCEN', 'NDREJAJ RAMAZAN', 'OUADAH ABDELREZAC', 'BAGHA SAID',
+                'NEAGU LAURENTIU', 'KHAWJA HIJRATULLAH', 'MAZOUJI RACHID', 'RAI JAMAL',
+                'RAI MOHAMED', 'EL FIRARI KARIM', 'YALCIN UMIT', 'AMRAOU MOHAMED 2',
+                'ZIMMERMANN LOIC'
+            ],
+            'moselle-est': [
+                'BECKER SEBASTIEN', 'FRANCOIS LAURENT', 'KHOUYA MOHAMED', 'REMIATTE LIONEL',
+                'BOULIHSSAN YOUNES', 'BENNACER ANISSA', 'ANDRASCHKE DAVINA', 'GUEZZI NAIMA',
+                'BICER ROJDA', 'KEHILI RANIA', 'TAGHOULT-OUNMIR AMRAN'
+            ],
+            'maintenance': [
+                'BOULAKDOUR YASSINE', 'BEJENARU ANATOLIE', 'AIT BAHA AHMED', 'ADDI AHMED',
+                'AIT ALLA SOFIENE', 'OURAMI RACHID', 'BRANGIER ROMUALD', 'MAGAZ LAHCEN',
+                'AGHOURI AREJDAL AISSA', 'AMRI HATEM', 'DARTE LOKMANE', 'TAHARDJI HAMZA'
+            ]
+        }
+
+        # Get today's attendance records WITH user info
+        attendances = Attendance.objects.filter(date=today).select_related('staff_member', 'created_by', 'updated_by')
+        attendance_dict = {att.staff_member_id: att for att in attendances}
+
+        # Check for active congé reservations
+        active_conge = CongeReservation.objects.filter(
+            start_date__lte=today,
+            end_date__gte=today
+        ).values_list('staff_member_id', flat=True)
+
+        # Organize staff by departments
+        departments = {
+            'contact': [],
+            'moselle-est': [],
+            'maintenance': []
+        }
+
+        # Process each department
+        for dept_name, member_names in DEPARTMENT_MAPPING.items():
+            for member_name in member_names:
+                try:
+                    staff_member = StaffMember.objects.get(name=member_name)
+                except StaffMember.DoesNotExist:
+                    default_city, created = City.objects.get_or_create(
+                        name='Équipes Fixes',
+                        defaults={'zone': None}
+                    )
+                    staff_member = StaffMember.objects.create(
+                        name=member_name,
+                        city=default_city
+                    )
+
+                attendance = attendance_dict.get(staff_member.id)
+
+                # Determine status
+                if staff_member.id in active_conge:
+                    status = 'conge'
+                elif attendance:
+                    if attendance.absence_reason == 'CONGE_STATUS':
+                        status = 'conge'
+                    elif attendance.present is True:
+                        status = 'present'
+                    elif attendance.present is False:
+                        status = 'absent'
+                    else:
+                        status = 'undefined'
+                else:
+                    status = 'undefined'
+
+                # Get user info for who made the last change
+                last_modified_by = None
+                if attendance:
+                    if attendance.updated_by:
+                        last_modified_by = f"{attendance.updated_by.first_name or attendance.updated_by.username}"
+                    elif attendance.created_by:
+                        last_modified_by = f"{attendance.created_by.first_name or attendance.created_by.username}"
+
+                # Create staff data
+                staff_data = {
+                    'id': staff_member.id,
+                    'name': staff_member.name,
+                    'status': status,
+                    'current_chantier': staff_member.city.name if staff_member.city.name != 'Équipes Fixes' else None,
+                    'absence_reason': attendance.absence_reason if attendance and attendance.present is False and attendance.absence_reason != 'CONGE_STATUS' else None,
+                    'timestamp': attendance.timestamp.isoformat() if attendance and attendance.timestamp else None,
+                    'hours_worked': float(attendance.hours_worked) if attendance and attendance.hours_worked else None,
+                    'grand_deplacement': attendance.grand_deplacement if attendance else False,
+                    'last_modified_by': last_modified_by
+                }
+
+                departments[dept_name].append(staff_data)
+
+        # Get all available chantiers for assignment
+        chantiers = City.objects.exclude(name='Équipes Fixes').values('id', 'name')
+
+        return JsonResponse({
+            'success': True,
+            'departments': departments,
+            'chantiers': list(chantiers),
+            'date': today.isoformat()
+        })
+
+    except Exception as e:
+        return JsonResponse({'success': False, 'message': str(e)}, status=500)
+
 def home_redirect(request):
     """Handle root URL redirect based on authentication status"""
     if request.user.is_authenticated:
@@ -1491,7 +1631,7 @@ def get_staff_by_city(request):
 @csrf_exempt
 @login_required
 def mark_present(request):
-    """API endpoint to mark a staff member as present with user tracking"""
+    """Make sure this sets the user tracking fields"""
     if request.method == 'POST':
         data = json.loads(request.body)
         staff_id = data.get('staff_id')
@@ -1502,6 +1642,8 @@ def mark_present(request):
             staff = StaffMember.objects.get(id=staff_id)
             today = timezone.now().date()
 
+            print(f"DEBUG: Marking {staff.name} present by user {request.user}")
+
             # Get or create attendance record
             attendance, created = Attendance.objects.get_or_create(
                 staff_member=staff,
@@ -1511,33 +1653,30 @@ def mark_present(request):
                     'timestamp': timezone.now(),
                     'hours_worked': hours_worked,
                     'grand_deplacement': grand_deplacement,
-                    'created_by': request.user  # Track who created it
+                    'created_by': request.user  # Make sure this is set!
                 }
             )
 
             # Update if already exists
             if not created:
+                print(f"DEBUG: Updating existing attendance, setting updated_by to {request.user}")
                 attendance.present = True
                 attendance.absence_reason = None
                 attendance.timestamp = timezone.now()
                 attendance.hours_worked = hours_worked
                 attendance.grand_deplacement = grand_deplacement
-                attendance.updated_by = request.user  # Track who updated it
+                attendance.updated_by = request.user  # Make sure this is set!
                 attendance.save()
-
-            message = f"{staff.name} marqué présent ({hours_worked}h)"
-            if grand_deplacement:
-                message += " - Grand déplacement (nuit)"
-            message += f" à {timezone.now().strftime('%H:%M:%S')} par {request.user.first_name or request.user.username}"
+            else:
+                print(f"DEBUG: Created new attendance with created_by = {request.user}")
 
             return JsonResponse({
                 'success': True,
-                'message': message
+                'message': f"{staff.name} marqué présent"
             })
 
-        except StaffMember.DoesNotExist:
-            return JsonResponse({'success': False, 'message': 'Personnel non trouvé'}, status=404)
         except Exception as e:
+            print(f"DEBUG: Error in mark_present: {e}")
             return JsonResponse({'success': False, 'message': str(e)}, status=500)
 
     return JsonResponse({'success': False, 'message': 'Méthode non autorisée'}, status=405)
