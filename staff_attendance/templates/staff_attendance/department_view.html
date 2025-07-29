@@ -73,7 +73,182 @@ body.dark-mode {
     height: 34px;
     margin-left: 10px;
 }
+.presence-options,
+.absence-options {
+    margin: 15px 0;
+    padding: 15px;
+    background-color: var(--modal-bg);
+    border-radius: 6px;
+    border: 1px solid var(--border-color);
+}
 
+.checkbox-group,
+.radio-group {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    margin-top: 8px;
+}
+
+.checkbox-item,
+.radio-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 8px;
+    border-radius: 4px;
+    transition: background-color 0.2s;
+}
+
+.checkbox-item:hover,
+.radio-item:hover {
+    background-color: rgba(52, 152, 219, 0.1);
+}
+
+.checkbox-item input,
+.radio-item input {
+    width: auto;
+    margin: 0;
+    transform: scale(1.3);
+    cursor: pointer;
+}
+
+.checkbox-item label,
+.radio-item label {
+    margin: 0;
+    cursor: pointer;
+    font-weight: 500;
+    font-size: 14px;
+    color: var(--text-color, #333);
+    user-select: none;
+}
+
+.info-message {
+    background-color: #e8f5e8;
+    padding: 15px;
+    border-radius: 6px;
+    color: #2d5a2d;
+    text-align: center;
+    font-weight: 500;
+    margin: 15px 0;
+    border: 1px solid #c3e6c3;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+}
+
+.info-message::before {
+    content: "ℹ️";
+    font-size: 16px;
+}
+
+/* Support mode sombre */
+[data-theme="dark"] .presence-options,
+[data-theme="dark"] .absence-options {
+    background-color: #2d3748;
+    border-color: #4a5568;
+}
+
+.presence-options,
+.absence-options {
+    margin: 15px 0;
+}
+
+.checkbox-group,
+.radio-group {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    margin-top: 8px;
+}
+
+.checkbox-item,
+.radio-item {
+    display: -webkit-box;
+    align-items: center;
+    gap: 8px;
+}
+
+.checkbox-item input,
+.radio-item input {
+    width: auto;
+    margin: 0;
+    transform: scale(1.2);
+}
+
+.checkbox-item label,
+.radio-item label {
+    margin: 0;
+    cursor: pointer;
+    font-weight: normal;
+    font-size: 14px;
+}
+
+.info-message {
+    background-color: #e8f5e8;
+    padding: 12px;
+    border-radius: 4px;
+    color: #2d5a2d;
+    text-align: center;
+    font-weight: 500;
+    margin: 15px 0;
+    border: 1px solid #c3e6c3;
+}
+
+.form-group label {
+    display: block;
+    margin-bottom: 8px;
+    font-weight: 500;
+    color: var(--text-color);
+}
+
+/* Dark mode support */
+[data-theme="dark"] .info-message {
+    background-color: #2d4a2d;
+    color: #a8d4a8;
+    border-color: #4a6b4a;
+}
+
+[data-theme="dark"] .checkbox-item label,
+[data-theme="dark"] .radio-item label {
+    color: var(--text-color);
+}
+
+[data-theme="dark"] .info-message {
+    background-color: #2d4a2d;
+    color: #a8d4a8;
+    border-color: #4a6b4a;
+}
+
+[data-theme="dark"] .checkbox-item label,
+[data-theme="dark"] .radio-item label {
+    color: #e2e8f0;
+}
+
+[data-theme="dark"] .checkbox-item:hover,
+[data-theme="dark"] .radio-item:hover {
+    background-color: rgba(74, 85, 104, 0.3);
+}
+
+/* Amélioration responsive */
+
+/* Animation pour les options */
+.presence-options,
+.absence-options {
+    animation: slideIn 0.3s ease-out;
+}
+
+@keyframes slideIn {
+    from {
+        opacity: 0;
+        transform: translateY(-10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
 .switch input {
     opacity: 0;
     width: 0;
@@ -260,7 +435,7 @@ body {
 }
 
 .team-moselle .team-icon::before {
-    content: '🏗️';
+    content: '👔';
 }
 
 .team-maintenance .team-icon::before {
@@ -290,7 +465,7 @@ body {
 }
 
 .staff-item:hover {
-    background: #f8f9fa;
+    background: var(--primary-hover);
     transform: translateY(-2px);
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
 }
@@ -513,7 +688,7 @@ body {
 
 .modal-content {
     background-color: var(--card-bg);
-    margin: 15% auto;
+    margin: 5% auto;
     padding: 20px;
     border-radius: 8px;
     width: 400px;
@@ -551,6 +726,8 @@ body {
     color: var(--text-color);
     background-color: var(--select-bg);
 }
+
+
 
 .form-group textarea {
     min-height: 100px;
@@ -652,7 +829,7 @@ body {
 <body>
     <div class="header">
         <h1>Gestion des Équipes Fixes</h1>
-        <p>Contact • Moselle-Est • Maintenance</p>
+        <p>Contact • Bureau • Maintenance</p>
     </div>
 
     <div class="theme-toggle">
@@ -694,7 +871,7 @@ body {
             <div class="team-header">
                 <h2 class="team-title">
                     <span class="team-icon"></span>
-                    Moselle-Est
+                    Bureau/Atelier
                 </h2>
             </div>
             <div class="team-content">
@@ -722,39 +899,47 @@ body {
 
     <!-- Present Modal with Hours, Grand Déplacement and Chantier Selection -->
     <div id="present-modal" class="modal">
-        <div class="modal-content">
-            <span class="close">&times;</span>
-            <h3>Marquer comme présent</h3>
-            <div id="present-staff-name" style="margin-bottom: 15px; font-weight: bold; color: var(--button-primary);"></div>
+    <div class="modal-content">
+        <span class="close">&times;</span>
+        <h3>Marquer comme présent</h3>
+        <div id="present-staff-name" style="margin-bottom: 15px; font-weight: bold; color: var(--button-primary);"></div>
 
-            <div class="form-group">
-                <label for="chantier-select">Chantier assigné :</label>
-                <select id="chantier-select" class="select">
-                    <option value="">Sélectionner un chantier</option>
-                    <!-- Chantier options will be populated here -->
-                </select>
-            </div>
+        <div class="form-group">
+            <label for="chantier-select">Chantier assigné :</label>
+            <select id="chantier-select" class="select">
+                <option value="">Sélectionner un chantier</option>
+                <!-- Chantier options will be populated here -->
+            </select>
+        </div>
 
-            <div class="form-group">
-                <label for="hours-worked">Heures travaillées :</label>
-                <div class="slider-container">
-                    <input type="range" id="hours-worked" class="slider-input" min="0" max="9" step="0.5" value="8">
-                    <div class="slider-value">
-                        <span>0h</span>
-                        <span class="current-value" id="hours-value">8h</span>
-                        <span>9h</span>
-                    </div>
+        <div class="form-group">
+            <label for="hours-worked">Heures travaillées :</label>
+            <div class="slider-container">
+                <input type="range" id="hours-worked" class="slider-input" min="0" max="9" step="0.5" value="8">
+                <div class="slider-value">
+                    <span>0h</span>
+                    <span class="current-value" id="hours-value">8h</span>
+                    <span>9h</span>
                 </div>
             </div>
+        </div>
 
-            <div class="checkbox-container">
-                <input type="checkbox" id="grand-deplacement">
-                <label for="grand-deplacement">Grand déplacement (nuit)</label>
-            </div>
+        <!-- Le message pour grand déplacement sera ajouté ici dynamiquement -->
 
-            <button id="submit-present" class="button success">Valider</button>
+        <div class="checkbox-container">
+            <input type="checkbox" id="grand-deplacement">
+            <label for="grand-deplacement">Grand déplacement (nuit)</label>
+        </div>
+
+        <!-- Les options de présence seront ajoutées ici dynamiquement -->
+
+        <div class="modal-actions">
+            <button id="submit-present" class="button present-btn">Confirmer</button>
+            <button onclick="presentModal.style.display='none'" class="button">Annuler</button>
         </div>
     </div>
+</div>
+
 
     <!-- Admin Password Modal -->
     <div id="admin-modal" class="modal">
@@ -771,16 +956,25 @@ body {
 
     <!-- Absence Reason Modal -->
     <div id="absence-modal" class="modal">
-        <div class="modal-content">
-            <span class="close">&times;</span>
-            <h3>Motif d'absence</h3>
-            <div class="form-group">
-                <label for="absence-reason">Veuillez indiquer le motif d'absence :</label>
-                <textarea id="absence-reason" placeholder="Motif d'absence..."></textarea>
-            </div>
-            <button id="submit-absence" class="button">Valider</button>
+    <div class="modal-content">
+        <span class="close">&times;</span>
+        <h3>Marquer comme absent</h3>
+        <div id="absence-staff-name" style="margin-bottom: 15px; font-weight: bold; color: var(--button-primary);"></div>
+
+        <!-- Cacher le champ texte original et utiliser les options radio -->
+        <div class="form-group" style="display: none;">
+            <label for="absence-reason">Motif d'absence :</label>
+            <input type="text" id="absence-reason" class="text-input" placeholder="Entrez le motif d'absence">
+        </div>
+
+        <!-- Les options radio seront ajoutées dynamiquement ici par JavaScript -->
+
+        <div class="modal-actions">
+            <button id="submit-absence" class="button absent-btn">Confirmer</button>
+            <button onclick="absenceModal.style.display='none'" class="button">Annuler</button>
         </div>
     </div>
+</div>
 
     {% csrf_token %}
     <script>
@@ -1110,81 +1304,407 @@ body {
             if (status === 'conge') return 'En congé';
             return 'Non défini';
         }
+const GRAND_DEPLACEMENT_STAFF = [
+    'AMRAOU MOHAMED',
+    'AMRAOU ABDELLAH',
+    'AMRAOU KHALED',
+    'AMRAOU YOUSSEF'
+];
+
+// Options pour présence
+const PRESENCE_OPTIONS = [
+    { id: 'panier_midi', label: 'PANIER MIDI', value: 'panier_midi' },
+    { id: 'repas_restaurant', label: 'REPAS RESTAURANT', value: 'repas_restaurant' },
+    { id: 'hotel_petit_dej', label: 'HOTEL + PETIT DEJ', value: 'hotel_petit_dej' }
+];
+
+// Options pour absence
+const ABSENCE_OPTIONS = [
+    { id: 'abnj', label: 'ABNJ', value: 'ABNJ' },
+    { id: 'am', label: 'AM', value: 'AM' },
+    { id: 'aba', label: 'ABA', value: 'ABA' }
+];
+
+// Fonction pour vérifier si un staff est en grand déplacement permanent
+function isGrandDeplacementStaff(staffName) {
+    return GRAND_DEPLACEMENT_STAFF.includes(staffName.toUpperCase());
+}
 
         // Show present modal
         function showPresentModal(staffId, staffName) {
-            currentPresentStaffId = staffId;
-            presentStaffNameElement.textContent = staffName;
+    currentPresentStaffId = staffId;
+    presentStaffNameElement.textContent = staffName;
 
-            chantierSelect.value = '';
-            hoursWorkedSlider.value = 8;
-            hoursValueDisplay.textContent = '8h';
-            grandDeplacementCheckbox.checked = false;
+    chantierSelect.value = '';
+    hoursWorkedSlider.value = 8;
+    hoursValueDisplay.textContent = '8h';
 
-            presentModal.style.display = 'block';
-        }
+    // Vérifier si c'est un personnel en grand déplacement permanent
+    const isGrandDeplacement = isGrandDeplacementStaff(staffName);
+
+    if (isGrandDeplacement) {
+        // Cocher automatiquement grand déplacement et désactiver la case
+        grandDeplacementCheckbox.checked = true;
+        grandDeplacementCheckbox.disabled = true;
+
+        // Afficher les nouvelles options AUSSI pour le grand déplacement
+        showPresenceOptions();
+
+        // Afficher un message informatif
+        showGrandDeplacementInfo();
+    } else {
+        // Personnel normal
+        grandDeplacementCheckbox.checked = false;
+        grandDeplacementCheckbox.disabled = false;
+
+        // Afficher les nouvelles options
+        showPresenceOptions();
+
+        // Cacher le message grand déplacement
+        hideGrandDeplacementInfo();
+    }
+
+    presentModal.style.display = 'block';
+}
+
 
         // Show absence modal
         function showAbsenceModal(staffId) {
-            currentAbsentStaffId = staffId;
-            absenceReasonInput.value = '';
-            absenceModal.style.display = 'block';
+    currentAbsentStaffId = staffId;
+
+    // Vider le champ texte et le cacher
+    absenceReasonInput.value = '';
+    absenceReasonInput.style.display = 'none';
+
+    // Créer les options radio pour les motifs d'absence
+    createAbsenceOptions();
+
+    absenceModal.style.display = 'block';
+}
+
+        function showPresenceOptions() {
+    let optionsContainer = document.getElementById('presence-options');
+
+    if (!optionsContainer) {
+        // Créer le conteneur d'options s'il n'existe pas
+        optionsContainer = document.createElement('div');
+        optionsContainer.id = 'presence-options';
+        optionsContainer.className = 'presence-options';
+
+        optionsContainer.innerHTML = `
+            <div class="form-group">
+                <label>Options supplémentaires :</label>
+                <div class="checkbox-group">
+                    <div class="checkbox-item">
+                        <input type="checkbox" id="panier-midi" value="panier_midi">
+                        <label for="panier-midi">PANIER MIDI</label>
+                    </div>
+                    <div class="checkbox-item">
+                        <input type="checkbox" id="repas-restaurant" value="repas_restaurant">
+                        <label for="repas-restaurant">REPAS RESTAURANT</label>
+                    </div>
+                    <div class="checkbox-item">
+                        <input type="checkbox" id="hotel-petit-dej" value="hotel_petit_dej">
+                        <label for="hotel-petit-dej">HOTEL + PETIT DEJ</label>
+                    </div>
+                </div>
+            </div>
+        `;
+
+        // Insérer avant les boutons du modal
+        const modalActions = presentModal.querySelector('.modal-actions') ||
+                            presentModal.querySelector('button').parentElement;
+        modalActions.parentNode.insertBefore(optionsContainer, modalActions);
+    }
+
+    optionsContainer.style.display = 'block';
+
+    // Décocher toutes les options
+    optionsContainer.querySelectorAll('input[type="checkbox"]').forEach(cb => {
+        cb.checked = false;
+    });
+}
+
+        function hidePresenceOptions() {
+    const optionsContainer = document.getElementById('presence-options');
+    if (optionsContainer) {
+        optionsContainer.style.display = 'none';
+    }
+}
+
+function showGrandDeplacementInfo() {
+    let infoDiv = document.getElementById('grand-deplacement-info');
+
+    if (!infoDiv) {
+        infoDiv = document.createElement('div');
+        infoDiv.id = 'grand-deplacement-info';
+        infoDiv.className = 'info-message';
+        infoDiv.innerHTML = '✓ Personnel en grand déplacement permanent';
+
+        // Insérer après les heures travaillées
+        const hoursGroup = document.querySelector('#present-modal .slider-container').parentElement;
+        hoursGroup.parentNode.insertBefore(infoDiv, hoursGroup.nextSibling);
+    }
+
+    infoDiv.style.display = 'block';
+}
+
+function hideGrandDeplacementInfo() {
+    const infoDiv = document.getElementById('grand-deplacement-info');
+    if (infoDiv) {
+        infoDiv.style.display = 'none';
+    }
+}
+
+function createAbsenceOptions() {
+    let optionsContainer = document.getElementById('absence-options');
+
+    if (!optionsContainer) {
+        // Créer le conteneur d'options s'il n'existe pas
+        optionsContainer = document.createElement('div');
+        optionsContainer.id = 'absence-options';
+        optionsContainer.className = 'absence-options';
+
+        let optionsHTML = '<div class="form-group"><label>Motif d\'absence :</label><div class="radio-group">';
+
+        ABSENCE_OPTIONS.forEach((option, index) => {
+            optionsHTML += `
+                <div class="radio-item">
+                    <input type="radio" id="absence-${option.value}" name="absence-reason" value="${option.value}" ${index === 0 ? 'checked' : ''}>
+                    <label for="absence-${option.value}">${option.label}</label>
+                </div>
+            `;
+        });
+
+        optionsHTML += '</div></div>';
+        optionsContainer.innerHTML = optionsHTML;
+
+        // Insérer avant les boutons du modal
+        const modalActions = absenceModal.querySelector('.modal-actions') ||
+                            absenceModal.querySelector('button').parentElement;
+        modalActions.parentNode.insertBefore(optionsContainer, modalActions);
+    }
+
+    optionsContainer.style.display = 'block';
+
+    // Sélectionner la première option par défaut
+    const firstRadio = optionsContainer.querySelector('input[type="radio"]');
+    if (firstRadio) {
+        firstRadio.checked = true;
+    }
+}
+
+
+
+function showPresenceOptions() {
+    let optionsContainer = document.getElementById('presence-options');
+
+    if (!optionsContainer) {
+        // Créer le conteneur d'options s'il n'existe pas
+        optionsContainer = document.createElement('div');
+        optionsContainer.id = 'presence-options';
+        optionsContainer.className = 'presence-options';
+
+        optionsContainer.innerHTML = `
+            <div class="form-group">
+                <label>Options supplémentaires :</label>
+                <div class="checkbox-group">
+                    <div class="checkbox-item">
+                        <input type="checkbox" id="panier-midi" value="panier_midi">
+                        <label for="panier-midi">PANIER MIDI</label>
+                    </div>
+                    <div class="checkbox-item">
+                        <input type="checkbox" id="repas-restaurant" value="repas_restaurant">
+                        <label for="repas-restaurant">REPAS RESTAURANT</label>
+                    </div>
+                    <div class="checkbox-item">
+                        <input type="checkbox" id="hotel-petit-dej" value="hotel_petit_dej">
+                        <label for="hotel-petit-dej">HOTEL + PETIT DEJ</label>
+                    </div>
+                </div>
+            </div>
+        `;
+
+        // Insérer avant les boutons du modal
+        const modalActions = presentModal.querySelector('.modal-actions') ||
+                            presentModal.querySelector('button').parentElement;
+        modalActions.parentNode.insertBefore(optionsContainer, modalActions);
+    }
+
+    optionsContainer.style.display = 'block';
+
+    // Décocher toutes les options
+    optionsContainer.querySelectorAll('input[type="checkbox"]').forEach(cb => {
+        cb.checked = false;
+    });
+}
+function hidePresenceOptions() {
+    const optionsContainer = document.getElementById('presence-options');
+    if (optionsContainer) {
+        optionsContainer.style.display = 'none';
+    }
+}
+
+
+        async function confirmPresent(staffId) {
+    const staffName = document.querySelector(`[data-staff-id="${staffId}"]`).dataset.staffName;
+    const chantier = document.getElementById('chantierSelect').value;
+    const hours = document.getElementById('hoursSlider').value;
+    const isGrandDeplacement = isGrandDeplacementStaff(staffName);
+
+    if (!chantier) {
+        showMessage('Veuillez sélectionner un chantier', 'error');
+        return;
+    }
+
+    // Collecter les options cochées (seulement si pas en grand déplacement)
+    let options = [];
+    if (!isGrandDeplacement) {
+        PRESENCE_OPTIONS.forEach(option => {
+            const checkbox = document.getElementById(option.id);
+            if (checkbox && checkbox.checked) {
+                options.push(option.value);
+            }
+        });
+    }
+
+    try {
+        const response = await fetch('/api/mark-present/', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': getCsrfToken()
+            },
+            body: JSON.stringify({
+                staff_id: staffId,
+                chantier_id: chantier,
+                hours_worked: parseFloat(hours),
+                grand_deplacement: isGrandDeplacement,
+                options: options
+            })
+        });
+
+        if (response.ok) {
+            showMessage('Personnel marqué comme présent', 'success');
+            closeModal('presentModal');
+            refreshStaffList();
+        } else {
+            throw new Error('Erreur lors de la mise à jour');
         }
+    } catch (error) {
+        showMessage('Erreur: ' + error.message, 'error');
+    }
+}
+
+// Confirmer absence
+async function confirmAbsent(staffId) {
+    const selectedReason = document.querySelector('input[name="absenceReason"]:checked');
+
+    if (!selectedReason) {
+        showMessage('Veuillez sélectionner un motif d\'absence', 'error');
+        return;
+    }
+
+    try {
+        const response = await fetch('/api/mark-absent/', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': getCsrfToken()
+            },
+            body: JSON.stringify({
+                staff_id: staffId,
+                absence_reason: selectedReason.value
+            })
+        });
+
+        if (response.ok) {
+            showMessage('Personnel marqué comme absent', 'success');
+            closeModal('absenceModal');
+            refreshStaffList();
+        } else {
+            throw new Error('Erreur lors de la mise à jour');
+        }
+    } catch (error) {
+        showMessage('Erreur: ' + error.message, 'error');
+    }
+}
+
+function closeModal(modalId) {
+    const modal = document.getElementById(modalId);
+    if (modal) {
+        modal.remove();
+    }
+}
 
         // API calls for marking attendance
-        async function markStaffPresent(staffId, chantierId, hoursWorked, grandDeplacement) {
-            try {
-                const response = await fetch('/api/mark-fixed-team-present/', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'X-CSRFToken': csrftoken
-                    },
-                    body: JSON.stringify({
-                        staff_id: staffId,
-                        chantier_id: chantierId,
-                        hours_worked: hoursWorked,
-                        grand_deplacement: grandDeplacement
-                    })
-                });
-
-                const data = await response.json();
-                if (data.success) {
-                    showMessage(data.message, 'success');
-                    await refreshData();
-                } else {
-                    showMessage(data.message, 'error');
-                }
-            } catch (error) {
-                showMessage('Erreur lors de la mise à jour', 'error');
-            }
-        }
-
         async function markStaffAbsent(staffId, reason) {
-            try {
-                const response = await fetch('/api/mark-fixed-team-absent/', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'X-CSRFToken': csrftoken
-                    },
-                    body: JSON.stringify({
-                        staff_id: staffId,
-                        reason: reason
-                    })
-                });
+    // Utiliser la raison sélectionnée via radio button
+    const selectedReason = document.querySelector('input[name="absence-reason"]:checked');
+    const actualReason = selectedReason ? selectedReason.value : reason;
 
-                const data = await response.json();
-                if (data.success) {
-                    showMessage(data.message, 'success');
-                    await refreshData();
-                } else {
-                    showMessage(data.message, 'error');
-                }
-            } catch (error) {
-                showMessage('Erreur lors de la mise à jour', 'error');
-            }
+    try {
+        const response = await fetch('/api/mark-fixed-team-absent/', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': csrftoken
+            },
+            body: JSON.stringify({
+                staff_id: staffId,
+                absence_reason: actualReason
+            })
+        });
+
+        const data = await response.json();
+        if (data.success) {
+            showMessage(data.message, 'success');
+            renderAllTeams();
+        } else {
+            showMessage(data.message, 'error');
         }
+    } catch (error) {
+        showMessage('Erreur lors de la mise à jour', 'error');
+    }
+}
+
+        async function markStaffPresent(staffId, chantierId, hoursWorked, grandDeplacement) {
+    // Collecter les nouvelles options pour TOUS les types de personnel
+    let options = [];
+    const optionsContainer = document.getElementById('presence-options');
+    if (optionsContainer) {
+        optionsContainer.querySelectorAll('input[type="checkbox"]:checked').forEach(cb => {
+            options.push(cb.value);
+        });
+    }
+
+    try {
+        const response = await fetch('/api/mark-fixed-team-present/', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': csrftoken
+            },
+            body: JSON.stringify({
+                staff_id: staffId,
+                chantier_id: chantierId,
+                hours_worked: hoursWorked,
+                grand_deplacement: grandDeplacement,
+                presence_options: options  // Nouvelles options pour tous
+            })
+        });
+
+        const data = await response.json();
+        if (data.success) {
+            showMessage(data.message, 'success');
+            renderAllTeams();
+        } else {
+            showMessage(data.message, 'error');
+        }
+    } catch (error) {
+        showMessage('Erreur lors de la mise à jour', 'error');
+    }
+}
 
         async function markStaffConge(staffId) {
             try {
@@ -1216,19 +1736,38 @@ body {
         }
 
         // Show message
-        function showMessage(text, type) {
-            messageElement.textContent = text;
-            messageElement.className = 'message ' + type;
-            messageElement.style.display = 'block';
-            messageElement.classList.add('show');
+        function showMessage(message, type) {
+    const messageDiv = document.createElement('div');
+    messageDiv.className = `message ${type}`;
+    messageDiv.textContent = message;
+    messageDiv.style.cssText = `
+        position: fixed;
+        top: 20px;
+        right: 20px;
+        padding: 15px 20px;
+        border-radius: 4px;
+        z-index: 1000;
+        color: white;
+        font-weight: 500;
+        ${type === 'success' ? 'background-color: #27ae60;' : 'background-color: #e74c3c;'}
+    `;
 
-            setTimeout(function() {
-                messageElement.classList.remove('show');
-                setTimeout(function() {
-                    messageElement.style.display = 'none';
-                }, 300);
-            }, 3000);
-        }
+    document.body.appendChild(messageDiv);
+
+    setTimeout(() => {
+        messageDiv.remove();
+    }, 3000);
+}
+
+function getCsrfToken() {
+    return document.querySelector('[name=csrfmiddlewaretoken]').value;
+}
+
+function refreshStaffList() {
+    // Cette fonction rechargera la liste du personnel
+    location.reload();
+}
+
 
         // Initialize
         init();
