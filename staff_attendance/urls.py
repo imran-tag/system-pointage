@@ -71,4 +71,8 @@ urlpatterns = [
     path('api/mark-fixed-team-absent/', views.mark_fixed_team_absent, name='mark_fixed_team_absent'),
     path('api/mark-fixed-team-conge/', views.mark_fixed_team_conge, name='mark_fixed_team_conge'),
 path('api/departments-data/', views.get_departments_data, name='get_departments_data'),
+
+path('api/generate-excel-history/', views.generate_excel_history_protected, name='generate_excel_history_protected'),
+
+
 ]

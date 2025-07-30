@@ -1614,7 +1614,7 @@ async function confirmAbsent(staffId) {
             },
             body: JSON.stringify({
                 staff_id: staffId,
-                absence_reason: selectedReason.value
+                reason: selectedReason.value
             })
         });
 
@@ -1652,7 +1652,7 @@ function closeModal(modalId) {
             },
             body: JSON.stringify({
                 staff_id: staffId,
-                absence_reason: actualReason
+                reason: actualReason
             })
         });
 

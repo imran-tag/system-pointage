@@ -11,17 +11,38 @@ from django.contrib.auth import authenticate, login, logout
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.models import User
 
+import openpyxl
+from openpyxl.styles import Font, PatternFill, Alignment, Border, Side
+from openpyxl.worksheet.protection import SheetProtection
+from openpyxl.workbook.protection import WorkbookProtection
+from django.http import HttpResponse
+from io import BytesIO
+import datetime
+
 from .models import City, StaffMember, Attendance, CongeReservation, Zone, UserProfile
 
 # Generate PDF
 from reportlab.pdfgen import canvas
-from reportlab.lib.pagesizes import A4
+from reportlab.lib.pagesizes import A4, landscape
 from reportlab.lib import colors
 from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph, Spacer
-from reportlab.lib.styles import getSampleStyleSheet
+from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
+from reportlab.lib.units import cm
 from io import BytesIO
+import calendar
+import locale
 
+MOIS_FRANCAIS = {
+    1: 'Janvier', 2: 'Février', 3: 'Mars', 4: 'Avril',
+    5: 'Mai', 6: 'Juin', 7: 'Juillet', 8: 'Août',
+    9: 'Septembre', 10: 'Octobre', 11: 'Novembre', 12: 'Décembre'
+}
 
+# Dictionnaire des jours en français
+JOURS_FRANCAIS = {
+    'Monday': 'Lundi', 'Tuesday': 'Mardi', 'Wednesday': 'Mercredi',
+    'Thursday': 'Jeudi', 'Friday': 'Vendredi', 'Saturday': 'Samedi', 'Sunday': 'Dimanche'
+}
 def login_view(request):
     """Handle user login"""
     # If user is already authenticated, redirect to attendance page
@@ -1913,6 +1934,33 @@ def verify_admin(request):
     return JsonResponse({'success': False, 'message': 'Méthode non autorisée'}, status=405)
 
 
+# Fonctions PDF améliorées et simplifiées
+# À remplacer dans votre views.py
+
+from reportlab.pdfgen import canvas
+from reportlab.lib.pagesizes import A4, landscape
+from reportlab.lib import colors
+from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph, Spacer
+from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
+from reportlab.lib.units import cm
+from io import BytesIO
+import calendar
+import locale
+
+# Dictionnaire des mois en français
+MOIS_FRANCAIS = {
+    1: 'Janvier', 2: 'Février', 3: 'Mars', 4: 'Avril',
+    5: 'Mai', 6: 'Juin', 7: 'Juillet', 8: 'Août',
+    9: 'Septembre', 10: 'Octobre', 11: 'Novembre', 12: 'Décembre'
+}
+
+# Dictionnaire des jours en français
+JOURS_FRANCAIS = {
+    'Monday': 'Lundi', 'Tuesday': 'Mardi', 'Wednesday': 'Mercredi',
+    'Thursday': 'Jeudi', 'Friday': 'Vendredi', 'Saturday': 'Samedi', 'Sunday': 'Dimanche'
+}
+
+
 @csrf_exempt
 def generate_pdf(request):
     """API endpoint to generate a daily PDF report of attendance in landscape format"""
@@ -2513,6 +2561,269 @@ def generate_history_pdf(request):
             return JsonResponse({'success': False, 'message': str(e)}, status=500)
 
     return JsonResponse({'success': False, 'message': 'Méthode non autorisée'}, status=405)
+
+
+
+# Solutions pour améliorer la lisibilité du PDF historique mensuel
+
+@csrf_exempt
+def generate_excel_history_protected(request):
+    """Excel historique mensuel avec protection"""
+    if request.method == 'POST':
+        try:
+            # Récupération des paramètres
+            data = json.loads(request.body) if request.body else {}
+            month = int(data.get('month', timezone.now().date().month))
+            year = int(data.get('year', timezone.now().date().year))
+
+            # Calcul des dates
+            start_date = datetime.date(year, month, 1)
+            last_day = calendar.monthrange(year, month)[1]
+            end_date = datetime.date(year, month, last_day)
+
+            # Récupération des données
+            staff_members = StaffMember.objects.select_related('city').all()
+            attendances = Attendance.objects.filter(
+                date__gte=start_date, date__lte=end_date
+            ).order_by('staff_member__name', 'date')
+
+            # Organisation des données
+            staff_data = {}
+            for staff in staff_members:
+                staff_data[staff.id] = {'staff': staff, 'attendances': {}}
+            for attendance in attendances:
+                staff_data[attendance.staff_member_id]['attendances'][attendance.date] = attendance
+
+            # Création du workbook
+            wb = openpyxl.Workbook()
+            ws = wb.active
+
+            mois_fr = MOIS_FRANCAIS.get(month, str(month))
+            ws.title = f"{mois_fr} {year}"
+
+            # Fonction pour convertir un numéro de colonne en lettre Excel
+            def get_excel_column(col_num):
+                """Convertit un numéro de colonne en lettre Excel (1->A, 27->AA, etc.)"""
+                result = ""
+                while col_num > 0:
+                    col_num -= 1
+                    result = chr(65 + (col_num % 26)) + result
+                    col_num //= 26
+                return result
+
+            # Calculer la dernière colonne
+            total_columns = 2 + last_day + 3  # Personnel + Chantier + jours + 3 totaux
+            last_column = get_excel_column(total_columns)
+
+            # Styles avec polices plus grandes pour Excel
+            header_font = Font(bold=True, color="FFFFFF", size=12)  # Plus grand
+            header_fill = PatternFill(start_color="1F4E79", end_color="1F4E79", fill_type="solid")
+            present_font = Font(color="006400", bold=True, size=11)  # Vert foncé, plus grand
+            absent_font = Font(color="DC143C", bold=True, size=10)  # Rouge foncé, plus grand
+            conge_font = Font(color="808080", size=10)  # Gris, plus grand
+            grand_dep_font = Font(color="0000FF", bold=True, size=11)  # Bleu, plus grand
+            border = Border(
+                left=Side(style='thin'),
+                right=Side(style='thin'),
+                top=Side(style='thin'),
+                bottom=Side(style='thin')
+            )
+
+            # Titre - Plus grand et plus visible
+            ws.merge_cells(f'A1:{last_column}1')
+            title_cell = ws.cell(row=1, column=1, value=f"Historique des Présences - {mois_fr} {year}")
+            title_cell.font = Font(bold=True, size=18, color="1F4E79")  # Plus grand et coloré
+            title_cell.alignment = Alignment(horizontal="center", vertical="center")
+
+            # Ajuster la hauteur de la ligne du titre
+            ws.row_dimensions[1].height = 25
+
+            # En-têtes avec plus d'espace
+            headers = ["Personnel", "Chantier"]
+            for day in range(1, last_day + 1):
+                headers.append(str(day))
+            headers.extend(["Total Présences", "Total Absences" ])
+
+            for col, header in enumerate(headers, 1):
+                cell = ws.cell(row=3, column=col, value=header)
+                cell.font = header_font
+                cell.fill = header_fill
+                cell.alignment = Alignment(horizontal="center", vertical="center")
+                cell.border = border
+
+            # Ajuster la hauteur de la ligne d'en-tête
+            ws.row_dimensions[3].height = 20
+
+            # Données par personnel
+            row = 4
+            for staff_id, staff_info in staff_data.items():
+                staff = staff_info['staff']
+                attendances_dict = staff_info['attendances']
+
+                # Nom du personnel - CASE BLEUE pour grand déplacement
+                has_grand_deplacement = any(att.grand_deplacement for att in attendances_dict.values() if att.present)
+                name_cell = ws.cell(row=row, column=1, value=staff.name)
+                name_cell.font = Font(size=11)  # Nom normal
+                if has_grand_deplacement:
+                    # CASE BLEUE pour grand déplacement
+                    name_cell.fill = PatternFill(start_color="ADD8E6", end_color="ADD8E6", fill_type="solid")
+                name_cell.border = border
+                name_cell.alignment = Alignment(vertical="center")
+
+                # Chantier avec police plus grande
+                chantier = staff.city.name if staff.city else "N/A"
+                chantier_cell = ws.cell(row=row, column=2, value=chantier)
+                chantier_cell.font = Font(size=10)  # Police plus grande
+                chantier_cell.border = border
+                chantier_cell.alignment = Alignment(vertical="center")
+
+                # Statuts par jour
+                present_count = absent_count  = 0
+
+                for day in range(1, last_day + 1):
+                    current_date = datetime.date(year, month, day)
+                    attendance = attendances_dict.get(current_date)
+                    col = day + 2  # Décalage pour Personnel et Chantier
+
+                    if attendance:
+                        if attendance.present:
+                            cell = ws.cell(row=row, column=col, value="PRÉSENT")
+                            # CASE VERTE avec texte blanc pour présent
+                            cell.fill = PatternFill(start_color="27AE60", end_color="27AE60", fill_type="solid")  # Vert
+                            cell.font = Font(color="FFFFFF", bold=True, size=8)  # Blanc
+                            present_count += 1
+
+                        elif attendance.absence_reason == 'CONGE_STATUS':
+                            cell = ws.cell(row=row, column=col, value="CONGÉ")
+                            # CASE VIOLETTE avec texte blanc pour congé
+                            cell.fill = PatternFill(start_color="8E44AD", end_color="8E44AD",
+                                                    fill_type="solid")  # Violet
+                            cell.font = Font(color="FFFFFF", bold=True, size=8)  # Blanc
+                        elif attendance.present is False and attendance.absence_reason in ['ABNJ', 'AM', 'ABA']:
+                            # AFFICHER LE TYPE D'ABSENCE EXACT avec case rouge et texte blanc
+                            cell = ws.cell(row=row, column=col, value=attendance.absence_reason)
+                            cell.fill = PatternFill(start_color="E74C3C", end_color="E74C3C",
+                                                    fill_type="solid")  # Rouge
+                            cell.font = Font(color="FFFFFF", bold=True, size=8)  # Blanc
+                            absent_count += 1
+                        elif attendance.present is False:
+                            # Si absent mais pas de raison spécifique - case rouge
+                            cell = ws.cell(row=row, column=col, value="ABSENT")
+                            cell.fill = PatternFill(start_color="E74C3C", end_color="E74C3C",
+                                                    fill_type="solid")  # Rouge
+                            cell.font = Font(color="FFFFFF", bold=True, size=8)  # Blanc
+                            absent_count += 1
+                        else:
+                            cell = ws.cell(row=row, column=col, value="-")
+                            cell.font = Font(size=8, color="666666")
+                    else:
+                        cell = ws.cell(row=row, column=col, value="-")
+                        cell.font = Font(size=8, color="666666")
+
+                    cell.alignment = Alignment(horizontal="center", vertical="center")
+                    cell.border = border
+
+                # Totaux avec police plus grande
+                total_p_cell = ws.cell(row=row, column=last_day + 3, value=present_count)
+                total_p_cell.alignment = Alignment(horizontal="center", vertical="center")
+                total_p_cell.border = border
+                total_p_cell.font = Font(bold=True, size=10)
+
+                total_a_cell = ws.cell(row=row, column=last_day + 4, value=absent_count)
+                total_a_cell.alignment = Alignment(horizontal="center", vertical="center")
+                total_a_cell.border = border
+                total_a_cell.font = Font(bold=True, size=10)
+
+
+
+                row += 1
+
+            # Ajustement des colonnes - ADAPTATION AUTOMATIQUE À LA LONGUEUR
+            ws.column_dimensions['A'].width = 25  # Personnel
+            ws.column_dimensions['B'].width = 20  # Chantier
+
+            # Jours du mois - Largeur adaptative selon le contenu
+            for day in range(1, last_day + 1):
+                col_letter = get_excel_column(day + 2)
+                # Largeur pour accommoder "PRÉSENT" (8 chars) et "ABNJ" (4 chars)
+                ws.column_dimensions[col_letter].width = 8
+
+            # Colonnes totaux
+            for i in range(3):
+                col_letter = get_excel_column(last_day + 3 + i)
+                ws.column_dimensions[col_letter].width = 10
+
+            # AJUSTEMENT AUTOMATIQUE - Parcourir toutes les cellules pour adapter
+            for col in range(3, last_day + 3):  # Colonnes des jours
+                max_length = 0
+                col_letter = get_excel_column(col)
+
+                for row_num in range(3, row):  # De la ligne d'en-tête aux données
+                    cell_value = ws.cell(row=row_num, column=col).value
+                    if cell_value:
+                        max_length = max(max_length, len(str(cell_value)))
+
+                # Ajuster la largeur avec une marge
+                ws.column_dimensions[col_letter].width = max(max_length + 2, 6)
+
+            # PROTECTION COMPLÈTE
+            ws.protection = SheetProtection(
+                password='admin123',
+                sheet=True,
+                objects=True,
+                scenarios=True,
+                formatCells=False,
+                formatColumns=False,
+                formatRows=False,
+                insertColumns=False,
+                insertRows=False,
+                deleteColumns=False,
+                deleteRows=False,
+                selectLockedCells=True,
+                sort=False,
+                autoFilter=False
+            )
+
+            wb.security = WorkbookProtection(
+                workbookPassword='admin123',
+                lockStructure=True,
+                lockWindows=True
+            )
+
+            # Légende mise à jour avec les nouvelles couleurs
+            legend_row = row + 1
+            ws.merge_cells(f'A{legend_row}:{last_column}{legend_row}')
+            legend_cell = ws.cell(row=legend_row, column=1,
+                                  value="🟢 VERT = Présent | 🔴 ROUGE = Absent/ABNJ/AM/ABA | 🟣 VIOLET = Congé | - = Pas de données | 🔵 CASE BLEUE = Grands déplacements")
+            legend_cell.font = Font(italic=True, size=11, color="555555")
+            legend_cell.alignment = Alignment(horizontal="center", vertical="center")
+            ws.row_dimensions[legend_row].height = 20
+
+            # Sauvegarde
+            buffer = BytesIO()
+            wb.save(buffer)
+            buffer.seek(0)
+
+            response = HttpResponse(
+                buffer.getvalue(),
+                content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+            )
+            filename = f'historique-{mois_fr.lower()}-{year}.xlsx'
+            response['Content-Disposition'] = f'attachment; filename="{filename}"'
+
+            return response
+
+        except Exception as e:
+            return JsonResponse({'success': False, 'message': str(e)}, status=500)
+
+    return JsonResponse({'success': False, 'message': 'Méthode non autorisée'}, status=405)
+
+
+
+# UTILISATION: Dans la fonction principale, décommentez l'option que vous préférez :
+# Option 1: Ultra-compact mais tout sur une page
+# Option 2: Par semaines (plus lisible, plusieurs pages)
+# Option 3: Résumé avec statistiques (le plus clair)
 
 
 

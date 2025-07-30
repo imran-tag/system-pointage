@@ -566,6 +566,8 @@ body {
     <div class="nav-buttons">
         <a href="{% url 'staff_attendance:attendance_page' %}" class="button nav-button">Retour à la page de présence</a>
         <button id="generate-pdf" class="button pdf-button">Générer PDF</button>
+        <button onclick="generateExcelHistory()" class="button">Excel Historique</button>
+
     </div>
 
     <div class="card">
@@ -808,6 +810,78 @@ body {
             const monthName = currentMonthData.month_name || 'Mois';
             currentPeriodElement.textContent = `${monthName} ${currentYear}`;
         }
+
+        async function generateExcelHistory() {
+    try {
+        showMessage('Génération de l\'Excel historique en cours...', 'info');
+
+        const response = await fetch('/api/generate-excel-history/', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': getCsrfToken() // ou csrftoken selon votre template
+            },
+            body: JSON.stringify({
+                month: currentMonth, // Variable globale de votre page historique
+                year: currentYear    // Variable globale de votre page historique
+            })
+        });
+
+        if (response.ok) {
+            // Créer un blob depuis la réponse Excel
+            const blob = await response.blob();
+
+            // Créer un lien pour télécharger
+            const downloadUrl = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = downloadUrl;
+
+            // Nom de fichier avec mois/année sélectionnés
+            const moisNoms = [
+                '', 'janvier', 'février', 'mars', 'avril', 'mai', 'juin',
+                'juillet', 'août', 'septembre', 'octobre', 'novembre', 'décembre'
+            ];
+            const moisNom = moisNoms[currentMonth] || currentMonth;
+            a.download = `historique-${moisNom}-${currentYear}.xlsx`;
+
+            document.body.appendChild(a);
+            a.click();
+
+            // Nettoyage
+            window.URL.revokeObjectURL(downloadUrl);
+            document.body.removeChild(a);
+
+            showMessage('Excel historique généré avec succès !', 'success');
+        } else {
+            const errorData = await response.json();
+            showMessage(errorData.message || 'Erreur lors de la génération de l\'Excel historique', 'error');
+        }
+    } catch (error) {
+        showMessage('Erreur lors de la génération de l\'Excel historique', 'error');
+        console.error('Error generating Excel history:', error);
+    }
+}
+
+// Fonction utilitaire pour récupérer le token CSRF
+function getCsrfToken() {
+    // Méthode 1: depuis un cookie
+    const cookieValue = document.cookie
+        .split('; ')
+        .find(row => row.startsWith('csrftoken='))
+        ?.split('=')[1];
+
+    if (cookieValue) return cookieValue;
+
+    // Méthode 2: depuis un meta tag
+    const csrfMeta = document.querySelector('meta[name="csrf-token"]');
+    if (csrfMeta) return csrfMeta.getAttribute('content');
+
+    // Méthode 3: depuis une variable globale (si vous l'avez définie)
+    if (typeof csrftoken !== 'undefined') return csrftoken;
+
+    console.warn('CSRF token not found');
+    return '';
+}
 
         // Update statistics display
         function updateStatsDisplay() {
