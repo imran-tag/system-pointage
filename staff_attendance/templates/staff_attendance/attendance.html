@@ -72,7 +72,224 @@ body.dark-mode {
     justify-content: center;
     margin-bottom: 20px;
 }
+/* TREE STYLES - Replace all existing tree CSS with this */
 
+/* Base tree container */
+.tree-container {
+    padding: 0;
+    margin: 0;
+    list-style: none;
+}
+
+.tree-item {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+}
+
+/* Zone styling */
+.zone-item {
+    background: var(--bg-color);
+    border-bottom: 1px solid var(--border-color);
+    transition: all 0.3s ease;
+}
+
+.zone-header {
+    display: flex;
+    align-items: center;
+    padding: 12px 15px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    user-select: none;
+    background: var(--city-group-bg);
+    border-radius: 6px;
+    margin-bottom: 2px;
+}
+
+.zone-header:hover {
+    background: var(--drag-hover);
+    transform: translateX(2px);
+}
+
+/* Expand icon */
+.expand-icon {
+    margin-right: 10px;
+    font-size: 14px;
+    width: 20px;
+    height: 20px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: transform 0.3s ease;
+    background: rgba(0,0,0,0.1);
+    border-radius: 3px;
+    color: var(--button-primary);
+    font-weight: bold;
+}
+
+.expand-icon.expanded {
+    transform: rotate(90deg);
+    background: var(--button-primary);
+    color: white;
+}
+
+/* Zone icon and text */
+.zone-icon {
+    margin-right: 10px;
+    font-size: 18px;
+}
+
+.zone-name {
+    font-weight: 600;
+    font-size: 16px;
+    flex: 1;
+}
+
+.zone-info {
+    font-size: 12px;
+    opacity: 0.8;
+    background: rgba(0,0,0,0.1);
+    padding: 4px 8px;
+    border-radius: 12px;
+    margin-left: 10px;
+}
+
+/* Chantiers list */
+.chantiers-list {
+    background: #f8f9fa;
+    border-left: 3px solid var(--button-primary);
+    margin: 0 0 10px 25px;
+    padding: 0;
+    list-style: none;
+    display: none;
+    border-radius: 0 6px 6px 0;
+    overflow: hidden;
+}
+
+.chantiers-list.expanded {
+    display: block;
+    animation: slideDown 0.3s ease;
+}
+
+@keyframes slideDown {
+    from {
+        opacity: 0;
+        max-height: 0;
+    }
+    to {
+        opacity: 1;
+        max-height: 1000px;
+    }
+}
+
+/* Chantier items */
+.chantier-item {
+    padding: 10px 15px !important;
+    border-bottom: 1px solid var(--border-color) !important;
+    cursor: pointer !important;
+    transition: all 0.3s ease !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: space-between !important;
+    list-style: none !important;
+    background: var(--bg-color) !important;
+    margin: 1px 0 !important;
+    border-radius: 0 !important;
+    border-left: none !important;
+    border-right: none !important;
+    border-top: none !important;
+}
+
+.chantier-item:hover {
+    background: var(--drag-hover) !important;
+    transform: translateX(5px) !important;
+    border-left: 4px solid var(--button-primary) !important;
+}
+
+.chantier-item.active {
+    background: var(--button-primary) !important;
+    color: var(--button-primary) !important;
+    border-left: 4px solid #2c3e50 !important;
+    font-weight: 600 !important;
+}
+
+/* Chantier content */
+.chantier-content {
+    display: flex;
+    align-items: center;
+    flex: 1;
+}
+
+.chantier-icon {
+    margin-right: 10px;
+    font-size: 16px;
+    opacity: 0.7;
+}
+
+.chantier-name {
+    font-weight: 500;
+    font-size: 14px;
+    flex: 1;
+}
+
+.chantier-staff-count {
+    font-size: 11px;
+    opacity: 0.8;
+    background: rgba(0,0,0,0.1);
+    padding: 3px 8px;
+    border-radius: 12px;
+    margin-left: 10px;
+}
+
+.chantier-item.active .chantier-staff-count {
+    background: rgba(255,255,255,0.3);
+}
+
+/* Action buttons */
+.chantier-actions {
+    opacity: 0;
+    display: flex;
+    gap: 5px;
+    transition: opacity 0.3s ease;
+}
+
+.chantier-item:hover .chantier-actions,
+.chantier-item.active .chantier-actions {
+    opacity: 1;
+}
+
+.action-btn {
+    background: rgba(0,0,0,0.1);
+    border: none;
+    cursor: pointer;
+    padding: 6px 8px;
+    border-radius: 4px;
+    font-size: 12px;
+    width: 28px;
+    height: 28px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.action-btn:hover {
+    background: rgba(0,0,0,0.2);
+}
+
+/* Toggle button */
+.toggle-all-btn {
+    background: transparent;
+    color: white;
+    border: 1px solid rgba(255,255,255,0.3);
+    padding: 6px 12px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 12px;
+}
+
+.toggle-all-btn:hover {
+    background: rgba(255,255,255,0.1);
+}
 .switch {
     position: relative;
     display: inline-block;
@@ -85,6 +302,19 @@ body.dark-mode {
     opacity: 0;
     width: 0;
     height: 0;
+}
+
+.empty-state {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    height: 200px;
+    color: #666;
+    font-size: 16px;
+    font-style: italic;
+    text-align: center;
+    padding: 20px;
 }
 
 .slider {
@@ -213,11 +443,8 @@ body {
     align-items: center;
 }
 
-.city-list {
-    list-style: none;
-    padding: 0;
-    margin: 0;
-}
+
+
 
 .city-item {
     padding: 12px 16px;
@@ -949,225 +1176,6 @@ body {
         max-height: 60vh;
     }
 
-    .staff-item {
-        flex-direction: column;
-        align-items: stretch;
-        gap: 12px;
-        padding: 16px;
-    }
-
-    .staff-info {
-        min-width: auto;
-        text-align: center;
-    }
-
-    .staff-name {
-        justify-content: center;
-        font-size: 18px;
-    }
-
-    .attendance-actions {
-        justify-content: center;
-        gap: 10px;
-    }
-
-    .attendance-actions .button {
-        flex: 1;
-        min-width: 60px;
-    }
-
-    .staff-panel-header {
-        flex-direction: column;
-        align-items: stretch;
-        gap: 15px;
-    }
-
-    .attendance-controls {
-        justify-content: center;
-        flex-wrap: wrap;
-    }
-
-    .city-item {
-        flex-direction: column;
-        align-items: stretch;
-    }
-
-    .city-actions {
-        opacity: 1;
-        margin-top: 10px;
-        justify-content: center;
-    }
-    /* Zone-specific styles for zones view */
-.zone-item {
-    background: linear-gradient(135deg, var(--city-group-bg) 0%, var(--card-bg) 100%);
-    border-left: 4px solid var(--button-primary);
-    border-radius: 8px;
-    position: relative;
-    overflow: hidden;
-}
-
-.zone-item::before {
-    content: '';
-    position: absolute;
-    top: 0;
-    left: 0;
-    right: 0;
-    height: 2px;
-    background: linear-gradient(90deg, var(--button-primary), transparent);
-    opacity: 0.6;
-}
-
-.zone-item:hover {
-    background: linear-gradient(135deg, var(--drag-hover) 0%, var(--city-group-bg) 100%);
-    transform: translateY(-2px);
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
-    border-left-color: var(--button-primary-hover);
-}
-
-.zone-item.active {
-    background: linear-gradient(135deg, var(--button-primary) 0%, var(--button-primary-hover) 100%);
-    color: white;
-    border-left-color: white;
-    box-shadow: 0 6px 20px rgba(52, 152, 219, 0.3);
-}
-
-.zone-item .city-content::before {
-    content: '🗺️';
-    display: inline-block;
-    margin-right: 8px;
-    font-size: 16px;
-    opacity: 0.8;
-}
-
-.zone-item .city-name {
-    font-weight: 600;
-    font-size: 17px;
-    letter-spacing: 0.3px;
-}
-
-.zone-item .staff-count {
-    font-size: 13px;
-    opacity: 0.9;
-    font-weight: 500;
-}
-
-/* Navigation button styles */
-.nav-button-small {
-    background: var(--button-primary);
-    color: white;
-    border: none;
-    padding: 8px 12px;
-    border-radius: 4px;
-    cursor: pointer;
-    font-size: 14px;
-    transition: background-color 0.3s;
-    margin-left: 10px;
-}
-
-.nav-button-small:hover {
-    background: var(--button-primary-hover);
-}
-
-/* PDF Download Button */
-.pdf-download-btn {
-    background: linear-gradient(135deg, #28a745, #218838);
-    color: white;
-    border: none;
-    padding: 12px 20px;
-    border-radius: 6px;
-    cursor: pointer;
-    font-size: 14px;
-    font-weight: 600;
-    transition: all 0.3s ease;
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    box-shadow: 0 2px 8px rgba(40, 167, 69, 0.2);
-    text-decoration: none;
-}
-
-.pdf-download-btn::before {
-    content: '📊';
-    font-size: 16px;
-}
-
-.pdf-download-btn:hover {
-    background: linear-gradient(135deg, #218838, #28a745);
-    transform: translateY(-2px);
-    box-shadow: 0 4px 16px rgba(40, 167, 69, 0.3);
-}
-
-.pdf-download-btn.loading {
-    background: var(--button-disabled);
-    cursor: not-allowed;
-    transform: none;
-    box-shadow: none;
-}
-
-.pdf-download-btn.loading::before {
-    content: '⏳';
-    animation: pulse 1.5s infinite;
-}
-
-.pdf-download-btn.success {
-    background: var(--button-success);
-}
-
-.pdf-download-btn.success::before {
-    content: '✅';
-}
-
-@keyframes pulse {
-    0%, 100% { opacity: 1; }
-    50% { opacity: 0.5; }
-}
-
-/* Zone breadcrumb navigation */
-.zone-breadcrumb {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-}
-
-.zone-breadcrumb .back-link {
-    color: var(--button-primary);
-    text-decoration: none;
-    font-weight: 500;
-    transition: color 0.3s ease;
-    display: flex;
-    align-items: center;
-    gap: 4px;
-}
-
-.zone-breadcrumb .back-link:hover {
-    color: var(--button-primary-hover);
-}
-
-/* Select dropdown for zone selection */
-.select {
-    width: 100%;
-    padding: 8px;
-    border: 1px solid var(--border-color);
-    border-radius: 4px;
-    box-sizing: border-box;
-    color: var(--text-color);
-    background-color: var(--select-bg);
-}
-
-/* Dark mode adjustments for zones */
-body.dark-mode .zone-item {
-    background: linear-gradient(135deg, var(--city-group-bg) 0%, #333 100%);
-    border-left-color: var(--button-primary);
-}
-
-body.dark-mode .zone-item:hover {
-    background: linear-gradient(135deg, var(--drag-hover) 0%, var(--city-group-bg) 100%);
-}
-
-body.dark-mode .zone-item.active {
-    background: linear-gradient(135deg, var(--button-primary) 0%, var(--button-primary-hover) 100%);
-    box-shadow: 0 6px 20px rgba(41, 128, 185, 0.4);
-}
 }
     </style>
 </head>
@@ -1209,52 +1217,55 @@ body.dark-mode .zone-item.active {
     <div id="message" class="message" style="display: none;"></div>
 
     <div class="container">
-        <div class="cities-panel">
-            <div class="panel-title">
-                <span id="panel-title-text">Zones</span>
-                <div>
-                    <button id="toggle-view-btn" class="nav-button-small" title="Basculer entre zones et chantiers">🔄</button>
-                    <button id="add-city-btn" class="add-city-btn" title="Ajouter un chantier">+</button>
-                </div>
+    <!-- Explorer Tree Panel -->
+    <div class="cities-panel">
+        <div class="panel-title">
+            <span>Zones & Chantiers</span>
+            <div>
+                <button class="toggle-all-btn" onclick="toggleAllZones()">Tout Ouvrir/Fermer</button>
+                <button id="add-city-btn" class="add-city-btn" title="Ajouter un chantier">+</button>
             </div>
-            <ul class="city-list" id="city-list">
-                <!-- Zones or Cities will be populated here -->
-            </ul>
         </div>
+        <ul class="tree-container" id="tree-container">
+            <!-- Tree will be populated here -->
+        </ul>
+    </div>
 
-        <div class="staff-panel">
-            <div class="staff-panel-header">
-                <h2 class="panel-title" id="staff-panel-title">Personnel</h2>
-                <div class="attendance-controls" id="attendance-controls" style="display: none;">
-                    <button id="mark-city-present" class="button success">Marquer Tous Présents</button>
-                    <button id="admin-modify" class="button admin">Mode Admin</button>
-                    <div id="admin-mode-indicator" class="admin-indicator" style="display: none;">
-                        <span>Mode Admin Actif</span>
-                        <button id="exit-admin-mode" class="button exit-admin">Quitter</button>
-                    </div>
-                </div>
-            </div>
-            <div class="current-date" id="current-date" style="display: none;"></div>
-            <div class="staff-list" id="staff-list">
-                <div class="empty-state">
-                    Sélectionnez un chantier pour voir son personnel
+    <!-- Personnel Panel (keep your existing structure) -->
+    <div class="staff-panel">
+        <div class="staff-panel-header">
+            <h2 class="panel-title" id="staff-panel-title">Personnel</h2>
+            <div class="attendance-controls" id="attendance-controls" style="display: none;">
+                <button id="mark-city-present" class="button success">Marquer Tous Présents</button>
+                <button id="admin-modify" class="button admin">Mode Admin</button>
+                <div id="admin-mode-indicator" class="admin-indicator" style="display: none;">
+                    <span>Mode Admin Actif</span>
+                    <button id="exit-admin-mode" class="button exit-admin">Quitter</button>
                 </div>
             </div>
         </div>
-
-        <div class="conge-panel" id="conge-panel">
-            <h2 class="conge-title">Congé</h2>
-            <div class="conge-icon">🏖️</div>
-            <div class="conge-list" id="conge-list">
-                <div class="conge-empty">
-                    <div>Aucun personnel en congé</div>
-                </div>
-            </div>
-            <div class="conge-instructions">
-                Glissez le personnel ici pour le mettre en congé aujourd'hui uniquement
+        <div class="current-date" id="current-date" style="display: none;"></div>
+        <div class="staff-list" id="staff-list">
+            <div class="empty-state">
+                👈 Sélectionnez un chantier pour voir son personnel
             </div>
         </div>
     </div>
+
+    <!-- Congé Panel (keep your existing structure) -->
+    <div class="conge-panel" id="conge-panel">
+        <h2 class="conge-title">Congé</h2>
+        <div class="conge-icon">🏖️</div>
+        <div class="conge-list" id="conge-list">
+            <div class="conge-empty">
+                <div>Aucun personnel en congé</div>
+            </div>
+        </div>
+        <div class="conge-instructions">
+            Glissez le personnel ici pour le mettre en congé aujourd'hui uniquement
+        </div>
+    </div>
+</div>
 
     <!-- Keep all your existing modals here -->
     <!-- Present Modal -->
@@ -1266,10 +1277,10 @@ body.dark-mode .zone-item.active {
             <div class="form-group">
                 <label for="hours-worked">Heures travaillées :</label>
                 <div class="slider-container">
-                    <input type="range" id="hours-worked" class="slider-input" min="0" max="9" step="0.5" value="8">
+                    <input type="range" id="hours-worked" class="slider-input" min="0" max="9" step="0.5" value="7">
                     <div class="slider-value">
                         <span>0h</span>
-                        <span class="current-value" id="hours-value">8h</span>
+                        <span class="current-value" id="hours-value">7h</span>
                         <span>9h</span>
                     </div>
                 </div>
@@ -1366,6 +1377,8 @@ body.dark-mode .zone-item.active {
         const csrftoken = document.querySelector('[name=csrfmiddlewaretoken]').value;
 
         // Variables
+        let expandedZones = new Set();
+        let selectedChantier = null;
         let zones = [];
         let cities = [];
         let allStaff = [];
@@ -1478,12 +1491,12 @@ const ABSENCE_OPTIONS = [
         });
 
         // Initialize
+
         async function init() {
-    await loadCurrentUser();
     await loadZones();
     await loadAllStaff();
     await loadCongeReservations();
-    renderZonesOrCities();
+    renderTree(); // Changed from renderZonesOrCities()
     renderCongeList();
     setupCurrentDate();
     setupEventListeners();
@@ -1557,22 +1570,17 @@ document.head.appendChild(styleSheet);
         // Setup event listeners
         function setupEventListeners() {
             // Toggle view button
-            if (toggleViewButton) {
-                toggleViewButton.addEventListener('click', function() {
-                    showZoneView = !showZoneView;
-                    renderZonesOrCities();
-                });
-            }
+
 
             // Add city button
             if (addCityButton) {
-                addCityButton.addEventListener('click', function() {
-                    populateZoneSelect();
-                    addCityModal.style.display = 'block';
-                    newCityNameInput.value = '';
-                    newCityNameInput.focus();
-                });
-            }
+        addCityButton.addEventListener('click', function() {
+            populateZoneSelect();
+            addCityModal.style.display = 'block';
+            newCityNameInput.value = '';
+            newCityNameInput.focus();
+        });
+    }
 
             // PDF generation button
             if (generatePdfTodayButton) {
@@ -1801,142 +1809,232 @@ document.head.appendChild(styleSheet);
                 cityZoneSelect.appendChild(option);
             });
         }
+        // Update these existing functions to work with the new structure
+function handleCityDragOver(e) {
+    e.preventDefault();
+    e.currentTarget.classList.add('drag-over');
+}
 
+function handleCityDrop(e) {
+    e.preventDefault();
+    e.currentTarget.classList.remove('drag-over');
+
+    if (!draggedStaffId) return;
+
+    const cityName = e.currentTarget.dataset.cityName;
+    if (cityName) {
+        updateStaffCityByName(draggedStaffId, cityName);
+    }
+}
+
+function handleCityDragLeave(e) {
+    e.currentTarget.classList.remove('drag-over');
+}
         // Render zones or cities based on current view
-        function renderZonesOrCities() {
-            if (showZoneView) {
-                panelTitleText.textContent = 'Zones';
-                toggleViewButton.textContent = '🏢';
-                toggleViewButton.title = 'Voir tous les chantiers';
-                renderZones();
-            } else {
-                panelTitleText.textContent = 'Tous les Chantiers';
-                toggleViewButton.textContent = '🗺️';
-                toggleViewButton.title = 'Voir par zones';
-                renderAllCities();
-            }
-        }
+        // Replace renderZonesOrCities with renderTree
+        function renderTree() {
+    const container = document.getElementById('tree-container');
+    if (!container) return;
+
+    container.innerHTML = '';
+
+    zones.forEach(zone => {
+        const li = document.createElement('li');
+        li.className = 'tree-item';
+
+        // Safely access zone.cities - it might be undefined initially
+        const zoneCities = zone.cities || [];
+        const totalStaff = zoneCities.reduce((sum, city) => sum + city.staff_count, 0);
+        const isExpanded = expandedZones.has(zone.id);
+
+        li.innerHTML = `
+            <div class="zone-item">
+                <div class="zone-header" onclick="toggleZone(${zone.id})">
+                    <span class="expand-icon ${isExpanded ? 'expanded' : ''}">▶</span>
+                    <span class="zone-icon">🗺️</span>
+                    <span class="zone-name">${zone.name}</span>
+                    <span class="zone-info">${zoneCities.length} chantier(s), ${totalStaff} membres</span>
+                </div>
+                <ul class="chantiers-list ${isExpanded ? 'expanded' : ''}" id="chantiers-${zone.id}">
+                    ${zoneCities.map(city => `
+                        <li class="chantier-item ${selectedChantier === city.name ? 'active' : ''}"
+                            onclick="selectChantierFromTree('${city.name}', '${city.name}')"
+                            data-city-name="${city.name}"
+                            data-city-id="${city.id}">
+                            <div class="chantier-content">
+                                <span class="chantier-icon">🏗️</span>
+                                <span class="chantier-name">${city.name}</span>
+                                <span class="chantier-staff-count">${city.staff_count}</span>
+                            </div>
+                            <div class="chantier-actions">
+                                <button class="action-btn" onclick="editCityName(event, ${city.id}, '${city.name}')" title="Modifier">✏️</button>
+                                <button class="action-btn" onclick="deleteCity(event, ${city.id}, '${city.name}')" title="Supprimer">🗑️</button>
+                            </div>
+                        </li>
+                    `).join('')}
+                </ul>
+            </div>
+        `;
+
+        container.appendChild(li);
+
+        // Add drag and drop support after creating the elements
+        const chantierItems = li.querySelectorAll('.chantier-item');
+        chantierItems.forEach(chantierItem => {
+            chantierItem.addEventListener('dragover', handleCityDragOver);
+            chantierItem.addEventListener('drop', handleCityDrop);
+            chantierItem.addEventListener('dragleave', handleCityDragLeave);
+        });
+    });
+}
+
+        // Toggle zone expansion
+function toggleZone(zoneId) {
+    if (expandedZones.has(zoneId)) {
+        expandedZones.delete(zoneId);
+    } else {
+        expandedZones.add(zoneId);
+    }
+    renderTree();
+}
+
+// Toggle all zones
+function toggleAllZones() {
+    if (expandedZones.size === zones.length) {
+        // All are expanded, collapse all
+        expandedZones.clear();
+    } else {
+        // Expand all
+        zones.forEach(zone => expandedZones.add(zone.id));
+    }
+    renderTree();
+}
+
+// Select chantier from tree (wrapper for your existing selectCity function)
+function selectChantierFromTree(cityName, displayName) {
+    selectedChantier = cityName;
+    selectCity(cityName, displayName);
+    renderTree(); // Refresh to show active state
+}
+
+// Update your existing editCityName function to handle event propagation
+function editCityName(event, cityId, cityName) {
+    if (event) {
+        event.stopPropagation();
+    }
+
+    // Your existing editCityName logic here
+    editCityId = cityId;
+    editCityNameInput.value = cityName;
+    editCityModal.style.display = 'block';
+    editCityNameInput.focus();
+}
+
+// Update your existing deleteCity function to handle event propagation
+function deleteCity(event, cityId, cityName) {
+    if (event) {
+        event.stopPropagation();
+    }
+
+    // Your existing deleteCity logic here
+    if (confirm(`Êtes-vous sûr de vouloir supprimer le chantier "${cityName}" ?`)) {
+        deleteCityById(cityId);
+    }
+}
 
         // Render zones
-        function renderZones() {
-            cityList.innerHTML = '';
 
-            zones.forEach(function(zone) {
-                const zoneItem = document.createElement('li');
-                zoneItem.className = 'city-item zone-item';
-                zoneItem.dataset.zoneId = zone.id;
 
-                const totalStaff = zone.cities.reduce((sum, city) => sum + city.staff_count, 0);
 
-                zoneItem.innerHTML = `
-                    <div class="city-content">
-                        <div class="city-name">${zone.name}</div>
-                        <div class="staff-count">${zone.cities.length} chantier(s), ${totalStaff} membre(s)</div>
-                    </div>
-                `;
-
-                zoneItem.addEventListener('click', function() {
-                    selectZone(zone.id, zone.name);
-                });
-
-                cityList.appendChild(zoneItem);
-            });
-        }
 
         // Render all cities (flat view)
-        function renderAllCities() {
-            cityList.innerHTML = '';
 
-            cities.forEach(function(city) {
-                const cityItem = document.createElement('li');
-                cityItem.className = 'city-item';
-                cityItem.dataset.cityName = city.name;
-                cityItem.dataset.cityId = city.id;
-
-                cityItem.innerHTML = `
-                    <div class="city-content">
-                        <div class="city-name">${city.name}</div>
-                        <div class="staff-count">${city.zone_name || 'Sans zone'} - ${city.staff_count} membre(s)</div>
-                    </div>
-                    <div class="city-actions">
-                        <button class="city-action-btn" onclick="editCityName(${city.id}, '${city.name}')" title="Modifier le nom">✏️</button>
-                        <button class="city-action-btn" onclick="deleteCity(${city.id}, '${city.name}')" title="Supprimer le chantier">🗑️</button>
-                    </div>
-                `;
-
-                cityItem.addEventListener('click', function(e) {
-                    if (!e.target.classList.contains('city-action-btn')) {
-                        selectCity(city.name, city.name);
-                    }
-                });
-
-                cityItem.addEventListener('dragover', handleCityDragOver);
-                cityItem.addEventListener('drop', handleCityDrop);
-                cityItem.addEventListener('dragleave', handleCityDragLeave);
-
-                cityList.appendChild(cityItem);
-            });
-        }
 
         // Select zone and show its cities
-        function selectZone(zoneId, zoneName) {
-            currentZoneId = zoneId;
-            showZoneView = false;
+        function renderAllChantiers() {
+    const chantiersContent = document.getElementById('chantiers-content');
+    document.getElementById('chantiers-title').textContent = 'Tous les Chantiers';
 
-            panelTitleText.innerHTML = `
-                <span onclick="backToZones()" style="cursor: pointer; color: var(--button-primary);">← Zones</span>
-                 / ${zoneName}
-            `;
-            toggleViewButton.style.display = 'none';
+    const ul = document.createElement('ul');
+    ul.className = 'city-list';
 
-            renderZoneCities(zoneId);
-        }
+    cities.forEach(function(city) {
+        const cityItem = document.createElement('li');
+        cityItem.className = 'city-item';
+        cityItem.dataset.cityName = city.name;
+        cityItem.dataset.cityId = city.id;
+
+        cityItem.innerHTML = `
+            <div class="city-content">
+                <div class="city-name">${city.name}</div>
+                <div class="staff-count">${city.zone_name || 'Sans zone'} - ${city.staff_count} membre(s)</div>
+            </div>
+            <div class="city-actions">
+                <button class="city-action-btn" onclick="editCityName(${city.id}, '${city.name}')" title="Modifier le nom">✏️</button>
+                <button class="city-action-btn" onclick="deleteCity(${city.id}, '${city.name}')" title="Supprimer le chantier">🗑️</button>
+            </div>
+        `;
+
+        cityItem.addEventListener('click', function(e) {
+            if (!e.target.classList.contains('city-action-btn')) {
+                selectCity(city.name, city.name);
+            }
+        });
+
+        cityItem.addEventListener('dragover', handleCityDragOver);
+        cityItem.addEventListener('drop', handleCityDrop);
+        cityItem.addEventListener('dragleave', handleCityDragLeave);
+
+        ul.appendChild(cityItem);
+    });
+
+    chantiersContent.innerHTML = '';
+    chantiersContent.appendChild(ul);
+}
+
+        // Select zone and show its cities in chantiers panel
 
         // Render cities in a specific zone
-        function renderZoneCities(zoneId) {
-            cityList.innerHTML = '';
 
-            const zone = zones.find(z => z.id === zoneId);
-            if (!zone) return;
 
-            zone.cities.forEach(function(city) {
-                const cityItem = document.createElement('li');
-                cityItem.className = 'city-item';
-                cityItem.dataset.cityName = city.name;
-                cityItem.dataset.cityId = city.id;
+function showEmptyPersonnel() {
+    document.getElementById('staff-panel-title').textContent = 'Personnel';
+    document.getElementById('staff-list').innerHTML = `
+        <div class="empty-state">
+            👈 Sélectionnez un chantier pour voir son personnel
+        </div>
+    `;
+    document.getElementById('attendance-controls').style.display = 'none';
+    document.getElementById('current-date').style.display = 'none';
+}
 
-                cityItem.innerHTML = `
-                    <div class="city-content">
-                        <div class="city-name">${city.name}</div>
-                        <div class="staff-count">${city.staff_count} membre(s)</div>
-                    </div>
-                    <div class="city-actions">
-                        <button class="city-action-btn" onclick="editCityName(${city.id}, '${city.name}')" title="Modifier le nom">✏️</button>
-                        <button class="city-action-btn" onclick="deleteCity(${city.id}, '${city.name}')" title="Supprimer le chantier">🗑️</button>
-                    </div>
-                `;
+function showEmptyChantiers() {
+    document.getElementById('chantiers-title').textContent = 'Chantiers';
+    document.getElementById('chantiers-content').innerHTML = `
+        <div class="empty-state">
+            👈 Sélectionnez une zone pour voir ses chantiers
+        </div>
+    `;
+}
 
-                cityItem.addEventListener('click', function(e) {
-                    if (!e.target.classList.contains('city-action-btn')) {
-                        selectCity(city.name, city.name);
-                    }
-                });
+        // Toggle between zones view and all chantiers view
+function toggleView() {
+    showZoneView = !showZoneView;
 
-                cityItem.addEventListener('dragover', handleCityDragOver);
-                cityItem.addEventListener('drop', handleCityDrop);
-                cityItem.addEventListener('dragleave', handleCityDragLeave);
+    if (showZoneView) {
+        // Show zones and clear chantiers
+        renderZones();
+        showEmptyChantiers();
+        showEmptyPersonnel();
+        document.getElementById('toggle-view-btn').title = 'Voir tous les chantiers';
+    } else {
+        // Show all chantiers
+        renderAllChantiers();
+        showEmptyPersonnel();
+        document.getElementById('toggle-view-btn').title = 'Voir par zones';
+    }
+}
 
-                cityList.appendChild(cityItem);
-            });
-        }
-
-        // Go back to zones view
-        function backToZones() {
-            currentZoneId = null;
-            showZoneView = true;
-            toggleViewButton.style.display = 'inline-block';
-            renderZonesOrCities();
-        }
 
         // Generate today's PDF report
         async function generateTodaysPDF() {
@@ -2448,61 +2546,6 @@ function createPresentModal() {
     };
 }
 
-function showPresenceOptions() {
-    const presentModal = document.getElementById('present-modal');
-    if (!presentModal) {
-        console.error('Modal présent non trouvé');
-        return;
-    }
-
-    let optionsContainer = document.getElementById('presence-options');
-
-    if (!optionsContainer) {
-        // Créer le conteneur d'options s'il n'existe pas
-        optionsContainer = document.createElement('div');
-        optionsContainer.id = 'presence-options';
-        optionsContainer.className = 'presence-options';
-
-        optionsContainer.innerHTML = `
-            <div class="form-group">
-                <label>Options supplémentaires :</label>
-                <div class="checkbox-group">
-                    <div class="checkbox-item">
-                        <input type="checkbox" id="panier-midi" value="panier_midi">
-                        <label for="panier-midi">PANIER MIDI</label>
-                    </div>
-                    <div class="checkbox-item">
-                        <input type="checkbox" id="repas-restaurant" value="repas_restaurant">
-                        <label for="repas-restaurant">REPAS RESTAURANT</label>
-                    </div>
-                    <div class="checkbox-item">
-                        <input type="checkbox" id="hotel-petit-dej" value="hotel_petit_dej">
-                        <label for="hotel-petit-dej">HOTEL + PETIT DEJ</label>
-                    </div>
-                </div>
-            </div>
-        `;
-
-        // Insérer avant les boutons du modal
-        const modalActions = presentModal.querySelector('.modal-actions');
-        if (modalActions) {
-            modalActions.parentNode.insertBefore(optionsContainer, modalActions);
-        } else {
-            // Fallback: ajouter à la fin du modal-content
-            const modalContent = presentModal.querySelector('.modal-content');
-            if (modalContent) {
-                modalContent.appendChild(optionsContainer);
-            }
-        }
-    }
-
-    optionsContainer.style.display = 'block';
-
-    // Décocher toutes les options
-    optionsContainer.querySelectorAll('input[type="checkbox"]').forEach(cb => {
-        cb.checked = false;
-    });
-}
 
 function hidePresenceOptions() {
     const optionsContainer = document.getElementById('presence-options');
@@ -3018,26 +3061,21 @@ if (!document.getElementById('attendance-presence-styles')) {
         }
 
         // Refresh data
-        async function refreshData() {
-            await loadAllStaff();
-            await loadZones();
-            await loadCongeReservations();
+        // Update your existing refreshData function
+async function refreshData() {
+    await loadZones();
+    await loadAllStaff();
+    await loadCongeReservations();
 
-            // Maintain current view state
-            if (currentZoneId && !showZoneView) {
-                // We're currently viewing a specific zone's cities
-                renderZoneCities(currentZoneId);
-            } else {
-                // We're in the main zones view or all cities view
-                renderZonesOrCities();
-            }
+    // Re-render tree while preserving expanded state
+    renderTree();
+    renderCongeList();
 
-            renderCongeList();
-
-            if (currentCityId) {
-                selectCity(currentCityId, currentCityName);
-            }
-        }
+    // Re-select current chantier if it exists
+    if (currentCityId) {
+        selectCity(currentCityId, currentCityName);
+    }
+}
 
         // Mark city present
         async function markCityPresent(cityName) {
