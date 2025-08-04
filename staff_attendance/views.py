@@ -520,6 +520,7 @@ def get_fixed_teams_staff(request):
             'AMRI HATEM',
             'DARTE LOKMANE',
             'TAHARDJI HAMZA',
+            'AIT BAHA YOUSSEF'
 
         ]
     }
