@@ -367,6 +367,101 @@ body {
     text-align: center;
     margin-bottom: 30px;
 }
+    /* Search styles */
+.search-container {
+    max-width: 600px;
+    margin: 0 auto 20px auto;
+    position: relative;
+}
+
+.search-bar {
+    position: relative;
+    display: flex;
+    align-items: center;
+}
+
+.search-input {
+    width: 100%;
+    padding: 12px 45px 12px 15px;
+    border: 2px solid var(--border-color);
+    border-radius: 25px;
+    font-size: 16px;
+    background-color: var(--card-bg);
+    color: var(--text-color);
+    transition: all 0.3s ease;
+    box-sizing: border-box;
+}
+
+.search-input:focus {
+    outline: none;
+    border-color: var(--button-primary);
+    box-shadow: 0 0 0 3px rgba(52, 152, 219, 0.1);
+}
+
+.clear-search-btn {
+    position: absolute;
+    right: 12px;
+    background: none;
+    border: none;
+    font-size: 18px;
+    color: #999;
+    cursor: pointer;
+    padding: 5px;
+    border-radius: 50%;
+    transition: all 0.2s ease;
+}
+
+.clear-search-btn:hover {
+    background-color: var(--border-color);
+    color: var(--text-color);
+}
+
+.search-results {
+    position: absolute;
+    top: 100%;
+    left: 0;
+    right: 0;
+    z-index: 1000;
+    background: var(--card-bg);
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+    max-height: 300px;
+    overflow-y: auto;
+    margin-top: 5px;
+}
+
+.search-result-item {
+    padding: 12px 15px;
+    cursor: pointer;
+    border-bottom: 1px solid var(--border-color);
+    transition: background-color 0.2s ease;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.search-result-item:hover {
+    background-color: var(--primary-hover);
+}
+
+.search-result-item:last-child {
+    border-bottom: none;
+}
+
+.search-highlight {
+    background-color: yellow;
+    font-weight: bold;
+    padding: 1px 2px;
+    border-radius: 2px;
+}
+
+.search-no-results {
+    padding: 20px;
+    text-align: center;
+    color: #999;
+    font-style: italic;
+}
 
 .header h1 {
     color: var(--header-color);
@@ -1201,6 +1296,15 @@ body {
         <a href="{% url 'staff_attendance:department_view' %}" class="button">🏢 Départements</a>
     </div>
 
+    <!-- Search Bar -->
+<div class="search-container">
+    <div class="search-bar">
+        <input type="text" id="search-input" placeholder="🔍 Rechercher un membre du personnel..." class="search-input">
+        <button id="clear-search" class="clear-search-btn" style="display: none;">✕</button>
+    </div>
+    <div id="search-results" class="search-results" style="display: none;"></div>
+</div>
+
     <div class="instructions">
         <strong>Instructions:</strong>
         1. Cliquez sur une zone pour voir ses chantiers, puis sur un chantier pour voir son personnel
@@ -1375,8 +1479,12 @@ body {
     <script>
         // Get CSRF token
         const csrftoken = document.querySelector('[name=csrfmiddlewaretoken]').value;
+        const searchInput = document.getElementById('search-input');
+        const clearSearchBtn = document.getElementById('clear-search-btn');
+        const searchResults = document.getElementById('search-results');
 
         // Variables
+        let searchTimeout;
         let expandedZones = new Set();
         let selectedChantier = null;
         let zones = [];
@@ -1490,6 +1598,7 @@ const ABSENCE_OPTIONS = [
             }
         });
 
+
         // Initialize
 
         async function init() {
@@ -1500,6 +1609,7 @@ const ABSENCE_OPTIONS = [
     renderCongeList();
     setupCurrentDate();
     setupEventListeners();
+    setupSearchFunctionality();
 }
 
         const additionalStyles = `
@@ -2128,8 +2238,8 @@ function toggleView() {
     const grandDeplacementCheckbox = document.getElementById('grand-deplacement');
 
     presentStaffNameElement.textContent = staffName;
-    hoursWorkedSlider.value = 8;
-    hoursValueDisplay.textContent = '8h';
+    hoursWorkedSlider.value = 7;
+    hoursValueDisplay.textContent = '7h';
 
     // Vérifier si c'est un personnel en grand déplacement permanent
     const isGrandDeplacement = isGrandDeplacementStaff(staffName);
@@ -2432,6 +2542,175 @@ function getRoleDisplayName(role) {
     return roleNames[role] || role;
 }
 
+function setupSearchFunctionality() {
+    const searchInput = document.getElementById('search-input');
+    const clearSearchBtn = document.getElementById('clear-search-btn');
+    const searchResults = document.getElementById('search-results');
+
+    if (!searchInput || !searchResults) {
+        console.log('Search elements not found');
+        return;
+    }
+
+    let searchTimeout;
+
+    // Search input event listener
+    searchInput.addEventListener('input', function() {
+        const query = this.value.trim();
+
+        if (query.length === 0) {
+            hideSearchResults();
+            if (clearSearchBtn) {
+                clearSearchBtn.style.display = 'none';
+            }
+            return;
+        }
+
+        if (clearSearchBtn) {
+            clearSearchBtn.style.display = 'block';
+        }
+
+        // Debounce search
+        clearTimeout(searchTimeout);
+        searchTimeout = setTimeout(() => {
+            performSearch(query);
+        }, 300);
+    });
+
+    // Clear search - seulement si l'élément existe
+    if (clearSearchBtn) {
+        clearSearchBtn.addEventListener('click', function() {
+            searchInput.value = '';
+            hideSearchResults();
+            this.style.display = 'none';
+            searchInput.focus();
+        });
+    }
+
+    // Hide search results when clicking outside
+    document.addEventListener('click', function(e) {
+        if (!searchInput.contains(e.target) && !searchResults.contains(e.target)) {
+            hideSearchResults();
+        }
+    });
+
+    // Fonctions de recherche
+    function performSearch(query) {
+        if (!allStaff || allStaff.length === 0) {
+            return;
+        }
+
+        const results = allStaff.filter(staff =>
+            staff.name.toLowerCase().includes(query.toLowerCase()) ||
+            staff.city.toLowerCase().includes(query.toLowerCase())
+        );
+
+        displaySearchResults(results, query);
+    }
+
+    function displaySearchResults(results, query) {
+        if (!searchResults) return;
+
+        searchResults.innerHTML = '';
+
+        if (results.length === 0) {
+            const noResults = document.createElement('div');
+            noResults.className = 'search-no-results';
+            noResults.textContent = 'Aucun résultat trouvé';
+            searchResults.appendChild(noResults);
+        } else {
+            results.forEach(staff => {
+                const resultItem = document.createElement('div');
+                resultItem.className = 'search-result-item';
+
+                const statusClass = getStatusClass(staff.status);
+                const statusText = getStatusText(staff.status);
+
+                const highlightedName = highlightText(staff.name, query);
+                const highlightedCity = highlightText(staff.city, query);
+
+                resultItem.innerHTML = `
+                    <span class="status-indicator ${statusClass}"></span>
+                    <div>
+                        <div style="font-weight: 500;">${highlightedName}</div>
+                        <div style="font-size: 12px; color: #666;">${highlightedCity} • ${statusText}</div>
+                    </div>
+                `;
+
+                resultItem.addEventListener('click', () => {
+                    selectStaffFromSearch(staff);
+                    hideSearchResults();
+                    searchInput.value = '';
+                    if (clearSearchBtn) {
+                        clearSearchBtn.style.display = 'none';
+                    }
+                });
+
+                searchResults.appendChild(resultItem);
+            });
+        }
+
+        searchResults.style.display = 'block';
+    }
+
+    function hideSearchResults() {
+        if (searchResults) {
+            searchResults.style.display = 'none';
+        }
+    }
+    // Fonctions utilitaires manquantes
+function getStatusClass(status) {
+    if (status === 'present') return 'present';
+    if (status === 'absent') return 'absent';
+    if (status === 'conge') return 'conge';
+    return 'undefined';
+}
+
+function getStatusText(status) {
+    if (status === 'present') return 'Présent';
+    if (status === 'absent') return 'Absent';
+    if (status === 'conge') return 'En congé';
+    return 'Non défini';
+}
+
+function highlightText(text, query) {
+    if (!query) return text;
+
+    const regex = new RegExp(`(${query})`, 'gi');
+    return text.replace(regex, '<span class="search-highlight">$1</span>');
+}
+
+function selectStaffFromSearch(staff) {
+    console.log('Selecting staff:', staff); // Pour débugger
+
+    // Sélectionner le chantier/ville du personnel
+    selectCity(staff.city, staff.city);
+
+    // Attendre un peu que la liste se charge, puis scroller vers l'élément
+    setTimeout(() => {
+        const staffElement = document.querySelector(`[data-staff-id="${staff.id}"]`);
+        console.log('Found staff element:', staffElement); // Pour débugger
+
+        if (staffElement) {
+            staffElement.scrollIntoView({
+                behavior: 'smooth',
+                block: 'center'
+            });
+
+            // Surligner brièvement
+            staffElement.style.background = 'rgba(52, 152, 219, 0.2)';
+            staffElement.style.transition = 'background 0.3s ease';
+
+            setTimeout(() => {
+                staffElement.style.background = '';
+            }, 2000);
+        }
+    }, 500); // Délai plus long pour laisser le temps à la liste de se charger
+}
+}
+
+
+
 // Logout function
 function logout() {
     if (confirm('Êtes-vous sûr de vouloir vous déconnecter ?')) {
@@ -2498,10 +2777,10 @@ function createPresentModal() {
                 <div class="form-group">
                     <label for="hours-worked">Heures travaillées :</label>
                     <div class="slider-container">
-                        <input type="range" id="hours-worked" class="slider-input" min="0" max="9" step="0.5" value="8">
+                        <input type="range" id="hours-worked" class="slider-input" min="0" max="9" step="0.5" value="7">
                         <div class="slider-value">
                             <span>0h</span>
-                            <span class="current-value" id="hours-value">8h</span>
+                            <span class="current-value" id="hours-value">7h</span>
                             <span>9h</span>
                         </div>
                     </div>

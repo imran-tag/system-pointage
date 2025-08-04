@@ -2009,8 +2009,9 @@ def generate_pdf(request):
 
             # Create table data with expanded columns for landscape
             data = [
-                ["Nom du Personnel", "Chantier", "Statut", "Heures Travaillées", "Grand Déplacement", "Heure d'Arrivée",
+                ["Nom du Personnel", "Chantier", "Statut", "Heures Travaillées", "Grand Déplacement",
                  "Motif d'Absence"]]
+
 
             # Add staff data to table
             for staff in staff_members:
@@ -2029,14 +2030,18 @@ def generate_pdf(request):
                 else:
                     status = "Non défini"
 
-                # Format the timestamp with proper timezone conversion
-                time = ""
-                if attendance and attendance.timestamp:
-                    # Convert UTC time to local time (Europe/Paris)
-                    local_time = timezone.localtime(attendance.timestamp)
-                    time = local_time.strftime("%H:%M")
 
-                # Get hours worked - FIX: Handle Decimal properly
+
+                # Get absence reason
+                absence_reason = ""
+                if attendance and attendance.present is False and attendance.absence_reason:
+                    absence_reason = attendance.absence_reason
+
+                # NOUVELLE LOGIQUE : Chantier vide si absent ou en congé
+                chantier_name = ""
+                if status == "Présent":
+                    chantier_name = staff.city.name
+                # Si absent ou en congé, chantier_name reste vide
                 hours_worked = ""
                 if attendance and attendance.hours_worked and attendance.present is True:
                     # Convert Decimal to float first
@@ -2047,26 +2052,16 @@ def generate_pdf(request):
                     else:
                         hours = hours_float
                     hours_worked = f"{hours}h"
-
-                # Get grand déplacement status
                 grand_deplacement = ""
                 if attendance and attendance.grand_deplacement and attendance.present is True:
                     grand_deplacement = "Oui"
-
-                # Get absence reason
-                absence_reason = ""
-                if attendance and attendance.present is False and attendance.absence_reason != 'CONGE_STATUS':
-                    absence_reason = attendance.absence_reason[:50]  # Limit length
-                    if len(attendance.absence_reason) > 50:
-                        absence_reason += "..."
-
                 data.append([
                     staff.name,
-                    staff.city.name,
+                    chantier_name,  # ← MODIFICATION ICI
                     status,
                     hours_worked,
                     grand_deplacement,
-                    time,
+
                     absence_reason
                 ])
 
@@ -2270,7 +2265,50 @@ def generate_pdf(request):
     return JsonResponse({'success': False, 'message': 'Méthode non autorisée'}, status=405)
 
 
+# Ajouter cette fonction à staff_attendance/views.py
+
+# Ajouter cette fonction à staff_attendance/views.py
+
 @csrf_exempt
+@login_required
+def clear_attendance(request):
+    """API endpoint to clear staff attendance status"""
+    if request.method == 'POST':
+        try:
+            data = json.loads(request.body)
+            staff_id = data.get('staff_id')
+
+            if not staff_id:
+                return JsonResponse({'success': False, 'message': 'ID du personnel requis'}, status=400)
+
+            staff = StaffMember.objects.get(id=staff_id)
+            today = timezone.now().date()
+
+            # Try to find and delete attendance record for today
+            try:
+                attendance = Attendance.objects.get(
+                    staff_member=staff,
+                    date=today
+                )
+                attendance.delete()
+
+                return JsonResponse({
+                    'success': True,
+                    'message': f'Statut de {staff.name} effacé avec succès'
+                })
+
+            except Attendance.DoesNotExist:
+                return JsonResponse({
+                    'success': True,
+                    'message': f'Aucun statut à effacer pour {staff.name}'
+                })
+
+        except StaffMember.DoesNotExist:
+            return JsonResponse({'success': False, 'message': 'Personnel non trouvé'}, status=404)
+        except Exception as e:
+            return JsonResponse({'success': False, 'message': str(e)}, status=500)
+
+    return JsonResponse({'success': False, 'message': 'Méthode non autorisée'}, status=405)
 def generate_history_pdf(request):
     """API endpoint to generate a PDF report of attendance history in landscape format"""
     if request.method == 'POST':
@@ -2541,7 +2579,129 @@ def generate_history_pdf(request):
                 stats_style))
             elements.append(
                 Paragraph(f"📊 Absences: <b>{total_absences}</b> | Congés: <b>{total_conges}</b>", stats_style))
+            # Add statistics section
+            elements.append(Spacer(1, 20))
+            elements.append(Paragraph("Statistiques de la période:", subtitle_style))
 
+            # Calculate period statistics
+            total_present_days = 0
+            total_hours_worked = 0
+            total_grand_deplacements = 0
+            total_absences = 0
+            total_conges = 0
+            total_staff_count = len(staff_members)
+
+            for attendance in attendances:
+                if attendance.present is True:
+                    total_present_days += 1
+                    if attendance.hours_worked:
+                        # Convert Decimal to float
+                        total_hours_worked += float(attendance.hours_worked)
+                    if attendance.grand_deplacement:
+                        total_grand_deplacements += 1
+                elif attendance.present is False:
+                    total_absences += 1
+                elif attendance.absence_reason == 'CONGE_STATUS':
+                    total_conges += 1
+
+            # Calculate averages
+            period_days = (end_date - start_date).days + 1
+            avg_presence_rate = (
+                        total_present_days / (total_staff_count * period_days) * 100) if total_staff_count > 0 else 0
+            avg_hours_per_day = (total_hours_worked / total_present_days) if total_present_days > 0 else 0
+
+            stats_style = ParagraphStyle(
+                'StatsStyle',
+                parent=styles['Normal'],
+                fontSize=10,
+                spaceAfter=6
+            )
+
+            elements.append(Paragraph(
+                f"📊 <b>Période:</b> {start_date.strftime('%d/%m/%Y')} au {end_date.strftime('%d/%m/%Y')} ({period_days} jours)",
+                stats_style))
+            elements.append(Paragraph(
+                f"📊 <b>Jours de présence totaux:</b> {total_present_days} | <b>Heures travaillées totales:</b> {total_hours_worked:.1f}h",
+                stats_style))
+            elements.append(Paragraph(
+                f"📊 <b>Grands déplacements:</b> {total_grand_deplacements} | <b>Absences:</b> {total_absences} | <b>Congés:</b> {total_conges}",
+                stats_style))
+            elements.append(Paragraph(
+                f"📊 <b>Taux de présence moyen:</b> {avg_presence_rate:.1f}% | <b>Heures moyennes/jour:</b> {avg_hours_per_day:.1f}h",
+                stats_style))
+
+            elements.append(Spacer(1, 15))
+
+            # Calculate statistics by chantier
+            elements.append(Spacer(1, 15))
+            elements.append(Paragraph("Statistiques par chantier:", subtitle_style))
+
+            chantier_stats = {}
+            for attendance in attendances:
+                if attendance.present is True and attendance.staff_member.city:
+                    chantier_name = attendance.staff_member.city.name
+                    hours_worked = float(attendance.hours_worked) if attendance.hours_worked else 0
+
+                    if chantier_name not in chantier_stats:
+                        chantier_stats[chantier_name] = {
+                            'total_hours': 0,
+                            'present_days': 0,
+                            'staff_count': set(),
+                            'grand_deplacements': 0
+                        }
+
+                    chantier_stats[chantier_name]['total_hours'] += hours_worked
+                    chantier_stats[chantier_name]['present_days'] += 1
+                    chantier_stats[chantier_name]['staff_count'].add(attendance.staff_member.id)
+
+                    if attendance.grand_deplacement:
+                        chantier_stats[chantier_name]['grand_deplacements'] += 1
+
+            # Create chantier statistics table
+            if chantier_stats:
+                chantier_data = [["Chantier", "Heures totales", "Jours présence", "Personnel unique", "Grands dépl."]]
+
+                # Sort by total hours (descending)
+                sorted_chantiers = sorted(chantier_stats.items(), key=lambda x: x[1]['total_hours'], reverse=True)
+
+                for chantier_name, stats in sorted_chantiers:
+                    chantier_data.append([
+                        chantier_name,
+                        f"{stats['total_hours']:.1f}h",
+                        str(stats['present_days']),
+                        str(len(stats['staff_count'])),
+                        str(stats['grand_deplacements'])
+                    ])
+
+                # Create the table
+                chantier_table = Table(chantier_data, colWidths=[200, 80, 80, 80, 80])
+                chantier_table.setStyle(TableStyle([
+                    ('BACKGROUND', (0, 0), (-1, 0), colors.darkblue),
+                    ('TEXTCOLOR', (0, 0), (-1, 0), colors.white),
+                    ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+                    ('FONTSIZE', (0, 0), (-1, 0), 10),
+                    ('FONTSIZE', (0, 1), (-1, -1), 9),
+                    ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
+                    ('ALIGN', (0, 1), (0, -1), 'LEFT'),  # Chantier names left-aligned
+                    ('GRID', (0, 0), (-1, -1), 1, colors.black),
+                    ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
+                    ('ROWBACKGROUNDS', (0, 1), (-1, -1), [colors.white, colors.lightgrey]),
+                ]))
+
+                elements.append(chantier_table)
+                elements.append(Spacer(1, 10))
+
+                # Add summary
+                total_chantiers = len(chantier_stats)
+                most_active_chantier = max(chantier_stats.items(), key=lambda x: x[1]['total_hours'])
+
+                elements.append(Paragraph(
+                    f"📈 <b>Chantiers actifs:</b> {total_chantiers} | <b>Plus actif:</b> {most_active_chantier[0]} ({most_active_chantier[1]['total_hours']:.1f}h)",
+                    stats_style))
+            else:
+                elements.append(Paragraph("Aucune donnée de chantier disponible pour cette période.", stats_style))
+
+            elements.append(Spacer(1, 15))
             # Build PDF document
             doc.build(elements)
 

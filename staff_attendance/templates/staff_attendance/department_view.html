@@ -30,6 +30,10 @@
     --message-info-color: #0c5460;
     --select-bg: white;
     --select-border: #ddd;
+
+    --team-absence-bg: linear-gradient(135deg, #e74c3c, #c0392b);
+    --team-conge-bg: linear-gradient(135deg, #9b59b6, #8e44ad);
+
 }
 
 /* Dark theme variables */
@@ -56,6 +60,9 @@ body.dark-mode {
     --message-info-color: #a3d9d9;
     --select-bg: #2d2d2d;
     --select-border: #444;
+
+    --team-absence-bg: linear-gradient(135deg, #c0392b, #922b21);
+    --team-conge-bg: linear-gradient(135deg, #8e44ad, #6c3483);
 }
 
 /* Dark mode toggle switch */
@@ -363,6 +370,30 @@ body {
     max-width: 1200px;
     margin-left: auto;
     margin-right: auto;
+}
+/* Status panels container - 2 panels side by side on top */
+.status-panels-container {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 20px;
+    max-width: 1400px;
+    margin: 0 auto 30px auto;
+}
+
+.team-absence .team-header {
+    background: var(--team-absence-bg);
+}
+
+.team-conge .team-header {
+    background: var(--team-conge-bg);
+}
+
+.team-absence .team-icon::before {
+    content: '❌';
+}
+
+.team-conge .team-icon::before {
+    content: '🏖️';
 }
 
 .teams-container {
@@ -800,6 +831,7 @@ body {
 }
 
 @media (max-width: 1200px) {
+    .status-panels-container,
     .teams-container {
         grid-template-columns: 1fr;
         gap: 15px;
@@ -823,13 +855,14 @@ body {
     .attendance-actions .button {
         width: 100%;
     }
+
 }
     </style>
 </head>
 <body>
     <div class="header">
         <h1>Gestion des Équipes Fixes</h1>
-        <p>Contact • Bureau • Maintenance</p>
+        <p>IDEAL CONCEPT • Bureau • Maintenance</p>
     </div>
 
     <div class="theme-toggle">
@@ -850,13 +883,46 @@ body {
 
     <div id="message" class="message" style="display: none;"></div>
 
+    <!-- Status Panels Container - Absence and Congés on top -->
+<div class="status-panels-container">
+    <!-- Absence Panel -->
+    <div class="team-panel team-absence">
+        <div class="team-header">
+            <h2 class="team-title">
+                <span class="team-icon"></span>
+                Absences
+            </h2>
+        </div>
+        <div class="team-content">
+            <ul class="staff-list" id="absence-staff">
+                <!-- Absent staff will be populated here -->
+            </ul>
+        </div>
+    </div>
+
+    <!-- Congés Panel -->
+    <div class="team-panel team-conge">
+        <div class="team-header">
+            <h2 class="team-title">
+                <span class="team-icon"></span>
+                Congés
+            </h2>
+        </div>
+        <div class="team-content">
+            <ul class="staff-list" id="conge-staff">
+                <!-- Staff on congés will be populated here -->
+            </ul>
+        </div>
+    </div>
+</div>
+
     <div class="teams-container">
         <!-- Contact Team -->
         <div class="team-panel team-contact">
             <div class="team-header">
                 <h2 class="team-title">
                     <span class="team-icon"></span>
-                    Contact
+                    IDEAL CONCEPT
                 </h2>
             </div>
             <div class="team-content">
@@ -915,10 +981,10 @@ body {
         <div class="form-group">
             <label for="hours-worked">Heures travaillées :</label>
             <div class="slider-container">
-                <input type="range" id="hours-worked" class="slider-input" min="0" max="9" step="0.5" value="8">
+                <input type="range" id="hours-worked" class="slider-input" min="0" max="9" step="0.5" value="7">
                 <div class="slider-value">
                     <span>0h</span>
-                    <span class="current-value" id="hours-value">8h</span>
+                    <span class="current-value" id="hours-value">7h</span>
                     <span>9h</span>
                 </div>
             </div>
@@ -1186,11 +1252,91 @@ body {
         }
 
         // Render all teams
-        function renderAllTeams() {
-            renderTeam('contact', contactStaffList);
-            renderTeam('moselle-est', moselleStaffList);
-            renderTeam('maintenance', maintenanceStaffList);
-        }
+        // Render all teams
+function renderAllTeams() {
+    renderTeam('contact', contactStaffList);
+    renderTeam('moselle-est', moselleStaffList);
+    renderTeam('maintenance', maintenanceStaffList);
+
+    // Render new status panels
+    renderStatusPanels();
+}
+
+// Nouvelle fonction à ajouter
+function renderStatusPanels() {
+    const absenceList = document.getElementById('absence-staff');
+    const congeList = document.getElementById('conge-staff');
+
+    if (!absenceList || !congeList) return;
+
+    // Collect all staff with absence/conge status
+    const absenceStaff = [];
+    const congeStaff = [];
+
+    Object.keys(teamsData).forEach(teamName => {
+        teamsData[teamName].forEach(member => {
+            if (member.status === 'absent') {
+                absenceStaff.push(member);
+            } else if (member.status === 'conge') {
+                congeStaff.push(member);
+            }
+        });
+    });
+
+    renderStaffInPanel(absenceList, absenceStaff);
+    renderStaffInPanel(congeList, congeStaff);
+}
+
+// Nouvelle fonction à ajouter
+function renderStaffInPanel(listElement, staffArray) {
+    listElement.innerHTML = '';
+
+    if (staffArray.length === 0) {
+        listElement.innerHTML = '<li style="text-align: center; padding: 20px; opacity: 0.6; font-style: italic;">Aucun personnel</li>';
+        return;
+    }
+
+    staffArray.forEach(member => {
+        const staffItem = document.createElement('li');
+        staffItem.className = 'staff-item';
+
+        const statusClass = getStatusClass(member.status);
+        const statusText = getStatusText(member.status);
+
+        let timestampHtml = member.timestamp ?
+            `<div class="timestamp">${new Date(member.timestamp).toLocaleTimeString()}</div>` : '';
+
+        let absenceReasonHtml = member.absence_reason ?
+            `<div class="absence-reason">Motif: ${member.absence_reason}</div>` : '';
+
+        let modifiedByHtml = member.last_modified_by ?
+            `<div class="modified-by">Modifié par: ${member.last_modified_by}</div>` : '';
+
+        staffItem.innerHTML = `
+            <div class="staff-info">
+                <div class="staff-name">
+                    <span class="status-indicator ${statusClass}"></span>
+                    ${member.name}
+                    ${member.city ? `<small>(${member.city})</small>` : ''}
+                </div>
+                <div class="attendance-info">
+                    <div class="status-text">${statusText}</div>
+                    ${absenceReasonHtml}
+                    ${timestampHtml}
+                    ${modifiedByHtml}
+                </div>
+            </div>
+            <div class="attendance-actions">
+    <button class="button small present-btn" onclick="showPresentModal(${member.id}, '${member.name}')" ${!adminMode ? 'disabled' : ''}>
+        Marquer présent
+    </button>
+
+</div>
+        `;
+
+        listElement.appendChild(staffItem);
+    });
+}
 
         // Render team staff
         function renderTeam(teamName, listElement) {
@@ -1215,6 +1361,12 @@ body {
     console.log('DEBUG: Found', teamsData[teamName].length, 'members for team:', teamName);
 
     teamsData[teamName].forEach(function(member) {
+
+        // Skip staff that are absent or on congé - they go to status panels
+    if (member.status === 'absent' || member.status === 'conge') {
+        return;
+    }
+
         console.log('DEBUG: Processing member:', member.name, member);
 
         const staffItem = document.createElement('li');
@@ -1312,11 +1464,6 @@ const GRAND_DEPLACEMENT_STAFF = [
 ];
 
 // Options pour présence
-const PRESENCE_OPTIONS = [
-    { id: 'panier_midi', label: 'PANIER MIDI', value: 'panier_midi' },
-    { id: 'repas_restaurant', label: 'REPAS RESTAURANT', value: 'repas_restaurant' },
-    { id: 'hotel_petit_dej', label: 'HOTEL + PETIT DEJ', value: 'hotel_petit_dej' }
-];
 
 // Options pour absence
 const ABSENCE_OPTIONS = [
@@ -1336,8 +1483,8 @@ function isGrandDeplacementStaff(staffName) {
     presentStaffNameElement.textContent = staffName;
 
     chantierSelect.value = '';
-    hoursWorkedSlider.value = 8;
-    hoursValueDisplay.textContent = '8h';
+    hoursWorkedSlider.value = 7;
+    hoursValueDisplay.textContent = '7h';
 
     // Vérifier si c'est un personnel en grand déplacement permanent
     const isGrandDeplacement = isGrandDeplacementStaff(staffName);
@@ -1391,25 +1538,7 @@ function isGrandDeplacementStaff(staffName) {
         optionsContainer.id = 'presence-options';
         optionsContainer.className = 'presence-options';
 
-        optionsContainer.innerHTML = `
-            <div class="form-group">
-                <label>Options supplémentaires :</label>
-                <div class="checkbox-group">
-                    <div class="checkbox-item">
-                        <input type="checkbox" id="panier-midi" value="panier_midi">
-                        <label for="panier-midi">PANIER MIDI</label>
-                    </div>
-                    <div class="checkbox-item">
-                        <input type="checkbox" id="repas-restaurant" value="repas_restaurant">
-                        <label for="repas-restaurant">REPAS RESTAURANT</label>
-                    </div>
-                    <div class="checkbox-item">
-                        <input type="checkbox" id="hotel-petit-dej" value="hotel_petit_dej">
-                        <label for="hotel-petit-dej">HOTEL + PETIT DEJ</label>
-                    </div>
-                </div>
-            </div>
-        `;
+
 
         // Insérer avant les boutons du modal
         const modalActions = presentModal.querySelector('.modal-actions') ||
@@ -1505,25 +1634,7 @@ function showPresenceOptions() {
         optionsContainer.id = 'presence-options';
         optionsContainer.className = 'presence-options';
 
-        optionsContainer.innerHTML = `
-            <div class="form-group">
-                <label>Options supplémentaires :</label>
-                <div class="checkbox-group">
-                    <div class="checkbox-item">
-                        <input type="checkbox" id="panier-midi" value="panier_midi">
-                        <label for="panier-midi">PANIER MIDI</label>
-                    </div>
-                    <div class="checkbox-item">
-                        <input type="checkbox" id="repas-restaurant" value="repas_restaurant">
-                        <label for="repas-restaurant">REPAS RESTAURANT</label>
-                    </div>
-                    <div class="checkbox-item">
-                        <input type="checkbox" id="hotel-petit-dej" value="hotel_petit_dej">
-                        <label for="hotel-petit-dej">HOTEL + PETIT DEJ</label>
-                    </div>
-                </div>
-            </div>
-        `;
+
 
         // Insérer avant les boutons du modal
         const modalActions = presentModal.querySelector('.modal-actions') ||

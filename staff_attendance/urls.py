@@ -65,6 +65,8 @@ urlpatterns = [
     # Fixed teams page
     path('fixed-teams/', views.fixed_teams_page, name='fixed_teams_page'),
 
+    path('api/clear-attendance/', views.clear_attendance, name='clear_attendance'),  # NOUVELLE LIGNE
+
     # Fixed teams API endpoints
     path('api/fixed-teams-staff/', views.get_fixed_teams_staff, name='get_fixed_teams_staff'),
     path('api/mark-fixed-team-present/', views.mark_fixed_team_present, name='mark_fixed_team_present'),
