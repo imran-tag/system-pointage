@@ -10,7 +10,6 @@ import os
 from django.contrib.auth import authenticate, login, logout
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.models import User
-
 import openpyxl
 from openpyxl.styles import Font, PatternFill, Alignment, Border, Side
 from openpyxl.worksheet.protection import SheetProtection
@@ -18,7 +17,6 @@ from openpyxl.workbook.protection import WorkbookProtection
 from django.http import HttpResponse
 from io import BytesIO
 import datetime
-
 from .models import City, StaffMember, Attendance, CongeReservation, Zone, UserProfile
 
 # Generate PDF
@@ -38,7 +36,6 @@ MOIS_FRANCAIS = {
     9: 'Septembre', 10: 'Octobre', 11: 'Novembre', 12: 'Décembre'
 }
 
-# Dictionnaire des jours en français
 JOURS_FRANCAIS = {
     'Monday': 'Lundi', 'Tuesday': 'Mardi', 'Wednesday': 'Mercredi',
     'Thursday': 'Jeudi', 'Friday': 'Vendredi', 'Saturday': 'Samedi', 'Sunday': 'Dimanche'
@@ -200,7 +197,6 @@ def add_city(request):
     return JsonResponse({'success': False, 'message': 'Méthode non autorisée'}, status=405)
 
 
-# Ajoutez ces vues à votre staff_attendance/views.py
 
 @login_required
 def department_view(request):
@@ -415,8 +411,7 @@ def update_department_mapping(request):
                     'message': f'Chantiers inexistants: {", ".join(missing_cities)}'
                 }, status=400)
 
-            # Pour une version simple, on pourrait stocker cela dans les settings ou une table de configuration
-            # Pour maintenant, on retourne simplement le succès
+
             return JsonResponse({
                 'success': True,
                 'message': 'Configuration des départements mise à jour avec succès',
@@ -431,7 +426,6 @@ def update_department_mapping(request):
     return JsonResponse({'success': False, 'message': 'Méthode non autorisée'}, status=405)
 
 
-# Add this to staff_attendance/views.py
 
 def fixed_teams_page(request):
     """Render the fixed teams attendance page"""
@@ -527,7 +521,7 @@ def get_fixed_teams_staff(request):
 
     # Get today's attendance records for all staff WITH USER INFO
     attendances = Attendance.objects.filter(date=today).select_related('created_by',
-                                                                       'updated_by')  # ← ADD select_related
+                                                                       'updated_by')
     attendance_dict = {att.staff_member.name: att for att in attendances}
 
     # Check for active congé reservations
@@ -542,16 +536,16 @@ def get_fixed_teams_staff(request):
         team_data = []
 
         for member_name in team_members:
-            # Get or create staff member (keep your existing logic)
+            # Get or create staff member
             try:
                 staff_member = StaffMember.objects.get(name=member_name)
             except StaffMember.DoesNotExist:
-                # Create logic (keep your existing code)
+                # Create logic
                 pass
 
             attendance = attendance_dict.get(staff_member.name)
 
-            # Determine status (keep your existing logic)
+            # Determine status
             if staff_member.name in active_conge:
                 status = 'conge'
             elif attendance:
@@ -566,7 +560,6 @@ def get_fixed_teams_staff(request):
             else:
                 status = 'undefined'
 
-            # ADD THIS: Get user info for who made the last change
             last_modified_by = None
             if attendance:
                 if attendance.updated_by:
@@ -583,12 +576,12 @@ def get_fixed_teams_staff(request):
                 'timestamp': attendance.timestamp.isoformat() if attendance and attendance.timestamp else None,
                 'hours_worked': float(attendance.hours_worked) if attendance and attendance.hours_worked else None,
                 'grand_deplacement': attendance.grand_deplacement if attendance else False,
-                'last_modified_by': last_modified_by  # ← ADD THIS LINE
+                'last_modified_by': last_modified_by
             })
 
         teams_data[team_name] = team_data
 
-    # Get all available chantiers for assignment (keep existing)
+    # Get all available chantiers for assignment
     chantiers = City.objects.exclude(name='Équipes Fixes').values('id', 'name')
 
     return JsonResponse({
@@ -597,7 +590,7 @@ def get_fixed_teams_staff(request):
     })
 
 @csrf_exempt
-@login_required  # Make sure this decorator is present!
+@login_required
 def mark_fixed_team_present(request):
     """API endpoint to mark a fixed team member as present with chantier assignment and USER TRACKING"""
     if request.method == 'POST':
@@ -626,7 +619,7 @@ def mark_fixed_team_present(request):
                     'timestamp': timezone.now(),
                     'hours_worked': hours_worked,
                     'grand_deplacement': grand_deplacement,
-                    'created_by': request.user  # ADD: Track who created it
+                    'created_by': request.user
                 }
             )
 
@@ -637,7 +630,7 @@ def mark_fixed_team_present(request):
                 attendance.timestamp = timezone.now()
                 attendance.hours_worked = hours_worked
                 attendance.grand_deplacement = grand_deplacement
-                attendance.updated_by = request.user  # ADD: Track who updated it
+                attendance.updated_by = request.user
                 attendance.save()
 
             chantier_text = f" sur {chantier.name}" if chantier_id else ""
@@ -662,7 +655,7 @@ def mark_fixed_team_present(request):
 
 
 @csrf_exempt
-@login_required  # Make sure this decorator is present!
+@login_required
 def mark_fixed_team_absent(request):
     """API endpoint to mark a fixed team member as absent with reason and USER TRACKING"""
     if request.method == 'POST':
@@ -682,7 +675,7 @@ def mark_fixed_team_absent(request):
                     'present': False,
                     'timestamp': timezone.now(),
                     'absence_reason': reason,
-                    'created_by': request.user  # ADD: Track who created it
+                    'created_by': request.user
                 }
             )
 
@@ -691,7 +684,7 @@ def mark_fixed_team_absent(request):
                 attendance.present = False
                 attendance.timestamp = timezone.now()
                 attendance.absence_reason = reason
-                attendance.updated_by = request.user  # ADD: Track who updated it
+                attendance.updated_by = request.user
                 attendance.save()
 
             return JsonResponse({
@@ -710,7 +703,7 @@ def mark_fixed_team_absent(request):
 
 
 @csrf_exempt
-@login_required  # Make sure this decorator is present!
+@login_required
 def mark_fixed_team_conge(request):
     """API endpoint to mark a fixed team member as on leave (congé) for today only with USER TRACKING"""
     if request.method == 'POST':
@@ -729,7 +722,7 @@ def mark_fixed_team_conge(request):
                     'present': None,
                     'timestamp': timezone.now(),
                     'absence_reason': 'CONGE_STATUS',
-                    'created_by': request.user  # ADD: Track who created it
+                    'created_by': request.user
                 }
             )
 
@@ -738,7 +731,7 @@ def mark_fixed_team_conge(request):
                 attendance.present = None
                 attendance.absence_reason = 'CONGE_STATUS'
                 attendance.timestamp = timezone.now()
-                attendance.updated_by = request.user  # ADD: Track who updated it
+                attendance.updated_by = request.user
                 attendance.save()
 
             return JsonResponse({
@@ -763,8 +756,8 @@ def get_department_stats(request):
 
         # Department mapping
         DEPARTMENT_MAPPING = {
-            'contact': ['160 - DROUOT_Réhabilitation de 821 logts'],  # Remplacez par vos chantiers Contact
-            'maintenance': ['001 - Bureau'],  # Remplacez par vos chantiers Maintenance
+            'contact': ['160 - DROUOT_Réhabilitation de 821 logts'],
+            'maintenance': ['001 - Bureau'],
             'moselle-est': ['015 - Atelier']
         }
 
@@ -914,7 +907,7 @@ def mark_conge_with_period(request):
                 start_date=start_date_obj,
                 end_date=end_date_obj,
                 reason=reason,
-                created_by=request.user  # Track who created it
+                created_by=request.user
             )
 
             message = f"{staff.name} en congé du {start_date_obj.strftime('%d/%m/%Y')} au {end_date_obj.strftime('%d/%m/%Y')} (créé par {request.user.first_name or request.user.username})"
@@ -2474,8 +2467,9 @@ def generate_history_pdf(request):
             normal_style = styles['Normal']
 
             # Add title
-            month_name = calendar.month_name[month]
-            elements.append(Paragraph(f"Historique de Présence - {month_name} {year}", title_style))
+
+            mois_fr = MOIS_FRANCAIS.get(month, str(month))
+            elements.append(Paragraph(f"Historique de Présence - {mois_fr} {year}", title_style))
             elements.append(Spacer(1, 12))
 
             # Add date range and summary in one line
@@ -2501,10 +2495,13 @@ def generate_history_pdf(request):
             # Create single table with all staff (no grouping by city)
             # Create table header with dates
             header = ["Nom du personnel"]
+
             for date in dates:
                 # Format: day + weekday initial
+                day_name_english = date.strftime('%A')  # Friday
+                day_name_french = JOURS_FRANCAIS.get(day_name_english, day_name_english)
                 day_str = date.strftime('%d')
-                weekday_initial = date.strftime('%a')[0].upper()  # M, T, W, T, F, S, S
+                weekday_initial = day_name_french[0].upper()  # M, T, W, T, F, S, S
 
                 # Special formatting for weekends
                 if date.weekday() >= 5:  # Saturday or Sunday
@@ -2520,40 +2517,46 @@ def generate_history_pdf(request):
                 row = [staff.name]
 
                 # Add status for each date
+                # Add status for each date
                 for date in dates:
-                    key = (date, staff.id)
-                    attendance = attendance_dict.get(key)
-
-                    if attendance:
-                        if attendance.absence_reason == 'CONGE_STATUS':
-                            status = "C"  # Congé
-                        elif attendance.present is True:
-                            # Show hours if available
-                            if attendance.hours_worked:
-                                hours_float = float(attendance.hours_worked)
-                                if hours_float.is_integer():
-                                    hours = int(hours_float)
-                                else:
-                                    hours = hours_float
-                                status = f"P{hours}"
-                                # Add G for grand déplacement
-                                if attendance.grand_deplacement:
-                                    status += "G"
-                            else:
-                                status = "P"
-                                if attendance.grand_deplacement:
-                                    status += "G"
-                        elif attendance.present is False:
-                            if attendance.absence_reason and len(attendance.absence_reason) > 0:
-                                status = attendance.absence_reason  # Show exact reason: ABNJ, ABA, AM
-                            else:
-                                status = "A"  # Generic absent
-                        else:
-                            status = "-"  # Undefined
+                    # Si c'est un weekend, toujours mettre une cellule vide
+                    if date.weekday() >= 5:  # 5=Samedi, 6=Dimanche
+                        row.append('')
                     else:
-                        status = "-"  # No record
+                        # Jour ouvrable - traitement normal
+                        key = (date, staff.id)
+                        attendance = attendance_dict.get(key)
 
-                    row.append(status)
+                        if attendance:
+                            if attendance.absence_reason == 'CONGE_STATUS':
+                                status = "C"  # Congé
+                            elif attendance.present is True:
+                                # Show hours if available
+                                if attendance.hours_worked:
+                                    hours_float = float(attendance.hours_worked)
+                                    if hours_float.is_integer():
+                                        hours = int(hours_float)
+                                    else:
+                                        hours = hours_float
+                                    status = f"P{hours}"
+                                    # Add G for grand déplacement
+                                    if attendance.grand_deplacement:
+                                        status += "G"
+                                else:
+                                    status = "P"
+                                    if attendance.grand_deplacement:
+                                        status += "G"
+                            elif attendance.present is False:
+                                if attendance.absence_reason and len(attendance.absence_reason) > 0:
+                                    status = attendance.absence_reason  # Show exact reason: ABNJ, ABA, AM
+                                else:
+                                    status = "A"  # Generic absent
+                            else:
+                                status = "-"  # Undefined
+                        else:
+                            status = "-"  # No record
+
+                        row.append(status)
 
                 data.append(row)
 

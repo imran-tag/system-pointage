@@ -658,6 +658,16 @@ body {
 
     {% csrf_token %}
     <script>
+        // Dictionnaires pour les dates en français
+const JOURS_FRANCAIS = {
+    'Monday': 'Lundi', 'Tuesday': 'Mardi', 'Wednesday': 'Mercredi',
+    'Thursday': 'Jeudi', 'Friday': 'Vendredi', 'Saturday': 'Samedi', 'Sunday': 'Dimanche'
+};
+
+const JOURS_FRANCAIS_ABBREV = {
+    'Monday': 'L', 'Tuesday': 'M', 'Wednesday': 'M',
+    'Thursday': 'J', 'Friday': 'V', 'Saturday': 'S', 'Sunday': 'D'
+};
         // Get CSRF token
         const csrftoken = document.querySelector('[name=csrfmiddlewaretoken]').value;
 
@@ -971,7 +981,7 @@ function getCsrfToken() {
                     dayNum.style.fontWeight = 'bold';
 
                     const weekdaySpan = document.createElement('div');
-                    weekdaySpan.textContent = day.weekday.slice(0, 3);
+                    weekdaySpan.textContent = JOURS_FRANCAIS_ABBREV[day.weekday] || day.weekday.slice(0, 1);
                     weekdaySpan.style.fontSize = '9px';
                     weekdaySpan.style.color = 'var(--timestamp-color)';
 
@@ -1011,65 +1021,73 @@ function getCsrfToken() {
                             cell.classList.add('weekend');
                         }
 
-                        const staffAttendance = day.staff[staff.id];
-                        const statusCell = document.createElement('div');
-                        statusCell.className = 'status-cell';
+                        // Si c'est un weekend, ne rien afficher
+if (day.weekday === 'Saturday' || day.weekday === 'Sunday') {
+    // Cellule complètement vide pour les weekends
+    cell.innerHTML = '';
+} else {
+    // Jour ouvrable - traitement normal
+    const staffAttendance = day.staff[staff.id];
+    const statusCell = document.createElement('div');
+    statusCell.className = 'status-cell';
 
-                        if (staffAttendance) {
-                            statusCell.classList.add(`status-${staffAttendance.status}`);
+    if (staffAttendance) {
+        statusCell.classList.add(`status-${staffAttendance.status}`);
+        // ... tout le code existant pour les tooltips reste identique
 
-                            // Create tooltip for more details
-                            const tooltip = document.createElement('div');
-                            tooltip.className = 'status-tooltip';
+        // Create tooltip for more details
+        const tooltip = document.createElement('div');
+        tooltip.className = 'status-tooltip';
 
-                            // Add status text
-                            let statusText = '';
-                            if (staffAttendance.status === 'present') {
-                                statusText = 'Présent';
-                            } else if (staffAttendance.status === 'absent') {
-                                statusText = 'Absent';
-                            } else if (staffAttendance.status === 'conge') {
-                                statusText = 'En congé';
-                            } else {
-                                statusText = 'Non défini';
-                            }
+        // Add status text
+        let statusText = '';
+        if (staffAttendance.status === 'present') {
+            statusText = 'Présent';
+        } else if (staffAttendance.status === 'absent') {
+            statusText = 'Absent';
+        } else if (staffAttendance.status === 'conge') {
+            statusText = 'En congé';
+        } else {
+            statusText = 'Non défini';
+        }
 
-                            let tooltipContent = `<strong>${statusText}</strong>`;
+        let tooltipContent = `<strong>${statusText}</strong>`;
 
-                            // Add timestamp if available
-                            if (staffAttendance.timestamp) {
-                                const timestamp = new Date(staffAttendance.timestamp);
-                                tooltipContent += `<br>à ${timestamp.toLocaleTimeString()}`;
-                            }
+        // Add timestamp if available
+        if (staffAttendance.timestamp) {
+            const timestamp = new Date(staffAttendance.timestamp);
+            tooltipContent += `<br>à ${timestamp.toLocaleTimeString()}`;
+        }
 
-                            // Add hours worked if available
-                            if (staffAttendance.hours_worked && staffAttendance.status === 'present') {
-                                tooltipContent += `<br><span class="hours-info">${staffAttendance.hours_worked}h travaillées</span>`;
-                            }
+        // Add hours worked if available
+        if (staffAttendance.hours_worked && staffAttendance.status === 'present') {
+            tooltipContent += `<br><span class="hours-info">${staffAttendance.hours_worked}h travaillées</span>`;
+        }
 
-                            // Add grand déplacement if applicable
-                            if (staffAttendance.grand_deplacement && staffAttendance.status === 'present') {
-                                tooltipContent += `<br><span class="grand-deplacement-info">Grand déplacement (nuit)</span>`;
-                            }
+        // Add grand déplacement if applicable
+        if (staffAttendance.grand_deplacement && staffAttendance.status === 'present') {
+            tooltipContent += `<br><span class="grand-deplacement-info">Grand déplacement (nuit)</span>`;
+        }
 
-                            // Add absence reason if available
-                            if (staffAttendance.absence_reason) {
-                                tooltipContent += `<br><span class="absence-reason">Motif: ${staffAttendance.absence_reason}</span>`;
-                            }
+        // Add absence reason if available
+        if (staffAttendance.absence_reason) {
+            tooltipContent += `<br><span class="absence-reason">Motif: ${staffAttendance.absence_reason}</span>`;
+        }
 
-                            tooltip.innerHTML = tooltipContent;
-                            statusCell.appendChild(tooltip);
-                        } else {
-                            statusCell.classList.add('status-none');
+        tooltip.innerHTML = tooltipContent;
+        statusCell.appendChild(tooltip);
+    } else {
+        statusCell.classList.add('status-none');
 
-                            // Create tooltip for no data
-                            const tooltip = document.createElement('div');
-                            tooltip.className = 'status-tooltip';
-                            tooltip.innerHTML = '<strong>Pas de données</strong>';
-                            statusCell.appendChild(tooltip);
-                        }
+        // Create tooltip for no data
+        const tooltip = document.createElement('div');
+        tooltip.className = 'status-tooltip';
+        tooltip.innerHTML = '<strong>Pas de données</strong>';
+        statusCell.appendChild(tooltip);
+    }
 
-                        cell.appendChild(statusCell);
+    cell.appendChild(statusCell);
+}
                         row.appendChild(cell);
                     });
 

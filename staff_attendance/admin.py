@@ -8,7 +8,6 @@ class CityAdmin(admin.ModelAdmin):
     search_fields = ('name',)
 
 
-# Dans admin.py
 @admin.register(StaffMember)
 class StaffMemberAdmin(admin.ModelAdmin):
     list_display = ('name', 'city', 'date_fin_contrat', 'contract_status_display')
