@@ -925,187 +925,163 @@ function getCsrfToken() {
             });
         }
 
-        // Render history table
+        
         function renderHistoryTable() {
-            const selectedCity = cityFilterSelect.value;
+    const selectedCity = cityFilterSelect.value;
 
-            // Filter staff based on selected city
-            const filteredStaff = selectedCity === 'all'
-                ? staffData
-                : staffData.filter(staff => staff.city === selectedCity);
+    // Filter staff based on selected city
+    const filteredStaff = selectedCity === 'all'
+        ? staffData
+        : staffData.filter(staff => staff.city === selectedCity);
 
-            // Group staff by city
-            const staffByCity = {};
-            filteredStaff.forEach(staff => {
-                if (!staffByCity[staff.city]) {
-                    staffByCity[staff.city] = [];
-                }
-                staffByCity[staff.city].push(staff);
-            });
+    // Clear container
+    historyContainer.innerHTML = '';
 
-            // Clear container
-            historyContainer.innerHTML = '';
+    // Create a single table with all staff (no grouping by city)
+    const table = document.createElement('table');
+    table.className = 'history-table';
 
-            // Create a table for each city
-            Object.keys(staffByCity).sort().forEach(city => {
-                const cityStaff = staffByCity[city];
+    // Create table header
+    const thead = document.createElement('thead');
+    const headerRow = document.createElement('tr');
 
-                // Create city title
-                const cityTitle = document.createElement('div');
-                cityTitle.className = 'city-title';
-                cityTitle.textContent = city;
-                historyContainer.appendChild(cityTitle);
+    // Add staff name header
+    const nameHeader = document.createElement('th');
+    nameHeader.textContent = 'Nom';
+    nameHeader.className = 'fixed-name-column';
+    headerRow.appendChild(nameHeader);
 
-                // Create table
-                const table = document.createElement('table');
-                table.className = 'history-table';
+    // Add date headers
+    historyData.forEach(day => {
+        const dateHeader = document.createElement('th');
+        dateHeader.className = 'date-header';
 
-                // Create table header
-                const thead = document.createElement('thead');
-                const headerRow = document.createElement('tr');
+        const dayNum = document.createElement('div');
+        dayNum.textContent = day.display_date.split('/')[0];
+        dayNum.style.fontSize = '11px';
+        dayNum.style.fontWeight = 'bold';
 
-                // Add staff name header
-                const nameHeader = document.createElement('th');
-                nameHeader.textContent = 'Nom';
-                nameHeader.className = 'fixed-name-column';
-                headerRow.appendChild(nameHeader);
+        const weekdaySpan = document.createElement('div');
+        weekdaySpan.textContent = JOURS_FRANCAIS_ABBREV[day.weekday] || day.weekday.slice(0, 1);
+        weekdaySpan.style.fontSize = '9px';
+        weekdaySpan.style.color = 'var(--timestamp-color)';
 
-                // Add date headers
-                historyData.forEach(day => {
-                    const dateHeader = document.createElement('th');
-                    dateHeader.className = 'date-header';
+        dateHeader.appendChild(dayNum);
+        dateHeader.appendChild(weekdaySpan);
 
-                    const dayNum = document.createElement('div');
-                    dayNum.textContent = day.display_date.split('/')[0];
-                    dayNum.style.fontSize = '11px';
-                    dayNum.style.fontWeight = 'bold';
+        // Add weekend class if Saturday or Sunday
+        if (day.weekday === 'Saturday' || day.weekday === 'Sunday') {
+            dateHeader.classList.add('weekend');
+        }
 
-                    const weekdaySpan = document.createElement('div');
-                    weekdaySpan.textContent = JOURS_FRANCAIS_ABBREV[day.weekday] || day.weekday.slice(0, 1);
-                    weekdaySpan.style.fontSize = '9px';
-                    weekdaySpan.style.color = 'var(--timestamp-color)';
+        headerRow.appendChild(dateHeader);
+    });
 
-                    dateHeader.appendChild(dayNum);
-                    dateHeader.appendChild(weekdaySpan);
+    thead.appendChild(headerRow);
+    table.appendChild(thead);
 
-                    // Add weekend class if Saturday or Sunday
-                    if (day.weekday === 'Saturday' || day.weekday === 'Sunday') {
-                        dateHeader.classList.add('weekend');
+    // Create table body
+    const tbody = document.createElement('tbody');
+
+    // Add all staff rows (no city grouping)
+    filteredStaff.forEach(staff => {
+        const row = document.createElement('tr');
+
+        // Add staff name cell
+        const nameCell = document.createElement('td');
+        nameCell.textContent = staff.name;
+        nameCell.className = 'fixed-name-column';
+        row.appendChild(nameCell);
+
+        // Add attendance cells
+        historyData.forEach(day => {
+            const cell = document.createElement('td');
+
+            // Check if weekend
+            if (day.weekday === 'Saturday' || day.weekday === 'Sunday') {
+                cell.classList.add('weekend');
+                // Si c'est un weekend, ne rien afficher
+                cell.innerHTML = '';
+            } else {
+                // Jour ouvrable - traitement normal
+                const staffAttendance = day.staff[staff.id];
+                const statusCell = document.createElement('div');
+                statusCell.className = 'status-cell';
+
+                if (staffAttendance) {
+                    statusCell.classList.add(`status-${staffAttendance.status}`);
+
+                    // Create tooltip for more details
+                    const tooltip = document.createElement('div');
+                    tooltip.className = 'status-tooltip';
+
+                    // Add status text
+                    let statusText = '';
+                    if (staffAttendance.status === 'present') {
+                        statusText = 'Présent';
+                    } else if (staffAttendance.status === 'absent') {
+                        statusText = 'Absent';
+                    } else if (staffAttendance.status === 'conge') {
+                        statusText = 'En congé';
+                    } else {
+                        statusText = 'Non défini';
                     }
 
-                    headerRow.appendChild(dateHeader);
-                });
+                    let tooltipContent = `<strong>${statusText}</strong>`;
 
-                thead.appendChild(headerRow);
-                table.appendChild(thead);
+                    // Add timestamp if available
+                    if (staffAttendance.timestamp) {
+                        const timestamp = new Date(staffAttendance.timestamp);
+                        tooltipContent += `<br>à ${timestamp.toLocaleTimeString()}`;
+                    }
 
-                // Create table body
-                const tbody = document.createElement('tbody');
+                    // Add hours worked if available
+                    if (staffAttendance.hours_worked && staffAttendance.status === 'present') {
+                        tooltipContent += `<br><span class="hours-info">${staffAttendance.hours_worked}h travaillées</span>`;
+                    }
 
-                // Add staff rows
-                cityStaff.forEach(staff => {
-                    const row = document.createElement('tr');
+                    // Add grand déplacement if applicable
+                    if (staffAttendance.grand_deplacement && staffAttendance.status === 'present') {
+                        tooltipContent += `<br><span class="grand-deplacement-info">Grand déplacement (nuit)</span>`;
+                    }
 
-                    // Add staff name cell
-                    const nameCell = document.createElement('td');
-                    nameCell.textContent = staff.name;
-                    nameCell.className = 'fixed-name-column';
-                    row.appendChild(nameCell);
+                    // Add absence reason if available
+                    if (staffAttendance.absence_reason) {
+                        tooltipContent += `<br><span class="absence-reason">Motif: ${staffAttendance.absence_reason}</span>`;
+                    }
 
-                    // Add attendance cells
-                    historyData.forEach(day => {
-                        const cell = document.createElement('td');
+                    tooltip.innerHTML = tooltipContent;
+                    statusCell.appendChild(tooltip);
+                } else {
+                    statusCell.classList.add('status-none');
 
-                        // Check if weekend
-                        if (day.weekday === 'Saturday' || day.weekday === 'Sunday') {
-                            cell.classList.add('weekend');
-                        }
+                    // Create tooltip for no data
+                    const tooltip = document.createElement('div');
+                    tooltip.className = 'status-tooltip';
+                    tooltip.innerHTML = '<strong>Pas de données</strong>';
+                    statusCell.appendChild(tooltip);
+                }
 
-                        // Si c'est un weekend, ne rien afficher
-if (day.weekday === 'Saturday' || day.weekday === 'Sunday') {
-    // Cellule complètement vide pour les weekends
-    cell.innerHTML = '';
-} else {
-    // Jour ouvrable - traitement normal
-    const staffAttendance = day.staff[staff.id];
-    const statusCell = document.createElement('div');
-    statusCell.className = 'status-cell';
-
-    if (staffAttendance) {
-        statusCell.classList.add(`status-${staffAttendance.status}`);
-        // ... tout le code existant pour les tooltips reste identique
-
-        // Create tooltip for more details
-        const tooltip = document.createElement('div');
-        tooltip.className = 'status-tooltip';
-
-        // Add status text
-        let statusText = '';
-        if (staffAttendance.status === 'present') {
-            statusText = 'Présent';
-        } else if (staffAttendance.status === 'absent') {
-            statusText = 'Absent';
-        } else if (staffAttendance.status === 'conge') {
-            statusText = 'En congé';
-        } else {
-            statusText = 'Non défini';
-        }
-
-        let tooltipContent = `<strong>${statusText}</strong>`;
-
-        // Add timestamp if available
-        if (staffAttendance.timestamp) {
-            const timestamp = new Date(staffAttendance.timestamp);
-            tooltipContent += `<br>à ${timestamp.toLocaleTimeString()}`;
-        }
-
-        // Add hours worked if available
-        if (staffAttendance.hours_worked && staffAttendance.status === 'present') {
-            tooltipContent += `<br><span class="hours-info">${staffAttendance.hours_worked}h travaillées</span>`;
-        }
-
-        // Add grand déplacement if applicable
-        if (staffAttendance.grand_deplacement && staffAttendance.status === 'present') {
-            tooltipContent += `<br><span class="grand-deplacement-info">Grand déplacement (nuit)</span>`;
-        }
-
-        // Add absence reason if available
-        if (staffAttendance.absence_reason) {
-            tooltipContent += `<br><span class="absence-reason">Motif: ${staffAttendance.absence_reason}</span>`;
-        }
-
-        tooltip.innerHTML = tooltipContent;
-        statusCell.appendChild(tooltip);
-    } else {
-        statusCell.classList.add('status-none');
-
-        // Create tooltip for no data
-        const tooltip = document.createElement('div');
-        tooltip.className = 'status-tooltip';
-        tooltip.innerHTML = '<strong>Pas de données</strong>';
-        statusCell.appendChild(tooltip);
-    }
-
-    cell.appendChild(statusCell);
-}
-                        row.appendChild(cell);
-                    });
-
-                    tbody.appendChild(row);
-                });
-
-                table.appendChild(tbody);
-                historyContainer.appendChild(table);
-            });
-
-            // Show message if no data
-            if (Object.keys(staffByCity).length === 0) {
-                const noDataMessage = document.createElement('div');
-                noDataMessage.className = 'message info';
-                noDataMessage.textContent = 'Aucune donnée disponible pour la sélection actuelle.';
-                historyContainer.appendChild(noDataMessage);
+                cell.appendChild(statusCell);
             }
-        }
+
+            row.appendChild(cell);
+        });
+
+        tbody.appendChild(row);
+    });
+
+    table.appendChild(tbody);
+    historyContainer.appendChild(table);
+
+    // Show message if no data
+    if (filteredStaff.length === 0) {
+        const noDataMessage = document.createElement('div');
+        noDataMessage.className = 'message info';
+        noDataMessage.textContent = 'Aucune donnée disponible pour la sélection actuelle.';
+        historyContainer.appendChild(noDataMessage);
+    }
+}
 
         // Generate PDF function
         async function generatePDF() {
