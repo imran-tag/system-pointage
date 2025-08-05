@@ -8,11 +8,25 @@ class CityAdmin(admin.ModelAdmin):
     search_fields = ('name',)
 
 
+# Dans admin.py
 @admin.register(StaffMember)
 class StaffMemberAdmin(admin.ModelAdmin):
-    list_display = ('name', 'city')
-    list_filter = ('city',)
+    list_display = ('name', 'city', 'date_fin_contrat', 'contract_status_display')
+    list_filter = ('city', 'date_fin_contrat')
     search_fields = ('name',)
+
+    def contract_status_display(self, obj):
+        status = obj.contract_status
+        if status == 'warning':
+            return f"⚠️ Expire dans {obj.days_until_contract_end} jours"
+        elif status == 'expire':
+            return "❌ Expiré"
+        elif status == 'active':
+            return "✅ Actif"
+        else:
+            return "♾️ Indéterminé"
+
+    contract_status_display.short_description = 'Statut Contrat'
 
 
 @admin.register(Attendance)

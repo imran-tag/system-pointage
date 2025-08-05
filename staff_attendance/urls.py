@@ -66,7 +66,11 @@ urlpatterns = [
     path('fixed-teams/', views.fixed_teams_page, name='fixed_teams_page'),
 
     path('api/clear-attendance/', views.clear_attendance, name='clear_attendance'),  # NOUVELLE LIGNE
+    path('api/mark-absence-period/', views.mark_absence_period, name='mark_absence_period'),
 
+# Contract management endpoints
+    path('api/contract-alerts/', views.get_contract_alerts, name='get_contract_alerts'),
+    path('api/cleanup-expired-contracts/', views.cleanup_expired_contracts, name='cleanup_expired_contracts'),
     # Fixed teams API endpoints
     path('api/fixed-teams-staff/', views.get_fixed_teams_staff, name='get_fixed_teams_staff'),
     path('api/mark-fixed-team-present/', views.mark_fixed_team_present, name='mark_fixed_team_present'),

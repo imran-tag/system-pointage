@@ -32,12 +32,35 @@ class City(models.Model):
 class StaffMember(models.Model):
     name = models.CharField(max_length=100)
     city = models.ForeignKey(City, on_delete=models.CASCADE, related_name='staff_members')
+    date_fin_contrat = models.DateField(null=True, blank=True, verbose_name="Date de fin de contrat")  # NOUVEAU CHAMP
 
     def __str__(self):
         return self.name
 
-    class Meta:
-        ordering = ['name']
+    @property
+    def contract_status(self):
+        """Retourne le statut du contrat"""
+        if not self.date_fin_contrat:
+            return 'indefini'  # Contrat à durée indéterminée
+
+        today = timezone.now().date()
+        days_remaining = (self.date_fin_contrat - today).days
+
+        if days_remaining < 0:
+            return 'expire'  # Contrat expiré
+        elif days_remaining <= 7:
+            return 'warning'  # Attention - expire dans une semaine
+        else:
+            return 'active'  # Contrat actif
+
+    @property
+    def days_until_contract_end(self):
+        """Retourne le nombre de jours avant la fin du contrat"""
+        if not self.date_fin_contrat:
+            return None
+
+        today = timezone.now().date()
+        return (self.date_fin_contrat - today).days
 
 
 class Attendance(models.Model):

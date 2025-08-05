@@ -1376,7 +1376,7 @@ def get_departments_data(request):
             'maintenance': [
                 'BOULAKDOUR YASSINE', 'BEJENARU ANATOLIE', 'AIT BAHA AHMED', 'ADDI AHMED',
                 'AIT ALLA SOFIENE', 'OURAMI RACHID', 'BRANGIER ROMUALD', 'MAGAZ LAHCEN',
-                'AGHOURI AREJDAL AISSA', 'AMRI HATEM', 'DARTE LOKMANE', 'TAHARDJI HAMZA'
+                'AGHOURI AREJDAL AISSA', 'AMRI HATEM', 'DARTE LOKMANE', 'TAHARDJI HAMZA', 'AIT BAHA YOUSSEF'
             ]
         }
 
@@ -1402,6 +1402,9 @@ def get_departments_data(request):
             for member_name in member_names:
                 try:
                     staff_member = StaffMember.objects.get(name=member_name)
+                    # Skip if contract has expired
+                    if staff_member.contract_status == 'expire':
+                        continue  # Ne pas inclure ce membre dans la liste
                 except StaffMember.DoesNotExist:
                     default_city, created = City.objects.get_or_create(
                         name='Équipes Fixes',
@@ -1464,6 +1467,105 @@ def get_departments_data(request):
 
     except Exception as e:
         return JsonResponse({'success': False, 'message': str(e)}, status=500)
+
+
+@csrf_exempt
+@login_required
+def get_contract_alerts(request):
+    """API endpoint to get contract expiration alerts"""
+    try:
+        today = timezone.now().date()
+
+        # Staff avec contrats qui expirent dans 7 jours ou moins
+        warning_contracts = StaffMember.objects.filter(
+            date_fin_contrat__isnull=False,
+            date_fin_contrat__gte=today,  # Pas encore expiré
+            date_fin_contrat__lte=today + timezone.timedelta(days=7)  # Expire dans 7 jours max
+        ).select_related('city')
+
+        # Staff avec contrats expirés (pour nettoyage éventuel)
+        expired_contracts = StaffMember.objects.filter(
+            date_fin_contrat__isnull=False,
+            date_fin_contrat__lt=today
+        ).select_related('city')
+
+        alerts = []
+
+        for staff in warning_contracts:
+            days_remaining = staff.days_until_contract_end
+            alerts.append({
+                'id': staff.id,
+                'name': staff.name,
+                'city': staff.city.name,
+                'date_fin_contrat': staff.date_fin_contrat.isoformat(),
+                'days_remaining': days_remaining,
+                'status': 'warning',
+                'message': f"Le contrat de {staff.name} expire dans {days_remaining} jour{'s' if days_remaining > 1 else ''} ({staff.date_fin_contrat.strftime('%d/%m/%Y')})"
+            })
+
+        expired_list = []
+        for staff in expired_contracts:
+            expired_list.append({
+                'id': staff.id,
+                'name': staff.name,
+                'city': staff.city.name,
+                'date_fin_contrat': staff.date_fin_contrat.isoformat(),
+                'days_expired': abs(staff.days_until_contract_end),
+                'status': 'expired'
+            })
+
+        return JsonResponse({
+            'success': True,
+            'alerts': alerts,
+            'expired': expired_list,
+            'warning_count': len(alerts),
+            'expired_count': len(expired_list)
+        })
+
+    except Exception as e:
+        return JsonResponse({'success': False, 'message': str(e)}, status=500)
+
+
+@csrf_exempt
+@login_required
+def cleanup_expired_contracts(request):
+    """API endpoint to remove staff with expired contracts"""
+    if request.method == 'POST':
+        try:
+            today = timezone.now().date()
+
+            expired_staff = StaffMember.objects.filter(
+                date_fin_contrat__isnull=False,
+                date_fin_contrat__lt=today
+            )
+
+            expired_names = [staff.name for staff in expired_staff]
+            count = expired_staff.count()
+
+            if count > 0:
+                # Supprimer les enregistrements de présence liés (optionnel)
+                # Attendance.objects.filter(staff_member__in=expired_staff).delete()
+
+                # Supprimer le personnel
+                expired_staff.delete()
+
+                return JsonResponse({
+                    'success': True,
+                    'message': f'{count} membre(s) du personnel avec contrats expirés supprimé(s)',
+                    'removed_staff': expired_names,
+                    'count': count
+                })
+            else:
+                return JsonResponse({
+                    'success': True,
+                    'message': 'Aucun contrat expiré à nettoyer',
+                    'count': 0
+                })
+
+        except Exception as e:
+            return JsonResponse({'success': False, 'message': str(e)}, status=500)
+
+    return JsonResponse({'success': False, 'message': 'Méthode non autorisée'}, status=405)
 
 def home_redirect(request):
     """Handle root URL redirect based on authentication status"""
@@ -2310,6 +2412,7 @@ def clear_attendance(request):
             return JsonResponse({'success': False, 'message': str(e)}, status=500)
 
     return JsonResponse({'success': False, 'message': 'Méthode non autorisée'}, status=405)
+@csrf_exempt
 def generate_history_pdf(request):
     """API endpoint to generate a PDF report of attendance history in landscape format"""
     if request.method == 'POST':
@@ -2356,7 +2459,7 @@ def generate_history_pdf(request):
             from reportlab.lib.pagesizes import A4, landscape
             doc = SimpleDocTemplate(
                 buffer,
-                pagesize=landscape(A4),  # This is the key change!
+                pagesize=landscape(A4),
                 topMargin=20,
                 bottomMargin=20,
                 leftMargin=20,
@@ -2388,13 +2491,6 @@ def generate_history_pdf(request):
             elements.append(Paragraph(date_and_summary, normal_style))
             elements.append(Spacer(1, 15))
 
-            # Group staff by city
-            staff_by_city = {}
-            for staff in staff_members:
-                if staff.city.name not in staff_by_city:
-                    staff_by_city[staff.city.name] = []
-                staff_by_city[staff.city.name].append(staff)
-
             # Get all dates in the range
             dates = []
             current_date = start_date
@@ -2402,141 +2498,134 @@ def generate_history_pdf(request):
                 dates.append(current_date)
                 current_date += datetime.timedelta(days=1)
 
-            # For each city, create a section
-            for city_name, city_staff in staff_by_city.items():
-                # City title
-                elements.append(Paragraph(f"Chantier: {city_name}", subtitle_style))
-                elements.append(Spacer(1, 8))
+            # Create single table with all staff (no grouping by city)
+            # Create table header with dates
+            header = ["Nom du personnel"]
+            for date in dates:
+                # Format: day + weekday initial
+                day_str = date.strftime('%d')
+                weekday_initial = date.strftime('%a')[0].upper()  # M, T, W, T, F, S, S
 
-                # Create table header with dates
-                header = ["Nom du personnel"]
+                # Special formatting for weekends
+                if date.weekday() >= 5:  # Saturday or Sunday
+                    header.append(f"{day_str}\n{weekday_initial}*")
+                else:
+                    header.append(f"{day_str}\n{weekday_initial}")
+
+            # Create table data
+            data = [header]
+
+            # Add staff rows - ALL STAFF IN ONE TABLE
+            for staff in staff_members:
+                row = [staff.name]
+
+                # Add status for each date
                 for date in dates:
-                    # Format: day + weekday initial
-                    day_str = date.strftime('%d')
-                    weekday_initial = date.strftime('%a')[0].upper()  # M, T, W, T, F, S, S
+                    key = (date, staff.id)
+                    attendance = attendance_dict.get(key)
 
-                    # Special formatting for weekends
-                    if date.weekday() >= 5:  # Saturday or Sunday
-                        header.append(f"{day_str}\n{weekday_initial}*")
-                    else:
-                        header.append(f"{day_str}\n{weekday_initial}")
-
-                # Create table data
-                data = [header]
-
-                # Add staff rows
-                for staff in city_staff:
-                    row = [staff.name]
-
-                    # Add status for each date
-                    for date in dates:
-                        key = (date, staff.id)
-                        attendance = attendance_dict.get(key)
-
-                        if attendance:
-                            if attendance.absence_reason == 'CONGE_STATUS':
-                                status = "C"  # Congé
-                            elif attendance.present is True:
-                                # Show hours if available - FIX: Handle Decimal properly
-                                if attendance.hours_worked:
-                                    # Convert Decimal to float first
-                                    hours_float = float(attendance.hours_worked)
-                                    # Check if it's a whole number
-                                    if hours_float.is_integer():
-                                        hours = int(hours_float)
-                                    else:
-                                        hours = hours_float
-                                    status = f"P{hours}"
-                                    # Add G for grand déplacement
-                                    if attendance.grand_deplacement:
-                                        status += "G"
+                    if attendance:
+                        if attendance.absence_reason == 'CONGE_STATUS':
+                            status = "C"  # Congé
+                        elif attendance.present is True:
+                            # Show hours if available
+                            if attendance.hours_worked:
+                                hours_float = float(attendance.hours_worked)
+                                if hours_float.is_integer():
+                                    hours = int(hours_float)
                                 else:
-                                    status = "P"
-                                    if attendance.grand_deplacement:
-                                        status += "G"
-                            elif attendance.present is False:
-                                status = "A"  # Absent
-                                if attendance.absence_reason and len(attendance.absence_reason) > 0:
-                                    status = "A*"  # Absent with reason
+                                    hours = hours_float
+                                status = f"P{hours}"
+                                # Add G for grand déplacement
+                                if attendance.grand_deplacement:
+                                    status += "G"
                             else:
-                                status = "-"  # Undefined
+                                status = "P"
+                                if attendance.grand_deplacement:
+                                    status += "G"
+                        elif attendance.present is False:
+                            if attendance.absence_reason and len(attendance.absence_reason) > 0:
+                                status = attendance.absence_reason  # Show exact reason: ABNJ, ABA, AM
+                            else:
+                                status = "A"  # Generic absent
                         else:
-                            status = "-"  # No record
+                            status = "-"  # Undefined
+                    else:
+                        status = "-"  # No record
 
-                        row.append(status)
+                    row.append(status)
 
-                    data.append(row)
+                data.append(row)
 
-                # Calculate column widths for landscape mode
-                # We have much more width available in landscape
-                available_width = landscape(A4)[0] - 40  # Subtract margins
-                name_col_width = 120  # Fixed width for name column
-                date_col_width = (available_width - name_col_width) / len(dates)
-                date_col_width = max(date_col_width, 18)  # Minimum width
+            # Calculate column widths for landscape mode
+            available_width = landscape(A4)[0] - 40  # Subtract margins
+            name_col_width = 120  # Fixed width for name column
+            date_col_width = (available_width - name_col_width) / len(dates)
+            date_col_width = max(date_col_width, 18)  # Minimum width
 
-                col_widths = [name_col_width] + [date_col_width] * len(dates)
+            col_widths = [name_col_width] + [date_col_width] * len(dates)
 
-                # Create the table
-                table = Table(data, colWidths=col_widths)
+            # Create the table
+            table = Table(data, colWidths=col_widths)
 
-                # Style the table
-                table_style = TableStyle([
-                    # Header styling
-                    ('BACKGROUND', (0, 0), (-1, 0), colors.navy),
-                    ('TEXTCOLOR', (0, 0), (-1, 0), colors.white),
-                    ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
-                    ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
-                    ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
-                    ('FONTSIZE', (0, 0), (-1, 0), 9),
-                    ('FONTSIZE', (0, 1), (-1, -1), 8),
+            # Style the table
+            table_style = TableStyle([
+                # Header styling
+                ('BACKGROUND', (0, 0), (-1, 0), colors.navy),
+                ('TEXTCOLOR', (0, 0), (-1, 0), colors.white),
+                ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
+                ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
+                ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+                ('FONTSIZE', (0, 0), (-1, 0), 9),
+                ('FONTSIZE', (0, 1), (-1, -1), 8),
 
-                    # Body styling
-                    ('BACKGROUND', (0, 1), (-1, -1), colors.white),
-                    ('GRID', (0, 0), (-1, -1), 0.5, colors.black),
-                    ('ROWBACKGROUNDS', (0, 1), (-1, -1), [colors.white, colors.lightgrey]),
+                # Body styling
+                ('BACKGROUND', (0, 1), (-1, -1), colors.white),
+                ('GRID', (0, 0), (-1, -1), 0.5, colors.black),
+                ('ROWBACKGROUNDS', (0, 1), (-1, -1), [colors.white, colors.lightgrey]),
 
-                    # Name column styling
-                    ('ALIGN', (0, 1), (0, -1), 'LEFT'),
-                    ('FONTNAME', (0, 1), (0, -1), 'Helvetica-Bold'),
-                    ('LEFTPADDING', (0, 1), (0, -1), 8),
-                ])
+                # Name column styling
+                ('ALIGN', (0, 1), (0, -1), 'LEFT'),
+                ('FONTNAME', (0, 1), (0, -1), 'Helvetica-Bold'),
+                ('LEFTPADDING', (0, 1), (0, -1), 8),
+            ])
 
-                # Add conditional formatting and weekend highlighting
-                for j in range(1, len(header)):
-                    date_index = j - 1
-                    if date_index < len(dates):
-                        date = dates[date_index]
+            # Add conditional formatting and weekend highlighting
+            for j in range(1, len(header)):
+                date_index = j - 1
+                if date_index < len(dates):
+                    date = dates[date_index]
 
-                        # Highlight weekends
-                        if date.weekday() >= 5:  # Saturday or Sunday
-                            table_style.add('BACKGROUND', (j, 0), (j, 0), colors.darkgrey)
-                            table_style.add('BACKGROUND', (j, 1), (j, -1), colors.lightsteelblue)
+                    # Highlight weekends
+                    if date.weekday() >= 5:  # Saturday or Sunday
+                        table_style.add('BACKGROUND', (j, 0), (j, 0), colors.darkgrey)
+                        table_style.add('BACKGROUND', (j, 1), (j, -1), colors.lightsteelblue)
 
-                # Add status color coding
-                for i in range(1, len(data)):
-                    for j in range(1, len(data[i])):
-                        cell_value = data[i][j]
-                        if cell_value.startswith("P"):
-                            # Present - green
-                            table_style.add('BACKGROUND', (j, i), (j, i), colors.lightgreen)
-                            table_style.add('TEXTCOLOR', (j, i), (j, i), colors.darkgreen)
-                            table_style.add('FONTNAME', (j, i), (j, i), 'Helvetica-Bold')
-                        elif cell_value in ["A", "A*"]:
-                            # Absent - red
-                            table_style.add('BACKGROUND', (j, i), (j, i), colors.lightcoral)
-                            table_style.add('TEXTCOLOR', (j, i), (j, i), colors.darkred)
-                            table_style.add('FONTNAME', (j, i), (j, i), 'Helvetica-Bold')
-                        elif cell_value == "C":
-                            # Congé - purple
-                            table_style.add('BACKGROUND', (j, i), (j, i), colors.plum)
-                            table_style.add('TEXTCOLOR', (j, i), (j, i), colors.purple)
-                            table_style.add('FONTNAME', (j, i), (j, i), 'Helvetica-Bold')
+            # Add status color coding
+            for i in range(1, len(data)):
+                for j in range(1, len(data[i])):
+                    cell_value = data[i][j]
+                    if cell_value.startswith("P"):
+                        # Present - green
+                        table_style.add('BACKGROUND', (j, i), (j, i), colors.lightgreen)
+                        table_style.add('TEXTCOLOR', (j, i), (j, i), colors.darkgreen)
+                        table_style.add('FONTNAME', (j, i), (j, i), 'Helvetica-Bold')
+                    elif cell_value in ["A", "ABNJ", "ABA", "AM"] or cell_value.startswith("A"):
+                        # Absent - red                        # Absent - red
+                        table_style.add('BACKGROUND', (j, i), (j, i), colors.lightcoral)
+                        table_style.add('TEXTCOLOR', (j, i), (j, i), colors.darkred)
+                        table_style.add('FONTNAME', (j, i), (j, i), 'Helvetica-Bold')
+                    elif cell_value == "C":
+                        # Congé - purple
+                        table_style.add('BACKGROUND', (j, i), (j, i), colors.plum)
+                        table_style.add('TEXTCOLOR', (j, i), (j, i), colors.purple)
+                        table_style.add('FONTNAME', (j, i), (j, i), 'Helvetica-Bold')
 
-                table.setStyle(table_style)
-                elements.append(table)
-                elements.append(Spacer(1, 20))
+            table.setStyle(table_style)
+            elements.append(table)
+            elements.append(Spacer(1, 20))
 
-            # Add legend at the end
+            # Add legend
             elements.append(Paragraph("Légende des codes:", subtitle_style))
             legend_style = styles['Normal']
             legend_style.fontSize = 10
@@ -2544,47 +2633,17 @@ def generate_history_pdf(request):
             elements.append(Paragraph(
                 "• <b>P</b> = Présent | <b>P8</b> = Présent 8h | <b>P8G</b> = Présent 8h + Grand déplacement (nuit)",
                 legend_style))
-            elements.append(Paragraph("• <b>A</b> = Absent | <b>A*</b> = Absent avec motif spécifique", legend_style))
+            elements.append(Paragraph("• <b>A</b> = Absent | <b>ABNJ/ABA/AM</b> = Motifs d'absence spécifiques", legend_style))
             elements.append(Paragraph("• <b>C</b> = En congé | <b>-</b> = Non défini (pas de données)", legend_style))
             elements.append(Paragraph("• <b>*</b> = Week-end (samedi/dimanche)", legend_style))
             elements.append(Spacer(1, 15))
 
-            # Add monthly statistics
-            elements.append(Paragraph("Statistiques du mois:", subtitle_style))
-
-            # Calculate monthly stats - FIX: Handle Decimal properly
-            total_present_days = 0
-            total_hours_worked = 0
-            total_grand_deplacements = 0
-            total_absences = 0
-            total_conges = 0
-
-            for attendance in attendances:
-                if attendance.present is True:
-                    total_present_days += 1
-                    if attendance.hours_worked:
-                        # Convert Decimal to float
-                        total_hours_worked += float(attendance.hours_worked)
-                    if attendance.grand_deplacement:
-                        total_grand_deplacements += 1
-                elif attendance.present is False:
-                    total_absences += 1
-                elif attendance.absence_reason == 'CONGE_STATUS':
-                    total_conges += 1
-
-            stats_style = styles['Normal']
-            stats_style.fontSize = 10
-
-            elements.append(Paragraph(
-                f"📊 Jours de présence: <b>{total_present_days}</b> | Heures travaillées: <b>{total_hours_worked}h</b> | Grands déplacements: <b>{total_grand_deplacements}</b>",
-                stats_style))
-            elements.append(
-                Paragraph(f"📊 Absences: <b>{total_absences}</b> | Congés: <b>{total_conges}</b>", stats_style))
             # Add statistics section
             elements.append(Spacer(1, 20))
             elements.append(Paragraph("Statistiques de la période:", subtitle_style))
 
             # Calculate period statistics
+            # Calculate period statistics - ONLY FOR THE SELECTED MONTH
             total_present_days = 0
             total_hours_worked = 0
             total_grand_deplacements = 0
@@ -2592,7 +2651,13 @@ def generate_history_pdf(request):
             total_conges = 0
             total_staff_count = len(staff_members)
 
-            for attendance in attendances:
+            # Filter attendances to only the selected month/year
+            month_attendances = attendances.filter(
+                date__year=year,
+                date__month=month
+            )
+
+            for attendance in month_attendances:  # ← CORRECTION ICI
                 if attendance.present is True:
                     total_present_days += 1
                     if attendance.hours_worked:
@@ -2607,8 +2672,7 @@ def generate_history_pdf(request):
 
             # Calculate averages
             period_days = (end_date - start_date).days + 1
-            avg_presence_rate = (
-                        total_present_days / (total_staff_count * period_days) * 100) if total_staff_count > 0 else 0
+            avg_presence_rate = (total_present_days / (total_staff_count * period_days) * 100) if total_staff_count > 0 else 0
             avg_hours_per_day = (total_hours_worked / total_present_days) if total_present_days > 0 else 0
 
             stats_style = ParagraphStyle(
@@ -2633,12 +2697,19 @@ def generate_history_pdf(request):
 
             elements.append(Spacer(1, 15))
 
+            # Add statistics section
+            elements.append(Spacer(1, 20))
+            elements.append(Paragraph("Statistiques de la période:", subtitle_style))
+
+            # Filter to only the requested month/year
+            month_attendances = [att for att in attendances if att.date.year == year and att.date.month == month]
+
             # Calculate statistics by chantier
             elements.append(Spacer(1, 15))
             elements.append(Paragraph("Statistiques par chantier:", subtitle_style))
 
             chantier_stats = {}
-            for attendance in attendances:
+            for attendance in month_attendances:  # ← CORRECTION ICI
                 if attendance.present is True and attendance.staff_member.city:
                     chantier_name = attendance.staff_member.city.name
                     hours_worked = float(attendance.hours_worked) if attendance.hours_worked else 0
@@ -2703,6 +2774,7 @@ def generate_history_pdf(request):
                 elements.append(Paragraph("Aucune donnée de chantier disponible pour cette période.", stats_style))
 
             elements.append(Spacer(1, 15))
+
             # Build PDF document
             doc.build(elements)
 
@@ -2724,7 +2796,68 @@ def generate_history_pdf(request):
     return JsonResponse({'success': False, 'message': 'Méthode non autorisée'}, status=405)
 
 
+@csrf_exempt
+@login_required
+def mark_absence_period(request):
+    """API endpoint to mark a staff member as absent for a period"""
+    if request.method == 'POST':
+        try:
+            data = json.loads(request.body)
+            staff_id = data.get('staff_id')
+            start_date = data.get('start_date')
+            end_date = data.get('end_date')
+            reason = data.get('reason', 'ABNJ')
 
+            staff = StaffMember.objects.get(id=staff_id)
+
+            # Parse dates
+            start_date_obj = datetime.datetime.strptime(start_date, '%Y-%m-%d').date()
+            end_date_obj = datetime.datetime.strptime(end_date, '%Y-%m-%d').date()
+
+            # Validate dates
+            if start_date_obj > end_date_obj:
+                return JsonResponse(
+                    {'success': False, 'message': 'La date de début doit être antérieure à la date de fin'}, status=400)
+
+            # Create attendance records for each day
+            current_date = start_date_obj
+            days_count = 0
+
+            while current_date <= end_date_obj:
+                attendance, created = Attendance.objects.get_or_create(
+                    staff_member=staff,
+                    date=current_date,
+                    defaults={
+                        'present': False,
+                        'timestamp': timezone.now(),
+                        'absence_reason': reason,
+                        'created_by': request.user
+                    }
+                )
+
+                if not created:
+                    attendance.present = False
+                    attendance.absence_reason = reason
+                    attendance.timestamp = timezone.now()
+                    attendance.updated_by = request.user
+                    attendance.save()
+
+                days_count += 1
+                current_date += datetime.timedelta(days=1)
+
+            return JsonResponse({
+                'success': True,
+                'message': f'{staff.name} marqué absent ({reason}) du {start_date_obj.strftime("%d/%m/%Y")} au {end_date_obj.strftime("%d/%m/%Y")} ({days_count} jours)'
+            })
+
+        except StaffMember.DoesNotExist:
+            return JsonResponse({'success': False, 'message': 'Personnel non trouvé'}, status=404)
+        except ValueError:
+            return JsonResponse({'success': False, 'message': 'Format de date invalide'}, status=400)
+        except Exception as e:
+            return JsonResponse({'success': False, 'message': str(e)}, status=500)
+
+    return JsonResponse({'success': False, 'message': 'Méthode non autorisée'}, status=405)
 # Solutions pour améliorer la lisibilité du PDF historique mensuel
 
 @csrf_exempt

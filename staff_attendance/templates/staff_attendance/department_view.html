@@ -119,7 +119,44 @@ body.dark-mode {
     transform: scale(1.3);
     cursor: pointer;
 }
+/* Admin mode styles */
+.admin-controls {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 15px;
+    margin-bottom: 20px;
+}
 
+.admin-btn {
+    background-color: #e67e22;
+    border: 1px solid #e67e22;
+}
+
+.admin-btn:hover {
+    background-color: #d35400;
+    border-color: #d35400;
+}
+
+.admin-btn.active {
+    background-color: #27ae60;
+    border-color: #27ae60;
+}
+
+.admin-btn.active:hover {
+    background-color: #2ecc71;
+    border-color: #2ecc71;
+}
+
+.admin-status {
+    color: #27ae60;
+    font-weight: 600;
+    font-size: 14px;
+    padding: 8px 15px;
+    background: rgba(39, 174, 96, 0.1);
+    border-radius: 20px;
+    border: 1px solid rgba(39, 174, 96, 0.3);
+}
 .checkbox-item label,
 .radio-item label {
     margin: 0;
@@ -445,7 +482,158 @@ body {
 .team-maintenance .team-header {
     background: var(--team-maintenance-bg);
 }
+/* Statistics styles */
+.stats-container {
+    max-width: 1400px;
+    margin: 0 auto 30px auto;
+}
 
+.stats-panel {
+    background: var(--card-bg);
+    border-radius: 12px;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+    padding: 20px;
+    text-align: center;
+}
+
+.stats-panel h3 {
+    margin: 0 0 20px 0;
+    color: var(--text-color);
+    font-size: 18px;
+}
+
+.stats-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    gap: 15px;
+}
+
+.stat-item {
+    background: var(--card-bg);
+    border-radius: 8px;
+    padding: 15px;
+    border: 2px solid var(--border-color);
+    transition: all 0.3s ease;
+}
+
+.stat-item:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+.stat-number {
+    font-size: 24px;
+    font-weight: bold;
+    margin-bottom: 5px;
+}
+
+.stat-label {
+    font-size: 12px;
+    color: #666;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.stat-present {
+    border-color: #2ecc71;
+}
+
+.stat-present .stat-number {
+    color: #2ecc71;
+}
+
+.stat-absent {
+    border-color: #e74c3c;
+}
+
+.stat-absent .stat-number {
+    color: #e74c3c;
+}
+.stat-number {
+    font-size: 24px;
+    font-weight: bold;
+    margin-bottom: 5px;
+    transition: transform 0.2s ease;
+}
+.stat-conge {
+    border-color: #9b59b6;
+}
+
+.stat-conge .stat-number {
+    color: #9b59b6;
+}
+/* Contract alerts styles */
+.contract-alerts-container {
+    max-width: 1400px;
+    margin: 0 auto 20px auto;
+}
+
+.alert-panel {
+    background: var(--card-bg);
+    border-radius: 8px;
+    padding: 15px;
+    border-left: 4px solid #f39c12;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.alert-warning {
+    background: #fff8dc;
+    border-left-color: #f39c12;
+}
+
+.alert-panel h3 {
+    margin: 0 0 10px 0;
+    color: #f39c12;
+    font-size: 16px;
+}
+
+.alert-item {
+    padding: 8px;
+    margin: 5px 0;
+    background: rgba(243, 156, 18, 0.1);
+    border-radius: 4px;
+    font-size: 14px;
+}
+
+.alert-actions {
+    margin-top: 10px;
+    display: flex;
+    gap: 10px;
+}
+.stat-undefined {
+    border-color: #f39c12;
+}
+
+.stat-undefined .stat-number {
+    color: #f39c12;
+}
+
+.stat-total {
+    border-color: #3498db;
+}
+
+.stat-total .stat-number {
+    color: #3498db;
+}
+
+.stat-rate {
+    border-color: #1abc9c;
+}
+
+.stat-rate .stat-number {
+    color: #1abc9c;
+}
+
+@media (max-width: 768px) {
+    .stats-grid {
+        grid-template-columns: repeat(2, 1fr);
+        gap: 10px;
+    }
+
+    .stat-number {
+        font-size: 20px;
+    }
+}
 .team-title {
     font-size: 20px;
     font-weight: 600;
@@ -874,14 +1062,64 @@ body {
         <span class="theme-icon">🌙</span>
     </div>
 
+    <!-- Admin Mode Button -->
+<div class="admin-controls">
+    <button id="admin-mode-btn" class="button admin-btn">Mode Admin</button>
+    <span id="admin-status" class="admin-status" style="display: none;">Mode Admin Activé ✓</span>
+</div>
     <div class="nav-buttons">
         <a href="{% url 'staff_attendance:attendance_page' %}" class="button">Retour aux Présences</a>
         <a href="{% url 'staff_attendance:attendance_history' %}" class="button">Historique</a>
     </div>
 
-    
+
 
     <div class="current-date" id="current-date"></div>
+
+    <!-- Statistics Panel -->
+    <div class="stats-container">
+    <div class="stats-panel">
+        <h3>📊 Statistiques du jour</h3>
+        <div class="stats-grid">
+            <div class="stat-item stat-present">
+                <div class="stat-number" id="stat-present">0</div>
+                <div class="stat-label">Présents</div>
+            </div>
+            <div class="stat-item stat-absent">
+                <div class="stat-number" id="stat-absent">0</div>
+                <div class="stat-label">Absents</div>
+            </div>
+            <div class="stat-item stat-conge">
+                <div class="stat-number" id="stat-conge">0</div>
+                <div class="stat-label">En Congé</div>
+            </div>
+            <div class="stat-item stat-undefined">
+                <div class="stat-number" id="stat-undefined">0</div>
+                <div class="stat-label">Non Défini</div>
+            </div>
+            <div class="stat-item stat-total">
+                <div class="stat-number" id="stat-total">0</div>
+                <div class="stat-label">Total Personnel</div>
+            </div>
+            <div class="stat-item stat-rate">
+                <div class="stat-number" id="stat-rate">0%</div>
+                <div class="stat-label">Taux Présence</div>
+            </div>
+        </div>
+    </div>
+</div>
+
+    <!-- Contract Alerts -->
+    <div class="contract-alerts-container" id="contract-alerts-container" style="display: none;">
+    <div class="alert-panel alert-warning">
+        <h3>⚠️ Alertes Contrats</h3>
+        <div id="contract-alerts-list"></div>
+        <div class="alert-actions">
+            <button id="dismiss-alerts" class="button small">Masquer</button>
+            <button id="cleanup-expired" class="button small danger">Nettoyer Expirés</button>
+        </div>
+    </div>
+</div>
 
     <div id="message" class="message" style="display: none;"></div>
 
@@ -1009,18 +1247,7 @@ body {
 </div>
 
 
-    <!-- Admin Password Modal -->
-    <div id="admin-modal" class="modal">
-        <div class="modal-content">
-            <span class="close">&times;</span>
-            <h3>Authentification Administrateur</h3>
-            <div class="form-group">
-                <label for="admin-password">Mot de passe :</label>
-                <input type="password" id="admin-password">
-            </div>
-            <button id="submit-password" class="button">Valider</button>
-        </div>
-    </div>
+
 
     <!-- Absence Reason Modal -->
     <div id="absence-modal" class="modal">
@@ -1041,6 +1268,94 @@ body {
             <button id="submit-absence" class="button absent-btn">Confirmer</button>
             <button onclick="absenceModal.style.display='none'" class="button">Annuler</button>
         </div>
+        <!-- Admin Password Modal -->
+
+    </div>
+</div>
+
+    <!-- Absence Period Modal -->
+    <div id="absence-period-modal" class="modal">
+    <div class="modal-content">
+        <span class="close">&times;</span>
+        <h3>Marquer comme absent avec période</h3>
+        <div id="absence-period-staff-name" style="margin-bottom: 15px; font-weight: bold; color: var(--button-primary);"></div>
+
+        <div class="form-group">
+            <label for="absence-start-date">Date de début :</label>
+            <input type="date" id="absence-start-date" required>
+        </div>
+
+        <div class="form-group">
+            <label for="absence-end-date">Date de fin :</label>
+            <input type="date" id="absence-end-date" required>
+        </div>
+
+        <div class="form-group">
+            <label>Motif d'absence :</label>
+            <div class="radio-group" id="absence-period-options">
+                <div class="radio-item">
+                    <input type="radio" id="period-abnj" name="absence-period-reason" value="ABNJ" checked>
+                    <label for="period-abnj">ABNJ</label>
+                </div>
+                <div class="radio-item">
+                    <input type="radio" id="period-am" name="absence-period-reason" value="AM">
+                    <label for="period-am">AM</label>
+                </div>
+                <div class="radio-item">
+                    <input type="radio" id="period-aba" name="absence-period-reason" value="ABA">
+                    <label for="period-aba">ABA</label>
+                </div>
+            </div>
+        </div>
+
+        <div class="modal-actions">
+            <button id="submit-absence-period" class="button absent-btn">Confirmer</button>
+            <button onclick="document.getElementById('absence-period-modal').style.display='none'" class="button">Annuler</button>
+        </div>
+    </div>
+</div>
+
+    <div id="admin-modal" class="modal">
+    <div class="modal-content">
+        <span class="close">&times;</span>
+        <h3>Authentification Administrateur</h3>
+        <div class="form-group">
+            <label for="admin-password">Mot de passe :</label>
+            <input type="password" id="admin-password" placeholder="Entrez le mot de passe admin">
+        </div>
+        <div class="modal-actions">
+            <button id="submit-password" class="button">Valider</button>
+            <button onclick="document.getElementById('admin-modal').style.display='none'" class="button">Annuler</button>
+        </div>
+    </div>
+</div>
+
+    <!-- Congé Period Modal -->
+    <div id="conge-period-modal" class="modal">
+    <div class="modal-content">
+        <span class="close">&times;</span>
+        <h3>Marquer en congé avec période</h3>
+        <div id="conge-period-staff-name" style="margin-bottom: 15px; font-weight: bold; color: var(--button-primary);"></div>
+
+        <div class="form-group">
+            <label for="conge-start-date">Date de début :</label>
+            <input type="date" id="conge-start-date" required>
+        </div>
+
+        <div class="form-group">
+            <label for="conge-end-date">Date de fin :</label>
+            <input type="date" id="conge-end-date" required>
+        </div>
+
+        <div class="form-group">
+            <label for="conge-reason">Motif du congé (optionnel) :</label>
+            <textarea id="conge-reason" placeholder="Congés payés, RTT, maladie, etc." rows="3"></textarea>
+        </div>
+
+        <div class="modal-actions">
+            <button id="submit-conge-period" class="button conge-btn">Confirmer</button>
+            <button onclick="document.getElementById('conge-period-modal').style.display='none'" class="button">Annuler</button>
+        </div>
     </div>
 </div>
 
@@ -1052,9 +1367,13 @@ body {
         // Variables
         let teamsData = {};
         let chantiers = [];
-        let adminMode = false;
         let currentPresentStaffId = null;
         let currentAbsentStaffId = null;
+        let adminMode = false;
+        let currentAbsencePeriodStaffId = null;
+        let currentCongePeriodStaffId = null;
+
+
 
         // DOM elements
         const messageElement = document.getElementById('message');
@@ -1063,9 +1382,15 @@ body {
         const moselleStaffList = document.getElementById('moselle-est-staff');
         const maintenanceStaffList = document.getElementById('maintenance-staff');
 
+        //admin
+        const adminModeBtn = document.getElementById('admin-mode-btn');
+        const adminStatus = document.getElementById('admin-status');
+        const adminModal = document.getElementById('admin-modal');
+        const adminPasswordInput = document.getElementById('admin-password');
+        const submitPasswordButton = document.getElementById('submit-password');
+
         // Modal elements
         const presentModal = document.getElementById('present-modal');
-        const adminModal = document.getElementById('admin-modal');
         const absenceModal = document.getElementById('absence-modal');
         const closeModalButtons = document.querySelectorAll('.close');
 
@@ -1075,12 +1400,10 @@ body {
         const hoursWorkedSlider = document.getElementById('hours-worked');
         const hoursValueDisplay = document.getElementById('hours-value');
         const grandDeplacementCheckbox = document.getElementById('grand-deplacement');
-        const adminPasswordInput = document.getElementById('admin-password');
         const absenceReasonInput = document.getElementById('absence-reason');
 
         // Button elements
         const submitPresentButton = document.getElementById('submit-present');
-        const submitPasswordButton = document.getElementById('submit-password');
         const submitAbsenceButton = document.getElementById('submit-absence');
 
         // Hours slider functionality
@@ -1117,7 +1440,12 @@ body {
             renderAllTeams();
             setupCurrentDate();
             setupEventListeners();
+            checkContractAlerts();
+
         }
+
+
+
 
         // Setup current date display
         function setupCurrentDate() {
@@ -1159,60 +1487,311 @@ body {
                 });
             }
 
-            // Submit admin password
-            if (submitPasswordButton) {
-                submitPasswordButton.addEventListener('click', async function() {
-                    try {
-                        const response = await fetch('/api/verify-admin/', {
-                            method: 'POST',
-                            headers: {
-                                'Content-Type': 'application/json',
-                                'X-CSRFToken': csrftoken
-                            },
-                            body: JSON.stringify({ password: adminPasswordInput.value })
-                        });
 
-                        const data = await response.json();
-
-                        if (data.success) {
-                            adminMode = true;
-                            adminModal.style.display = 'none';
-                            showMessage('Mode administrateur activé.', 'success');
-                            renderAllTeams();
-                        } else {
-                            showMessage('Mot de passe incorrect !', 'error');
-                        }
-                    } catch (error) {
-                        showMessage('Erreur lors de la vérification', 'error');
-                        console.error('Error verifying admin:', error);
-                    }
-                });
-            }
 
             // Close modals
             closeModalButtons.forEach(function(button) {
                 button.addEventListener('click', function() {
                     presentModal.style.display = 'none';
-                    adminModal.style.display = 'none';
                     absenceModal.style.display = 'none';
+                    if (document.getElementById('absence-period-modal')) {
+            document.getElementById('absence-period-modal').style.display = 'none';
+        }
+                    if (document.getElementById('conge-period-modal')) {
+            document.getElementById('conge-period-modal').style.display = 'none';
+        }
                 });
             });
 
             // Click outside modal to close
             window.addEventListener('click', function(e) {
                 if (e.target === presentModal) presentModal.style.display = 'none';
-                if (e.target === adminModal) adminModal.style.display = 'none';
                 if (e.target === absenceModal) absenceModal.style.display = 'none';
             });
+        if (adminModeBtn) {
+        adminModeBtn.addEventListener('click', function() {
+            console.log('Admin button clicked, current mode:', adminMode); // Debug
+            if (adminMode) {
+                deactivateAdminMode();
+            } else {
+                showAdminModal();
+            }
+        });
+    }
 
-            // Enter key handlers
-            adminPasswordInput.addEventListener('keypress', function(e) {
-                if (e.key === 'Enter') {
-                    submitPasswordButton.click();
+    // Submit admin password
+    if (submitPasswordButton) {
+        submitPasswordButton.addEventListener('click', async function() {
+            const password = adminPasswordInput.value;
+
+            if (!password) {
+                showMessage('Veuillez entrer le mot de passe', 'error');
+                return;
+            }
+
+            try {
+                const response = await fetch('/api/verify-admin/', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': csrftoken
+                    },
+                    body: JSON.stringify({ password: password })
+                });
+
+                const data = await response.json();
+
+                if (data.success) {
+                    activateAdminMode();
+                    adminModal.style.display = 'none';
+                    adminPasswordInput.value = '';
+                    showMessage('Mode administrateur activé', 'success');
+                } else {
+                    showMessage('Mot de passe incorrect', 'error');
+                    adminPasswordInput.value = '';
                 }
-            });
+            } catch (error) {
+                showMessage('Erreur lors de la vérification', 'error');
+                console.error('Error verifying admin:', error);
+            }
+        });
+    }
+
+    // Enter key in password field
+    if (adminPasswordInput) {
+        adminPasswordInput.addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                submitPasswordButton.click();
+            }
+        });
+    }
+// Show admin modal
+function showAdminModal() {
+    console.log('Showing admin modal'); // Debug
+    if (adminModal) {
+        adminModal.style.display = 'block';
+        adminPasswordInput.focus();
+    } else {
+        console.error('Admin modal not found');
+    }
+}
+
+// Activate admin mode
+function activateAdminMode() {
+    console.log('Activating admin mode'); // Debug
+    adminMode = true;
+    adminModeBtn.textContent = 'Désactiver Admin';
+    adminModeBtn.classList.add('active');
+    adminStatus.style.display = 'inline-block';
+
+    // Refresh the staff lists to enable all buttons
+    renderAllTeams();
+}
+
+// Deactivate admin mode
+function deactivateAdminMode() {
+    console.log('Deactivating admin mode'); // Debug
+    adminMode = false;
+    adminModeBtn.textContent = 'Mode Admin';
+    adminModeBtn.classList.remove('active');
+    adminStatus.style.display = 'none';
+
+    // Refresh the staff lists to disable locked buttons
+    renderAllTeams();
+
+    showMessage('Mode administrateur désactivé', 'info');
+}
+    // Close modals
+    closeModalButtons.forEach(function(button) {
+        button.addEventListener('click', function() {
+            presentModal.style.display = 'none';
+            absenceModal.style.display = 'none';
+            if (adminModal) {
+                adminModal.style.display = 'none';
+                adminPasswordInput.value = '';
+            }
+            if (document.getElementById('absence-period-modal')) {
+            document.getElementById('absence-period-modal').style.display = 'none';
+        }
+            if (document.getElementById('conge-period-modal')) {
+            document.getElementById('conge-period-modal').style.display = 'none';
+        }
+        });
+    });
+
+    // Click outside modal to close
+    window.addEventListener('click', function(e) {
+        if (e.target === presentModal) presentModal.style.display = 'none';
+        if (e.target === absenceModal) absenceModal.style.display = 'none';
+        if (e.target === adminModal) {
+            adminModal.style.display = 'none';
+            adminPasswordInput.value = '';
+        }
+    });
+        const submitAbsencePeriodButton = document.getElementById('submit-absence-period');
+if (submitAbsencePeriodButton) {
+    submitAbsencePeriodButton.addEventListener('click', function() {
+        if (currentAbsencePeriodStaffId) {
+            const startDate = document.getElementById('absence-start-date').value;
+            const endDate = document.getElementById('absence-end-date').value;
+            const selectedReason = document.querySelector('input[name="absence-period-reason"]:checked');
+
+            if (!startDate || !endDate) {
+                showMessage('Veuillez sélectionner les dates', 'error');
+                return;
+            }
+
+            if (!selectedReason) {
+                showMessage('Veuillez sélectionner un motif', 'error');
+                return;
+            }
+
+            markStaffAbsentPeriod(currentAbsencePeriodStaffId, startDate, endDate, selectedReason.value);
+            document.getElementById('absence-period-modal').style.display = 'none';
+            currentAbsencePeriodStaffId = null;
+        }
+    });
+}
+
+        const submitCongePeriodButton = document.getElementById('submit-conge-period');
+if (submitCongePeriodButton) {
+    submitCongePeriodButton.addEventListener('click', function() {
+        if (currentCongePeriodStaffId) {
+            const startDate = document.getElementById('conge-start-date').value;
+            const endDate = document.getElementById('conge-end-date').value;
+            const reason = document.getElementById('conge-reason').value.trim();
+
+            if (!startDate || !endDate) {
+                showMessage('Veuillez sélectionner les dates', 'error');
+                return;
+            }
+
+            markStaffCongePeriod(currentCongePeriodStaffId, startDate, endDate, reason);
+            document.getElementById('conge-period-modal').style.display = 'none';
+            currentCongePeriodStaffId = null;
+        }
+    });
+}
+
         }
 
+        // Check contract alerts
+async function checkContractAlerts() {
+    try {
+        const response = await fetch('/api/contract-alerts/');
+        const data = await response.json();
+
+        if (data.success && data.warning_count > 0) {
+            displayContractAlerts(data.alerts);
+        }
+    } catch (error) {
+        console.error('Error checking contract alerts:', error);
+    }
+}
+
+// Display contract alerts
+function displayContractAlerts(alerts) {
+    const container = document.getElementById('contract-alerts-container');
+    const alertsList = document.getElementById('contract-alerts-list');
+
+    alertsList.innerHTML = '';
+
+    alerts.forEach(alert => {
+        const alertItem = document.createElement('div');
+        alertItem.className = 'alert-item';
+        alertItem.innerHTML = alert.message;
+        alertsList.appendChild(alertItem);
+    });
+
+    container.style.display = 'block';
+}
+
+// Cleanup expired contracts
+async function cleanupExpiredContracts() {
+    if (!confirm('Êtes-vous sûr de vouloir supprimer le personnel avec des contrats expirés ?')) {
+        return;
+    }
+
+    try {
+        const response = await fetch('/api/cleanup-expired-contracts/', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]')?.value || ''
+            }
+        });
+
+        const data = await response.json();
+        if (data.success) {
+            showMessage(data.message, 'success');
+            if (data.count > 0) {
+                loadTeamsData(); // Refresh data
+            }
+        } else {
+            showMessage(data.message, 'error');
+        }
+    } catch (error) {
+        showMessage('Erreur lors du nettoyage', 'error');
+    }
+}
+
+// Event listeners for alerts
+document.getElementById('dismiss-alerts')?.addEventListener('click', function() {
+    document.getElementById('contract-alerts-container').style.display = 'none';
+});
+
+document.getElementById('cleanup-expired')?.addEventListener('click', cleanupExpiredContracts);
+
+// Calculate and update statistics
+function updateStatistics() {
+    let totalStaff = 0;
+    let presentCount = 0;
+    let absentCount = 0;
+    let congeCount = 0;
+    let undefinedCount = 0;
+
+    // Count all staff across all departments
+    Object.keys(teamsData).forEach(teamName => {
+        teamsData[teamName].forEach(member => {
+            totalStaff++;
+
+            switch(member.status) {
+                case 'present':
+                    presentCount++;
+                    break;
+                case 'absent':
+                    absentCount++;
+                    break;
+                case 'conge':
+                    congeCount++;
+                    break;
+                case 'undefined':
+                default:
+                    undefinedCount++;
+                    break;
+            }
+        });
+    });
+
+    // Calculate presence rate
+    const presenceRate = totalStaff > 0 ? Math.round((presentCount / totalStaff) * 100) : 0;
+
+    // Update DOM elements
+    document.getElementById('stat-present').textContent = presentCount;
+    document.getElementById('stat-absent').textContent = absentCount;
+    document.getElementById('stat-conge').textContent = congeCount;
+    document.getElementById('stat-undefined').textContent = undefinedCount;
+    document.getElementById('stat-total').textContent = totalStaff;
+    document.getElementById('stat-rate').textContent = presenceRate + '%';
+
+    // Add animation effect
+    document.querySelectorAll('.stat-number').forEach(element => {
+        element.style.transform = 'scale(1.1)';
+        setTimeout(() => {
+            element.style.transform = 'scale(1)';
+        }, 200);
+    });
+}
         // Load teams data
         async function loadTeamsData() {
     try {
@@ -1262,6 +1841,8 @@ function renderAllTeams() {
 
     // Render new status panels
     renderStatusPanels();
+    updateStatistics();
+
 }
 
 // Nouvelle fonction à ajouter
@@ -1332,7 +1913,6 @@ function renderStaffInPanel(listElement, staffArray) {
     <button class="button small present-btn" onclick="showPresentModal(${member.id}, '${member.name}')" ${!adminMode ? 'disabled' : ''}>
         Marquer présent
     </button>
-
 </div>
         `;
 
@@ -1340,6 +1920,50 @@ function renderStaffInPanel(listElement, staffArray) {
     });
 }
 
+        function showCongePeriodModal(staffId, staffName) {
+    currentCongePeriodStaffId = staffId;
+    document.getElementById('conge-period-staff-name').textContent = staffName;
+
+    // Set default dates (today and tomorrow)
+    const today = new Date();
+    const tomorrow = new Date(today);
+    tomorrow.setDate(tomorrow.getDate() + 1);
+
+    document.getElementById('conge-start-date').value = today.toISOString().split('T')[0];
+    document.getElementById('conge-end-date').value = tomorrow.toISOString().split('T')[0];
+    document.getElementById('conge-reason').value = '';
+
+    document.getElementById('conge-period-modal').style.display = 'block';
+}
+
+// Mark staff congé for period
+async function markStaffCongePeriod(staffId, startDate, endDate, reason) {
+    try {
+        const response = await fetch('/api/mark-conge-period/', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]')?.value || ''
+            },
+            body: JSON.stringify({
+                staff_id: staffId,
+                start_date: startDate,
+                end_date: endDate,
+                reason: reason
+            })
+        });
+
+        const data = await response.json();
+        if (data.success) {
+            showMessage(data.message, 'success');
+            loadTeamsData();
+        } else {
+            showMessage(data.message, 'error');
+        }
+    } catch (error) {
+        showMessage('Erreur lors de la mise à jour', 'error');
+    }
+}
         // Render team staff
         function renderTeam(teamName, listElement) {
     console.log('DEBUG: renderTeam called with:', teamName);
@@ -1409,41 +2033,91 @@ function renderStaffInPanel(listElement, staffArray) {
             modifiedByHtml = '<div class="modified-by">Modifié par: ' + member.last_modified_by + '</div>';
         }
 
-        const isLocked = member.status !== 'undefined' && !adminMode;
 
-        staffItem.innerHTML = `
-            <div class="staff-info">
-                <div class="staff-name">
-                    <span class="status-indicator ${statusClass}"></span>
-                    ${member.name}
-                </div>
-                <div class="attendance-info">
-                    <div class="status-text">${statusText}</div>
-                    ${currentChantierHtml}
-                    ${timestampHtml}
-                    ${hoursWorkedHtml}
-                    ${grandDeplacementHtml}
-                    ${absenceReasonHtml}
-                    ${modifiedByHtml}
-                </div>
-            </div>
-            <div class="attendance-actions">
-                <button class="button small present-btn" onclick="showPresentModal(${member.id}, '${member.name}')" ${isLocked ? 'disabled' : ''}>
-                    Présent
-                </button>
-                <button class="button small absent-btn" onclick="showAbsenceModal(${member.id})" ${isLocked ? 'disabled' : ''}>
-                    Absent
-                </button>
-                <button class="button small conge-btn" onclick="markStaffConge(${member.id})" ${isLocked ? 'disabled' : ''}>
-                    Congé
-                </button>
-            </div>
-        `;
+        // DÉFINIR isLocked ICI
+const isLocked = member.status !== 'undefined' && !adminMode;
+
+staffItem.innerHTML = `
+    <div class="staff-info">
+        <div class="staff-name">
+            <span class="status-indicator ${statusClass}"></span>
+            ${member.name}
+        </div>
+        <div class="attendance-info">
+            <div class="status-text">${statusText}</div>
+            ${currentChantierHtml}
+            ${timestampHtml}
+            ${hoursWorkedHtml}
+            ${grandDeplacementHtml}
+            ${absenceReasonHtml}
+            ${modifiedByHtml}
+        </div>
+    </div>
+    <div class="attendance-actions">
+        <button class="button small present-btn" onclick="showPresentModal(${member.id}, '${member.name}')" ${isLocked ? 'disabled' : ''}>
+            Présent
+        </button>
+        <button class="button small absent-btn" onclick="showAbsenceModal(${member.id})" ${isLocked ? 'disabled' : ''}>
+    Absent Jour
+        </button>
+        <button class="button small absent-btn" onclick="showAbsencePeriodModal(${member.id}, '${member.name}')" ${isLocked ? 'disabled' : ''}>
+    Absent Période
+        </button>
+        <button class="button small conge-btn" onclick="showCongePeriodModal(${member.id}, '${member.name}')" ${isLocked ? 'disabled' : ''}>
+    Période Congé
+        </button>
+    </div>
+`;
 
         listElement.appendChild(staffItem);
     });
 }
+function showAbsencePeriodModal(staffId, staffName) {
+    currentAbsencePeriodStaffId = staffId;
+    document.getElementById('absence-period-staff-name').textContent = staffName;
 
+    // Set default dates (today and tomorrow)
+    const today = new Date();
+    const tomorrow = new Date(today);
+    tomorrow.setDate(tomorrow.getDate() + 1);
+
+    document.getElementById('absence-start-date').value = today.toISOString().split('T')[0];
+    document.getElementById('absence-end-date').value = tomorrow.toISOString().split('T')[0];
+
+    // Reset to first option
+    document.getElementById('period-abnj').checked = true;
+
+    document.getElementById('absence-period-modal').style.display = 'block';
+}
+
+// Mark staff absent for period
+async function markStaffAbsentPeriod(staffId, startDate, endDate, reason) {
+    try {
+        const response = await fetch('/api/mark-absence-period/', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]')?.value || ''
+            },
+            body: JSON.stringify({
+                staff_id: staffId,
+                start_date: startDate,
+                end_date: endDate,
+                reason: reason
+            })
+        });
+
+        const data = await response.json();
+        if (data.success) {
+            showMessage(data.message, 'success');
+            loadTeamsData();
+        } else {
+            showMessage(data.message, 'error');
+        }
+    } catch (error) {
+        showMessage('Erreur lors de la mise à jour', 'error');
+    }
+}
         // Get status class and text
         function getStatusClass(status) {
             if (status === 'present') return 'present';
@@ -1818,29 +2492,6 @@ function closeModal(modalId) {
         showMessage('Erreur lors de la mise à jour', 'error');
     }
 }
-
-        async function markStaffConge(staffId) {
-            try {
-                const response = await fetch('/api/mark-fixed-team-conge/', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'X-CSRFToken': csrftoken
-                    },
-                    body: JSON.stringify({ staff_id: staffId })
-                });
-
-                const data = await response.json();
-                if (data.success) {
-                    showMessage(data.message, 'success');
-                    await refreshData();
-                } else {
-                    showMessage(data.message, 'error');
-                }
-            } catch (error) {
-                showMessage('Erreur lors de la mise à jour', 'error');
-            }
-        }
 
         // Refresh data
         async function refreshData() {
