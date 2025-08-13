@@ -2,6 +2,7 @@ from django.shortcuts import render, redirect
 from django.http import JsonResponse, HttpResponse
 from django.views.decorators.csrf import csrf_exempt
 from django.utils import timezone
+import time
 from django.conf import settings
 import json
 import datetime
@@ -349,6 +350,7 @@ def mark_department_present(request):
                         'timestamp': current_time,
                         'hours_worked': 8.0,
                         'grand_deplacement': False,
+                        'chantier_at_time': staff.city,  # ← SAUVEGARDE LE CHANTIER ACTUEL
                         'created_by': request.user
                     }
                 )
@@ -359,6 +361,7 @@ def mark_department_present(request):
                     attendance.timestamp = current_time
                     attendance.hours_worked = 8.0
                     attendance.grand_deplacement = False
+                    attendance.chantier_at_time = staff.city  # ← MET À JOUR LE CHANTIER
                     attendance.updated_by = request.user
                     attendance.save()
 
@@ -619,6 +622,7 @@ def mark_fixed_team_present(request):
                     'timestamp': timezone.now(),
                     'hours_worked': hours_worked,
                     'grand_deplacement': grand_deplacement,
+                    'chantier_at_time': staff.city,  # ← SAUVEGARDE LE CHANTIER ACTUEL
                     'created_by': request.user
                 }
             )
@@ -630,6 +634,7 @@ def mark_fixed_team_present(request):
                 attendance.timestamp = timezone.now()
                 attendance.hours_worked = hours_worked
                 attendance.grand_deplacement = grand_deplacement
+                attendance.chantier_at_time = staff.city  # ← MET À JOUR LE CHANTIER
                 attendance.updated_by = request.user
                 attendance.save()
 
@@ -1770,6 +1775,7 @@ def mark_present(request):
                     'timestamp': timezone.now(),
                     'hours_worked': hours_worked,
                     'grand_deplacement': grand_deplacement,
+                    'chantier_at_time': staff.city,  # ← SAUVEGARDE LE CHANTIER ACTUEL
                     'created_by': request.user  # Make sure this is set!
                 }
             )
@@ -1782,6 +1788,7 @@ def mark_present(request):
                 attendance.timestamp = timezone.now()
                 attendance.hours_worked = hours_worked
                 attendance.grand_deplacement = grand_deplacement
+                attendance.chantier_at_time = staff.city  # ← MET À JOUR LE CHANTIER
                 attendance.updated_by = request.user  # Make sure this is set!
                 attendance.save()
             else:
@@ -1789,7 +1796,7 @@ def mark_present(request):
 
             return JsonResponse({
                 'success': True,
-                'message': f"{staff.name} marqué présent"
+                'message': f'{staff.name} marqué présent sur {staff.city.name}'
             })
 
         except Exception as e:
@@ -2405,11 +2412,14 @@ def clear_attendance(request):
             return JsonResponse({'success': False, 'message': str(e)}, status=500)
 
     return JsonResponse({'success': False, 'message': 'Méthode non autorisée'}, status=405)
+
+
 @csrf_exempt
 def generate_history_pdf(request):
     """API endpoint to generate a PDF report of attendance history in landscape format"""
     if request.method == 'POST':
         try:
+            start_time = time.time()
             # Get month and year from request
             data = json.loads(request.body) if request.body else {}
             month = data.get('month')
@@ -2429,21 +2439,25 @@ def generate_history_pdf(request):
             start_date = datetime.date(year, month, 1)
             last_day = calendar.monthrange(year, month)[1]
             end_date = datetime.date(year, month, last_day)
+            print(f"Date setup: {time.time() - start_time:.2f}s")
 
             # Get all staff with their attendance
             staff_members = StaffMember.objects.select_related('city').all()
+            print(f"Staff query: {time.time() - start_time:.2f}s")
 
             # Get attendance records for the period
-            attendances = Attendance.objects.filter(
+            attendances = Attendance.objects.select_related('staff_member', 'staff_member__city').filter(
                 date__gte=start_date,
                 date__lte=end_date
             ).order_by('-date')
+            print(f"Attendance query: {time.time() - start_time:.2f}s")
 
             # Create a dictionary for quick lookup
             attendance_dict = {}
             for attendance in attendances:
                 key = (attendance.date, attendance.staff_member_id)
                 attendance_dict[key] = attendance
+            print(f"Dictionary creation: {time.time() - start_time:.2f}s")
 
             # Create a BytesIO buffer for the PDF
             buffer = BytesIO()
@@ -2518,6 +2532,7 @@ def generate_history_pdf(request):
 
                 # Add status for each date
                 # Add status for each date
+
                 for date in dates:
                     # Si c'est un weekend, toujours mettre une cellule vide
                     if date.weekday() >= 5:  # 5=Samedi, 6=Dimanche
@@ -2531,21 +2546,21 @@ def generate_history_pdf(request):
                             if attendance.absence_reason == 'CONGE_STATUS':
                                 status = "C"  # Congé
                             elif attendance.present is True:
-                                # Show hours if available
-                                if attendance.hours_worked:
-                                    hours_float = float(attendance.hours_worked)
-                                    if hours_float.is_integer():
-                                        hours = int(hours_float)
+                                if attendance.hours_worked and float(attendance.hours_worked) > 0:
+                                    # Vraiment présent avec des heures travaillées
+                                    if attendance.chantier_at_time:
+                                        chantier_code = attendance.chantier_at_time.name[:3]
+                                        status = chantier_code
                                     else:
-                                        hours = hours_float
-                                    status = f"P{hours}"
-                                    # Add G for grand déplacement
-                                    if attendance.grand_deplacement:
-                                        status += "G"
+                                        # Fallback vers le chantier actuel si pas stocké
+                                        if attendance.staff_member.city:
+                                            chantier_code = attendance.staff_member.city.name[:3]
+                                            status = chantier_code
+                                        else:
+                                            status = "---"
                                 else:
-                                    status = "P"
-                                    if attendance.grand_deplacement:
-                                        status += "G"
+                                    # Présent mais 0 heures = Non défini
+                                    status = "-"
                             elif attendance.present is False:
                                 if attendance.absence_reason and len(attendance.absence_reason) > 0:
                                     status = attendance.absence_reason  # Show exact reason: ABNJ, ABA, AM
@@ -2559,7 +2574,7 @@ def generate_history_pdf(request):
                         row.append(status)
 
                 data.append(row)
-
+            print(f"getting chantier codes: {time.time() - start_time:.2f}s")
             # Calculate column widths for landscape mode
             available_width = landscape(A4)[0] - 40  # Subtract margins
             name_col_width = 120  # Fixed width for name column
@@ -2608,7 +2623,7 @@ def generate_history_pdf(request):
             for i in range(1, len(data)):
                 for j in range(1, len(data[i])):
                     cell_value = data[i][j]
-                    if cell_value.startswith("P"):
+                    if cell_value.startswith("1") or cell_value.startswith("0"):
                         # Present - green
                         table_style.add('BACKGROUND', (j, i), (j, i), colors.lightgreen)
                         table_style.add('TEXTCOLOR', (j, i), (j, i), colors.darkgreen)
@@ -2623,7 +2638,7 @@ def generate_history_pdf(request):
                         table_style.add('BACKGROUND', (j, i), (j, i), colors.plum)
                         table_style.add('TEXTCOLOR', (j, i), (j, i), colors.purple)
                         table_style.add('FONTNAME', (j, i), (j, i), 'Helvetica-Bold')
-
+            print(f"color coding: {time.time() - start_time:.2f}s")
             table.setStyle(table_style)
             elements.append(table)
             elements.append(Spacer(1, 20))
@@ -2640,34 +2655,48 @@ def generate_history_pdf(request):
             elements.append(Paragraph("• <b>C</b> = En congé | <b>-</b> = Non défini (pas de données)", legend_style))
             elements.append(Paragraph("• <b>*</b> = Week-end (samedi/dimanche)", legend_style))
             elements.append(Spacer(1, 15))
-
+            print(f"adding legend: {time.time() - start_time:.2f}s")
             # Add statistics section
             elements.append(Spacer(1, 20))
             elements.append(Paragraph("Statistiques de la période:", subtitle_style))
 
-            # Calculate period statistics
-            # Calculate period statistics - ONLY FOR THE SELECTED MONTH
+            # Calculate stats from data already in memory (attendance_dict)
             total_present_days = 0
             total_hours_worked = 0
             total_grand_deplacements = 0
             total_absences = 0
             total_conges = 0
             total_staff_count = len(staff_members)
+            chantier_stats = {}
 
-            # Filter attendances to only the selected month/year
-            month_attendances = attendances.filter(
-                date__year=year,
-                date__month=month
-            )
-
-            for attendance in month_attendances:  # ← CORRECTION ICI
+            # Use the attendance_dict we already have in memory
+            for (date, staff_id), attendance in attendance_dict.items():
                 if attendance.present is True:
                     total_present_days += 1
                     if attendance.hours_worked:
-                        # Convert Decimal to float
                         total_hours_worked += float(attendance.hours_worked)
                     if attendance.grand_deplacement:
                         total_grand_deplacements += 1
+
+                    # Chantier stats
+                    if attendance.staff_member.city:
+                        chantier_name = attendance.staff_member.city.name
+                        if chantier_name not in chantier_stats:
+                            chantier_stats[chantier_name] = {
+                                'total_hours': 0,
+                                'present_days': 0,
+                                'staff_count': set(),
+                                'grand_deplacements': 0
+                            }
+
+                        chantier_stats[chantier_name]['total_hours'] += float(
+                            attendance.hours_worked) if attendance.hours_worked else 0
+                        chantier_stats[chantier_name]['present_days'] += 1
+                        chantier_stats[chantier_name]['staff_count'].add(attendance.staff_member.id)
+
+                        if attendance.grand_deplacement:
+                            chantier_stats[chantier_name]['grand_deplacements'] += 1
+
                 elif attendance.present is False:
                     total_absences += 1
                 elif attendance.absence_reason == 'CONGE_STATUS':
@@ -2675,7 +2704,8 @@ def generate_history_pdf(request):
 
             # Calculate averages
             period_days = (end_date - start_date).days + 1
-            avg_presence_rate = (total_present_days / (total_staff_count * period_days) * 100) if total_staff_count > 0 else 0
+            avg_presence_rate = (
+                        total_present_days / (total_staff_count * period_days) * 100) if total_staff_count > 0 else 0
             avg_hours_per_day = (total_hours_worked / total_present_days) if total_present_days > 0 else 0
 
             stats_style = ParagraphStyle(
@@ -2700,43 +2730,106 @@ def generate_history_pdf(request):
 
             elements.append(Spacer(1, 15))
 
-            # Add statistics section
-            elements.append(Spacer(1, 20))
-            elements.append(Paragraph("Statistiques de la période:", subtitle_style))
+            # Nouveau tableau : Heures par personnel et chantier (VERSION GROUPÉE)
+            elements.append(Paragraph("Heures par personnel et chantier:", subtitle_style))
 
-            # Filter to only the requested month/year
-            month_attendances = [att for att in attendances if att.date.year == year and att.date.month == month]
+            # Calculer les heures par employé et par chantier
+            staff_chantier_hours = {}
 
-            # Calculate statistics by chantier
-            elements.append(Spacer(1, 15))
+            for (date, staff_id), attendance in attendance_dict.items():
+                if attendance.present is True and attendance.hours_worked and float(attendance.hours_worked) > 0:
+                    staff_name = attendance.staff_member.name
+
+                    if attendance.chantier_at_time:
+                        chantier_name = attendance.chantier_at_time.name
+                    elif attendance.staff_member.city:
+                        chantier_name = attendance.staff_member.city.name
+                    else:
+                        chantier_name = "Non défini"
+
+                    if staff_name not in staff_chantier_hours:
+                        staff_chantier_hours[staff_name] = {}
+
+                    if chantier_name not in staff_chantier_hours[staff_name]:
+                        staff_chantier_hours[staff_name][chantier_name] = 0
+
+                    staff_chantier_hours[staff_name][chantier_name] += float(attendance.hours_worked)
+
+            # Créer un tableau GROUPÉ par employé
+            if staff_chantier_hours:
+                grouped_data = [["Personnel", "Chantier", "Heures"]]
+
+                for staff_name in sorted(staff_chantier_hours.keys()):
+                    staff_data = staff_chantier_hours[staff_name]
+
+                    # Calculer le total pour cet employé
+                    total_staff_hours = sum(staff_data.values())
+
+                    # Première ligne : nom de l'employé avec son total
+                    first_chantier = sorted(staff_data.keys())[0]
+                    grouped_data.append([
+                        f"{staff_name} ({total_staff_hours:.1f}h total)",
+                        first_chantier,
+                        f"{staff_data[first_chantier]:.1f}h"
+                    ])
+
+                    # Lignes suivantes : autres chantiers (nom vide pour grouper visuellement)
+                    for chantier_name in sorted(staff_data.keys())[1:]:
+                        hours = staff_data[chantier_name]
+                        grouped_data.append([
+                            "",  # Nom vide pour effet groupé
+                            f"  → {chantier_name}",  # Indentation visuelle
+                            f"{hours:.1f}h"
+                        ])
+
+                    # Ligne de séparation visuelle
+                    if staff_name != sorted(staff_chantier_hours.keys())[-1]:  # Pas pour le dernier
+                        grouped_data.append(["", "", ""])  # Ligne vide
+
+                # Créer le tableau avec style groupé
+                grouped_table = Table(grouped_data, colWidths=[180, 180, 60])
+
+                # Style de base
+                table_style = TableStyle([
+                    # En-tête
+                    ('BACKGROUND', (0, 0), (-1, 0), colors.darkgreen),
+                    ('TEXTCOLOR', (0, 0), (-1, 0), colors.white),
+                    ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+                    ('FONTSIZE', (0, 0), (-1, 0), 10),
+
+                    # Corps
+                    ('FONTSIZE', (0, 1), (-1, -1), 9),
+                    ('ALIGN', (0, 0), (-1, -1), 'LEFT'),
+                    ('ALIGN', (2, 0), (2, -1), 'CENTER'),  # Heures centrées
+                    ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
+                    ('GRID', (0, 0), (-1, -1), 1, colors.black),
+                ])
+
+                # Appliquer des styles spéciaux pour les lignes de personnel principal
+                row_index = 1
+                for staff_name in sorted(staff_chantier_hours.keys()):
+                    staff_data = staff_chantier_hours[staff_name]
+
+                    # Ligne principale (nom + total) en gras et fond coloré
+                    table_style.add('BACKGROUND', (0, row_index), (-1, row_index), colors.lightblue)
+                    table_style.add('FONTNAME', (0, row_index), (-1, row_index), 'Helvetica-Bold')
+
+                    row_index += len(staff_data)  # Avancer aux lignes suivantes
+
+                    # Ligne vide de séparation
+                    if staff_name != sorted(staff_chantier_hours.keys())[-1]:
+                        row_index += 1
+
+                grouped_table.setStyle(table_style)
+                elements.append(grouped_table)
+                elements.append(Spacer(1, 10))
+
+            # Statistics by chantier
             elements.append(Paragraph("Statistiques par chantier:", subtitle_style))
 
-            chantier_stats = {}
-            for attendance in month_attendances:  # ← CORRECTION ICI
-                if attendance.present is True and attendance.staff_member.city:
-                    chantier_name = attendance.staff_member.city.name
-                    hours_worked = float(attendance.hours_worked) if attendance.hours_worked else 0
-
-                    if chantier_name not in chantier_stats:
-                        chantier_stats[chantier_name] = {
-                            'total_hours': 0,
-                            'present_days': 0,
-                            'staff_count': set(),
-                            'grand_deplacements': 0
-                        }
-
-                    chantier_stats[chantier_name]['total_hours'] += hours_worked
-                    chantier_stats[chantier_name]['present_days'] += 1
-                    chantier_stats[chantier_name]['staff_count'].add(attendance.staff_member.id)
-
-                    if attendance.grand_deplacement:
-                        chantier_stats[chantier_name]['grand_deplacements'] += 1
-
-            # Create chantier statistics table
             if chantier_stats:
                 chantier_data = [["Chantier", "Heures totales", "Jours présence", "Personnel unique", "Grands dépl."]]
 
-                # Sort by total hours (descending)
                 sorted_chantiers = sorted(chantier_stats.items(), key=lambda x: x[1]['total_hours'], reverse=True)
 
                 for chantier_name, stats in sorted_chantiers:
@@ -2748,7 +2841,6 @@ def generate_history_pdf(request):
                         str(stats['grand_deplacements'])
                     ])
 
-                # Create the table
                 chantier_table = Table(chantier_data, colWidths=[200, 80, 80, 80, 80])
                 chantier_table.setStyle(TableStyle([
                     ('BACKGROUND', (0, 0), (-1, 0), colors.darkblue),
@@ -2757,7 +2849,7 @@ def generate_history_pdf(request):
                     ('FONTSIZE', (0, 0), (-1, 0), 10),
                     ('FONTSIZE', (0, 1), (-1, -1), 9),
                     ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
-                    ('ALIGN', (0, 1), (0, -1), 'LEFT'),  # Chantier names left-aligned
+                    ('ALIGN', (0, 1), (0, -1), 'LEFT'),
                     ('GRID', (0, 0), (-1, -1), 1, colors.black),
                     ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
                     ('ROWBACKGROUNDS', (0, 1), (-1, -1), [colors.white, colors.lightgrey]),
@@ -2765,6 +2857,7 @@ def generate_history_pdf(request):
 
                 elements.append(chantier_table)
                 elements.append(Spacer(1, 10))
+                print(f"stats: {time.time() - start_time:.2f}s")
 
                 # Add summary
                 total_chantiers = len(chantier_stats)
@@ -2777,9 +2870,12 @@ def generate_history_pdf(request):
                 elements.append(Paragraph("Aucune donnée de chantier disponible pour cette période.", stats_style))
 
             elements.append(Spacer(1, 15))
+            print(f"summary: {time.time() - start_time:.2f}s")
 
             # Build PDF document
             doc.build(elements)
+            print(f"PDF generation: {time.time() - start_time:.2f}s")
+
 
             # Get the value of the BytesIO buffer
             pdf = buffer.getvalue()
@@ -2797,6 +2893,9 @@ def generate_history_pdf(request):
             return JsonResponse({'success': False, 'message': str(e)}, status=500)
 
     return JsonResponse({'success': False, 'message': 'Méthode non autorisée'}, status=405)
+
+
+
 
 
 @csrf_exempt

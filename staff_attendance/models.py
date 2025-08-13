@@ -73,6 +73,9 @@ class Attendance(models.Model):
                                        verbose_name="Heures travaillées")
     grand_deplacement = models.BooleanField(default=False, verbose_name="Grand déplacement (nuit)")
 
+    chantier_at_time = models.ForeignKey(City, on_delete=models.SET_NULL, null=True, blank=True,
+                                         verbose_name="Chantier au moment de la présence")
+
     # NEW: Track which user made the change
     created_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True, verbose_name="Créé par")
     updated_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True,
