@@ -509,6 +509,7 @@ def get_fixed_teams_staff(request):
             'BEJENARU ANATOLIE',
             'AIT BAHA AHMED',
             'ADDI AHMED',
+            'AIT BAHA YOUSSEF',
             'AIT ALLA SOFIENE',
             'OURAMI RACHID',
             'BRANGIER ROMUALD',
@@ -517,7 +518,8 @@ def get_fixed_teams_staff(request):
             'AMRI HATEM',
             'DARTE LOKMANE',
             'TAHARDJI HAMZA',
-            'AIT BAHA YOUSSEF'
+            'ZILLOU ABDELMAJID'
+
 
         ]
     }
@@ -1372,9 +1374,9 @@ def get_departments_data(request):
                 'BICER ROJDA', 'KEHILI RANIA', 'TAGHOULT-OUNMIR AMRAN'
             ],
             'maintenance': [
-                'BOULAKDOUR YASSINE', 'BEJENARU ANATOLIE', 'AIT BAHA AHMED', 'ADDI AHMED',
+                'BOULAKDOUR YASSINE', 'BEJENARU ANATOLIE', 'AIT BAHA AHMED', 'ADDI AHMED', 'AIT BAHA YOUSSEF',
                 'AIT ALLA SOFIENE', 'OURAMI RACHID', 'BRANGIER ROMUALD', 'MAGAZ LAHCEN',
-                'AGHOURI AREJDAL AISSA', 'AMRI HATEM', 'DARTE LOKMANE', 'TAHARDJI HAMZA', 'AIT BAHA YOUSSEF'
+                'AGHOURI AREJDAL AISSA', 'AMRI HATEM', 'DARTE LOKMANE', 'TAHARDJI HAMZA', 'ZILLOU ABDELMAJID'
             ]
         }
 
