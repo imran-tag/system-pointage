@@ -518,8 +518,9 @@ def get_fixed_teams_staff(request):
             'AGHOURI AREJDAL AISSA',
             'AMRI HATEM',
             'DARTE LOKMANE',
-            'TAHARDJI HAMZA'
-            
+            'TAHARDJI HAMZA',
+            'AIT KHARDI NOUREDDINE',
+            'AIT HEDDI MOHAMED ILYES'
 
 
         ]
@@ -1366,8 +1367,8 @@ def get_departments_data(request):
                 'PARCOT MARC', 'BOUADLA AMAR', 'BULUT AHMET', 'CADIR AYDIN',
                 'OUAJOUB LAHCEN', 'NDREJAJ RAMAZAN', 'OUADAH ABDELREZAC', 'BAGHA SAID',
                 'NEAGU LAURENTIU', 'KHAWJA HIJRATULLAH', 'MAZOUJI RACHID', 'RAI JAMAL',
-                'RAI MOHAMED', 'EL FIRARI KARIM', 'YALCIN UMIT', 'AMRAOU MOHAMED 2',
-                'ZIMMERMANN LOIC', 'ZILLOU ABDELMAJID'
+                'RAI MOHAMED', 'YALCIN UMIT', 'AMRAOU MOHAMED 2',
+                'ZIMMERMANN LOIC', 'ZILLOU ABDELMAJID', 'EL FIRARI KARIM'
             ],
             'moselle-est': [
                 'BECKER SEBASTIEN', 'FRANCOIS LAURENT', 'KHOUYA MOHAMED', 'REMIATTE LIONEL',
@@ -1377,7 +1378,7 @@ def get_departments_data(request):
             'maintenance': [
                 'BOULAKDOUR YASSINE', 'BEJENARU ANATOLIE', 'AIT BAHA AHMED', 'ADDI AHMED', 'AIT BAHA YOUSSEF',
                 'AIT ALLA SOFIENE', 'OURAMI RACHID', 'BRANGIER ROMUALD', 'MAGAZ LAHCEN',
-                'AGHOURI AREJDAL AISSA', 'AMRI HATEM', 'DARTE LOKMANE', 'TAHARDJI HAMZA'
+                'AGHOURI AREJDAL AISSA', 'AMRI HATEM', 'DARTE LOKMANE', 'TAHARDJI HAMZA','AIT KHARDI NOUREDDINE', 'AIT HEDDI MOHAMED ILYES'
             ]
         }
 
@@ -3393,6 +3394,5 @@ def get_zones_list(request):
         return JsonResponse({'success': True, 'zones': zones_data})
     except Exception as e:
         return JsonResponse({'success': False, 'message': str(e)}, status=500)
-
 
 
