@@ -504,6 +504,7 @@ def get_fixed_teams_staff(request):
             'BICER ROJDA',
             'KEHILI RANIA',
             'TAGHOULT-OUNMIR AMRAN',
+            'BENEDICTE KRYSIK'
         ],
         'maintenance': [
             'BOULAKDOUR YASSINE',
@@ -1373,7 +1374,7 @@ def get_departments_data(request):
             'moselle-est': [
                 'BECKER SEBASTIEN', 'FRANCOIS LAURENT', 'KHOUYA MOHAMED', 'REMIATTE LIONEL',
                 'BOULIHSSAN YOUNES', 'BENNACER ANISSA', 'ANDRASCHKE DAVINA', 'GUEZZI NAIMA',
-                'BICER ROJDA', 'KEHILI RANIA', 'TAGHOULT-OUNMIR AMRAN'
+                'BICER ROJDA', 'KEHILI RANIA', 'TAGHOULT-OUNMIR AMRAN','BENEDICTE KRYSIK'
             ],
             'maintenance': [
                 'BOULAKDOUR YASSINE', 'BEJENARU ANATOLIE', 'AIT BAHA AHMED', 'ADDI AHMED', 'AIT BAHA YOUSSEF',
