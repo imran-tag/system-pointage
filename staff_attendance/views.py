@@ -490,7 +490,9 @@ def get_fixed_teams_staff(request):
             'YALCIN UMIT',
             'AMRAOU MOHAMED 2',
             'ZIMMERMANN LOIC',
-            'ZILLOU ABDELMAJID'
+            'ZILLOU ABDELMAJID',
+            'MILAN ZMIKO',
+            'ECHABAB AHMED'
         ],
         'moselle-est': [
             'BECKER SEBASTIEN',
@@ -1369,7 +1371,8 @@ def get_departments_data(request):
                 'OUAJOUB LAHCEN', 'NDREJAJ RAMAZAN', 'OUADAH ABDELREZAC', 'BAGHA SAID',
                 'NEAGU LAURENTIU', 'KHAWJA HIJRATULLAH', 'MAZOUJI RACHID', 'RAI JAMAL',
                 'RAI MOHAMED', 'YALCIN UMIT', 'AMRAOU MOHAMED 2',
-                'ZIMMERMANN LOIC', 'ZILLOU ABDELMAJID', 'EL FIRARI KARIM'
+                'ZIMMERMANN LOIC', 'ZILLOU ABDELMAJID', 'EL FIRARI KARIM',
+            'MILAN ZMIKO', 'ECHABAB AHMED'
             ],
             'moselle-est': [
                 'BECKER SEBASTIEN', 'FRANCOIS LAURENT', 'KHOUYA MOHAMED', 'REMIATTE LIONEL',
