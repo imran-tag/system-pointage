@@ -523,7 +523,13 @@ def get_fixed_teams_staff(request):
             'DARTE LOKMANE',
             'TAHARDJI HAMZA',
             'AIT KHARDI NOUREDDINE',
-            'AIT HEDDI MOHAMED ILYES'
+            'AIT HEDDI MOHAMED ILYES',
+            'GARBA ISSA',
+            'BENHARA OTMANE',
+            'MOHAMED-ILYES',
+            'CHEKIROU MEHDI',
+            'AIT ABAID HAFID',
+            'MENGHOUR AZZEDINE'
 
 
         ]
@@ -1382,7 +1388,12 @@ def get_departments_data(request):
             'maintenance': [
                 'BOULAKDOUR YASSINE', 'BEJENARU ANATOLIE', 'AIT BAHA AHMED', 'ADDI AHMED', 'AIT BAHA YOUSSEF',
                 'AIT ALLA SOFIENE', 'OURAMI RACHID', 'BRANGIER ROMUALD', 'MAGAZ LAHCEN',
-                'AGHOURI AREJDAL AISSA', 'AMRI HATEM', 'DARTE LOKMANE', 'TAHARDJI HAMZA','AIT KHARDI NOUREDDINE', 'AIT HEDDI MOHAMED ILYES'
+                'AGHOURI AREJDAL AISSA', 'AMRI HATEM', 'DARTE LOKMANE', 'TAHARDJI HAMZA','AIT KHARDI NOUREDDINE', 'AIT HEDDI MOHAMED ILYES','GARBA ISSA',
+            'BENHARA OTMANE',
+            'MOHAMED-ILYES',
+            'CHEKIROU MEHDI',
+            'AIT ABAID HAFID',
+            'MENGHOUR AZZEDINE'
             ]
         }
 
