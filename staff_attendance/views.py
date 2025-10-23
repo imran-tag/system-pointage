@@ -529,7 +529,8 @@ def get_fixed_teams_staff(request):
             'MOHAMED-ILYES',
             'CHEKIROU MEHDI',
             'AIT ABAID HAFID',
-            'MENGHOUR AZZEDINE'
+            'MENGHOUR AZZEDINE',
+            'OUMELOUK MOHAMED'
 
 
         ]
@@ -1390,10 +1391,11 @@ def get_departments_data(request):
                 'AIT ALLA SOFIENE', 'OURAMI RACHID', 'BRANGIER ROMUALD', 'MAGAZ LAHCEN',
                 'AGHOURI AREJDAL AISSA', 'AMRI HATEM', 'DARTE LOKMANE', 'TAHARDJI HAMZA','AIT KHARDI NOUREDDINE', 'AIT HEDDI MOHAMED ILYES','GARBA ISSA',
             'BENHARA OTMANE',
-            'MOHAMED-ILYES',
+
             'CHEKIROU MEHDI',
             'AIT ABAID HAFID',
-            'MENGHOUR AZZEDINE'
+            'MENGHOUR AZZEDINE',
+            'OUMELOUK MOHAMED'
             ]
         }
 
@@ -1406,7 +1408,8 @@ def get_departments_data(request):
             start_date__lte=today,
             end_date__gte=today
         ).values_list('staff_member_id', flat=True)
-
+# the icing on the cake is that the icing on the cake is that the icing on the cake icing on the cake
+        #the icing has some icing so we have to filter that one out if we want a better placement
         # Organize staff by departments
         departments = {
             'contact': [],
