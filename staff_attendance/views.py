@@ -530,7 +530,9 @@ def get_fixed_teams_staff(request):
             'CHEKIROU MEHDI',
             'AIT ABAID HAFID',
             'MENGHOUR AZZEDINE',
-            'OUMELOUK MOHAMED'
+            'OUMELOUK MOHAMED',
+            'AVDIMETAJ DION',
+            'HARZOUN SAID'
 
 
         ]
@@ -1391,11 +1393,12 @@ def get_departments_data(request):
                 'AIT ALLA SOFIENE', 'OURAMI RACHID', 'BRANGIER ROMUALD', 'MAGAZ LAHCEN',
                 'AGHOURI AREJDAL AISSA', 'AMRI HATEM', 'DARTE LOKMANE', 'TAHARDJI HAMZA','AIT KHARDI NOUREDDINE', 'AIT HEDDI MOHAMED ILYES','GARBA ISSA',
             'BENHARA OTMANE',
-
             'CHEKIROU MEHDI',
             'AIT ABAID HAFID',
             'MENGHOUR AZZEDINE',
-            'OUMELOUK MOHAMED'
+            'OUMELOUK MOHAMED',
+            'AVDIMETAJ DION',
+            'HARZOUN SAID'
             ]
         }
 
