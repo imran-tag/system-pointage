@@ -532,7 +532,8 @@ def get_fixed_teams_staff(request):
             'MENGHOUR AZZEDINE',
             'OUMELOUK MOHAMED',
             'AVDIMETAJ DION',
-            'HARZOUN SAID'
+            'HARZOUN SAID',
+            'BRAHIMI MALICK'
 
 
         ]
@@ -1398,7 +1399,8 @@ def get_departments_data(request):
             'MENGHOUR AZZEDINE',
             'OUMELOUK MOHAMED',
             'AVDIMETAJ DION',
-            'HARZOUN SAID'
+            'HARZOUN SAID',
+            'BRAHIMI MALICK'
             ]
         }
 
@@ -3415,5 +3417,6 @@ def get_zones_list(request):
         return JsonResponse({'success': True, 'zones': zones_data})
     except Exception as e:
         return JsonResponse({'success': False, 'message': str(e)}, status=500)
+
 
 
