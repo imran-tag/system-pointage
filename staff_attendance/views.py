@@ -492,7 +492,8 @@ def get_fixed_teams_staff(request):
             'ZIMMERMANN LOIC',
             'ZILLOU ABDELMAJID',
             'MILAN ZMIKO',
-            'ECHABAB AHMED'
+            'ECHABAB AHMED',
+            'BOUTON SANDY'
         ],
         'moselle-est': [
             'BECKER SEBASTIEN',
@@ -1383,7 +1384,7 @@ def get_departments_data(request):
                 'NEAGU LAURENTIU', 'KHAWJA HIJRATULLAH', 'MAZOUJI RACHID', 'RAI JAMAL',
                 'RAI MOHAMED', 'YALCIN UMIT', 'AMRAOU MOHAMED 2',
                 'ZIMMERMANN LOIC', 'ZILLOU ABDELMAJID', 'EL FIRARI KARIM',
-            'MILAN ZMIKO', 'ECHABAB AHMED'
+            'MILAN ZMIKO', 'ECHABAB AHMED','BOUTON SANDY'
             ],
             'moselle-est': [
                 'BECKER SEBASTIEN', 'FRANCOIS LAURENT', 'KHOUYA MOHAMED', 'REMIATTE LIONEL',
@@ -3419,6 +3420,7 @@ def get_zones_list(request):
         return JsonResponse({'success': True, 'zones': zones_data})
     except Exception as e:
         return JsonResponse({'success': False, 'message': str(e)}, status=500)
+
 
 
 
